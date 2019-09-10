@@ -1,0 +1,192 @@
+== PREDEFINED ==
+
+center: C -> P
+intersection: L L -> P
+intersection1: CL CL -> P
+intersection2: CL CL -> P
+intersection_closer: CL CL P -> P
+intersection_remoter: CL CL P -> P
+line: P P -> L
+circle: P P P -> C
+point_on: CL -> P
+
+== CONSTRUCTED ==
+
+intersections: o1:CL o2:CL -> X1:P X2:P
+X1 = intersection1 o1 o2
+X2 = intersection2 o1 o2
+
+perp_bisector: A:P B:P -> l:L
+c1 = circle B A A
+c2 = circle A B B
+X1 X2 = intersections c1 c2
+l = line X1 X2
+
+midpoint: A:P B:P -> X:P
+l = line A B
+x = perp_bisector A B
+X = intersection l x
+
+circumcenter: A:P B:P C:P -> O:P
+c = perp_bisector A B
+a = perp_bisector B C
+O = intersection a c
+
+circumcircle: A:P B:P C:P -> c:C
+O = circumcenter A B C
+c = circle A O O
+
+diacircle: A:P B:P -> c:C
+M = midpoint A B
+c = circle A M M
+
+tangent1: A:P c:C -> l:L X:P
+C = center c
+d = diacircle A C
+X = intersection1 c d
+l = line A X
+
+tangent2: A:P c:C -> l:L X:P
+C = center c
+d = diacircle A C
+X = intersection2 c d
+l = line A X
+
+tangents: A:P c:C -> t1:L X1:P t2:L X2:P
+t1 X1 = tangent1 A c
+t2 X2 = tangent2 A c
+
+tangent_closer: A:P c:C P:P -> l:L X:P
+C = center c
+d = diacircle A C
+X = intersection_closer c d P
+l = line A X
+
+tangent_remoter: A:P c:C P:P -> l:L X:P
+C = center c
+d = diacircle A C
+X = intersection_remoter c d P
+l = line A X
+
+angle_bisector_int: A:P B:P C:P -> l:L
+l1 = line B A
+l2 = line B C
+c = circle A B B
+C' = intersection_closer l2 c C
+l = perp_bisector A C'
+
+angle_bisector_ext: A:P B:P C:P -> l:L
+l1 = line B A
+l2 = line B C
+c = circle A B B
+C' = intersection_remoter l2 c C
+l = perp_bisector A C'
+
+perpline: l:L A:P -> p:L
+B = point_on l
+c = circle B A A
+C = intersection_remoter c l B
+p = perp_bisector B C
+
+paraline: l:L A:P -> pa:L
+pe = perpline l A
+pa = perpline pe A
+
+foot: A:P l:L -> F:P
+p = perpline l A
+F = intersection p l
+
+incenter: A:P B:P C:P -> I:P
+a = angle_bisector_int B A C
+b = angle_bisector_int A B C
+I = intersection a b
+
+incircle: A:P B:P C:P -> i:C
+I = incenter A B C
+a = line B C
+F = foot I a
+i = circle F I I
+
+excenter: A:P B:P C:P -> E:P
+a = angle_bisector_int B A C
+b = angle_bisector_ext A B C
+E = intersection a b
+
+excircle: A:P B:P C:P -> e:C
+E = excenter A B C
+a = line B C
+F = foot E a
+e = circle F E E
+
+median: A:P B:P C:P -> m:L
+M = midpoint B C
+m = line A M
+
+centroid: A:P B:P C:P -> G:P
+a = median A B C
+b = median B A C
+G = intersection a b
+
+altitude: A:P B:P C:P -> p:L
+a = line B C
+p = perpline a A
+
+orthocenter: A:P B:P C:P -> H:P
+a = altitude A B C
+b = altitude B A C
+H = intersection a b
+
+circle9: A:P B:P C:P -> f:C
+Ma = midpoint B C
+Mb = midpoint C A
+Mc = midpoint A B
+f = circumcircle Ma Mb Mc
+
+reflect: A:P l:L -> B:P
+p = perpline l A
+M = intersection p l
+c = circle A M M
+B = intersection_remoter c p A
+
+reflect: A:P M:P -> B:P
+l = line A M
+c = circle A M M
+B = intersection_remoter c l A
+
+trisides: A:P B:P C:P -> a:L b:L c:L
+a = line B C
+b = line C A
+c = line A B
+
+conjugate: X:P A:P B:P C:P -> Y:P
+a b c = trisides A B C
+Xa = reflect X a
+Xb = reflect X b
+Xc = reflect X c
+Y = circumcenter Xa Xb Xc
+
+midpoint_arc: A:P B:P C:P -> M:P
+l = angle_bisector_int B A C
+c = circumcircle A B C
+M = intersection_remoter l c A
+
+midpoint_arc2: A:P B:P C:P -> M2:P
+O = circumcenter A B C
+M1 = midpoint_arc A B C
+M2 = reflect M1 O
+
+inverse: A:P c:C -> R:P
+C = center c
+a = line A C
+B = point_on c
+X = intersection1 c a
+b = line B X
+A' = reflect A b
+r = line B A'
+R = intersection a r
+
+ortic_triangle: A:P B:P C:P -> A':P B':P C':P
+a b c = trisides A B C
+A' = foot A a
+B' = foot B b
+C' = foot C c

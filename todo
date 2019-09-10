@@ -1,0 +1,15 @@
+* visualisation of some facts
+  * lies_on
+  * equal angles
+    * right angle (perpendicular)
+    * parallel
+* selection of ambiguous (numerically equivalent) object
+* Numerical models outside GUI
+  * Lemma proven for a special case can be used in general
+  * GUI <-> file (save / load)
+  * in composite tools: distinguish steps that
+    * can fail (assumptions)
+    * that can numerically fail (proof steps)
+    * and that should not fail (conclusions)
+* automatically applied facts: line_uq, radius_dist, primarily *_uq
+* gamification -- problem format, given goal, detection of solution
