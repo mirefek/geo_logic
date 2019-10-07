@@ -1,3 +1,21 @@
+* simple logic changes
+  * unit and unit circle (a prime number)
+  * midpoint as a basic operation
+
+* numerical model inside logic
+  * fraction elimination of angles
+    + numerical checking
+    -> angle_div not needed
+  * automatically applied uniqueness
+    * lines
+    * circles
+    * intersections (even of circles)
+      * even when the circle is not explicitely specified
+  * automatically applied other facts, e.g.:
+    * radius_dist
+    * point_on_line_bisector
+  * proof of universality of a construction
+
 * visualisation of some facts
   * lies_on
   * equal angles
@@ -6,10 +24,13 @@
 * selection of ambiguous (numerically equivalent) object
 * Numerical models outside GUI
   * Lemma proven for a special case can be used in general
+    * possible cheating:
+      * equilateral_aa -> ss can be used
+        for proving that C is a midpoint of AB, if A,B,C are collinear
+	and it is checked numerically
   * GUI <-> file (save / load)
   * in composite tools: distinguish steps that
     * can fail (assumptions)
     * that can numerically fail (proof steps)
     * and that should not fail (conclusions)
-* automatically applied facts: line_uq, radius_dist, primarily *_uq
 * gamification -- problem format, given goal, detection of solution
