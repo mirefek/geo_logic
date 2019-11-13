@@ -422,5 +422,16 @@ class ToolBox:
 if __name__ == "__main__":
     tools = ToolBox()
     with StopWatch('loading tools'):
-        tools.load_file("tools2.txt")
+        tools.load_file("tools2.txt", True)
+
+    with StopWatch('logic initialization'):
+        tool, _ = tools.tool_dict["circle9", (gt.Point, gt.Point, gt.Point)]
+        logic_model = logic.LogicModel()
+        num_model = dict()
+        A = logic_model.new_num_object(gt.Point([0, 0]), num_model)
+        B = logic_model.new_num_object(gt.Point([5, 0]), num_model)
+        C = logic_model.new_num_object(gt.Point([2, 4]), num_model)
+    with StopWatch('circle9'):
+        tool.run((A,B,C), logic_model, num_model, strictness = 1)
+
     print_times()
