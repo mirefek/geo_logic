@@ -1,46 +1,62 @@
-import geo_object as gt
+from geo_object import *
 import numpy as np
 
-def radius_of(c):
-    return gt.Ratio((np.log(c.r), 1))
-def center_of(c):
-    return gt.Point(c.c)
-def dist(a,b):
+def radius_of(c : Circle) -> Ratio:
+    return Ratio((np.log(c.r), 1))
+def center_of(c : Circle) -> Point:
+    return Point(c.c)
+def dist(a : Point, b : Point) -> Ratio:
     assert((a.a != b.a).any())
-    return gt.Ratio((np.log(np.linalg.norm(a.a - b.a)), 1))
-def direction_of(l):
-    result = gt.Angle(np.angle(complex(*l.n)))
-    return result
+    return Ratio((np.log(np.linalg.norm(a.a - b.a)), 1))
+def direction_of(l : Line) -> Angle:
+    ang = np.angle(complex(*l.n))
+    #print("direction_of: {} -> {}".format(l.n, ang))
+    return Angle(ang)
 
-def intersection(l1, l2):
-    assert(isinstance(l1, gt.Line) and isinstance(l2, gt.Line))
-    [p] = gt.intersection_ll(l1, l2)
-    return gt.Point(p)
-def intersection_remoter(cl1, cl2, p):
-    intersections = [gt.Point(x) for x in gt.intersection(cl1, cl2)]
+def intersection(l1 : Line, l2 : Line) -> Point:
+    assert(isinstance(l1, Line) and isinstance(l2, Line))
+    [p] = intersection_ll(l1, l2)
+    return Point(p)
+def intersection_remoter(cl1 : PointSet, cl2 : PointSet, p : Point) -> Point:
+    intersections = [Point(x) for x in intersection_univ(cl1, cl2)]
     assert(len(intersections) == 2)
     intersections.sort(key = lambda p: np.dot(p.a, [1.2, 3.4]))
     return max(intersections, key = lambda x: x.dist_from(p.a))
-def intersection0(cl1, cl2):
-    intersections = [gt.Point(x) for x in gt.intersection(cl1, cl2)]
+def intersection0(cl1 : PointSet, cl2 : PointSet) -> Point:
+    intersections = [Point(x) for x in intersection_univ(cl1, cl2)]
     assert(len(intersections) == 2)
     intersections.sort(key = lambda p: np.dot(p.a, [1.2, 3.4]))
     return intersections[0]
-def point_on(cl1):
-    true_coor = ps.closest_on(np.zeros([2]))
-    return gt.Point(true_coor)
-def line(p1, p2):
-    assert(isinstance(p1, gt.Point))
-    assert(isinstance(p2, gt.Point))
-    return gt.line_passing_points(p1, p2)
-def circle(center, radius):
-    assert(isinstance(center, gt.Point))
-    assert(isinstance(radius, gt.Ratio))
-    return gt.Circle(center.a, np.exp(radius.x))
-def line_with_direction(p, d):
-    assert(isinstance(d, gt.Angle))
-    assert(isinstance(p, gt.Point))
+def free_point(x : float, y : float) -> Point:
+    return Point(np.array((x,y)))
+def point_on(x : float, y : float, cl : PointSet) -> Point:
+    true_coor = cl.closest_on(np.array((x,y)))
+    return Point(true_coor)
+def line(p1 : Point, p2 : Point) -> Line:
+    assert(isinstance(p1, Point))
+    assert(isinstance(p2, Point))
+    return line_passing_points(p1, p2)
+def circle(center : Point, radius : Ratio) -> Circle:
+    assert(isinstance(center, Point))
+    assert(isinstance(radius, Ratio))
+    return Circle(center.a, np.exp(radius.x))
+def line_with_direction(p : Point, d : Angle) -> Line:
+    assert(isinstance(d, Angle))
+    assert(isinstance(p, Point))
     cplx = np.exp(d.data*1j)
     normal_vector = np.array((cplx.real, cplx.imag))
     c = np.dot(normal_vector, p.a)
-    return gt.Line(normal_vector, c)
+    return Line(normal_vector, c)
+
+def midpoint(A : Point, B : Point) -> Point:
+    return Point((A.a + B.a)/2)
+def half_direction(A : Point, B : Point) -> Angle:
+    vec = vector_perp_rot(A.a - B.a)
+    ang = np.angle(complex(*vec))/2
+    #print("half direction: {} -> {}".format(vec, ang))
+    return Angle(ang)
+def double_direction(A : Point, ang : Angle, d : Ratio) -> Point:
+    cplx = -1j*np.exp(d.x + 2*ang.data*1j)
+    vector = np.array((cplx.real, cplx.imag))
+    #print("double direction: {} -> {}".format(ang.data, vector))
+    return Point(A.a + vector)

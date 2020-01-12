@@ -4,12 +4,12 @@ from gi.repository import Gtk, Gdk
 import cairo
 import numpy as np
 from geo_object import *
-from parse_tools import ToolBox, type_to_c
-from tool_base import ToolError, PrimitivePred
+from parse import Parser, type_to_c
+from tools import ToolError, ToolErrorException, MovableTool
 import primitive_pred
 from logic_model import LogicModel
 from collections import defaultdict
-from construction import *
+from tool_step import ToolStep, ToolStepEnv
 
 def corners_to_rectangle(corners):
     size = corners[1] - corners[0]
@@ -18,14 +18,25 @@ def corners_to_rectangle(corners):
 class Drawing(Gtk.Window):
 
     def make_toolbox(self, max_height = 45):
-        self.toolbox = ToolBox()
-        self.toolbox.load_file("tools2.txt", False)
+        self.tool_buttons = dict()
+        self.parser = Parser()
+        self.parser.parse_file("tools.gl")
+        self.tool_dict = self.parser.tool_dict
+        self.tool_dict['line', (Point, Point)].add_symmetry((1,0))
+        self.tool_dict['midpoint', (Point, Point)].add_symmetry((1,0))
+        self.tool_dict['dist', (Point, Point)].add_symmetry((1,0))
+        self.tool_dict['intersection', (Line, Line)].add_symmetry((1,0))
+        self.tool_dict['intersection0', (Circle, Circle)].add_symmetry((1,0))
+        self.tool_dict['intersection_remoter', (Circle, Circle, Point)].add_symmetry((1,0,2))
 
         tool_names = set()
-        name_to_itypes = defaultdict(list)
-        for name, itype in self.toolbox.tool_dict.keys():
+        self.name_to_itypes = defaultdict(list)
+        for key, tool in self.tool_dict.items():
+            if not isinstance(key, tuple): continue
+            name, itype = key
             tool_names.add(name)
-            name_to_itypes[name].append(itype)
+            if isinstance(tool, MovableTool): itype = itype[2:]
+            self.name_to_itypes[name].append(itype)
         tool_names = sorted(tool_names)
 
         def change_tool(button, name):
@@ -33,15 +44,19 @@ class Drawing(Gtk.Window):
                 self.tool = self.scripted_tool
                 self.tool_data = []
                 self.tool_name = name
-                self.tool_itypes = name_to_itypes[name]
+                self.tool_itypes = self.name_to_itypes[name]
 
                 # printing type
                 ttypes = []
                 for itype in self.tool_itypes:
                     args = ' '.join(type_to_c[t] for t in itype)
-                    _, otype = self.toolbox.tool_dict[name,itype]
+                    if (name,itype) not in self.tool_dict:
+                        itype = (float, float)+itype
+                        movable_mark = '<M> '
+                    else: movable_mark = ''
+                    otype = self.tool_dict[name,itype].out_types
                     output = ' '.join(type_to_c[t] for t in otype)
-                    ttypes.append("{} -> {}".format(args, output))
+                    ttypes.append("{}{} -> {}".format(movable_mark, args, output))
                 print("Tool '{} : {}'".format(name, ', or '.join(ttypes)))
 
         num_names = len(tool_names)
@@ -65,6 +80,7 @@ class Drawing(Gtk.Window):
                 button = Gtk.RadioButton.new_from_widget(button1)
                 button.set_label(name)
             button.connect("toggled", change_tool, name)
+            self.tool_buttons[name] = button
             vbox.add(button)
         return hbox
 
@@ -73,7 +89,20 @@ class Drawing(Gtk.Window):
         self.shift = np.array([0,0])
         self.scale = 1
         self.mb_grasp = None
-        self.constr = Construction()
+        self.steps = []
+        self.obj_to_step = []
+        self.steps_refresh()
+        self.key_to_tool = {
+            'p': "perp_bisector",
+            'f': "free_point",
+            'l': "line",
+            'c': "circle",
+            'x': "intersection0",
+            '9': "circle9",
+            'i': "incircle",
+            'e': "excircle",
+            't': "double_dir_test",
+        }
 
         hbox = Gtk.HPaned()
         hbox.add(self.make_toolbox())
@@ -99,8 +128,11 @@ class Drawing(Gtk.Window):
         self.connect("delete-event", Gtk.main_quit)
         self.show_all()
 
-        self.tool = self.point_tool
+        self.tool = None
         self.tool_data = []
+        self.tool = self.scripted_tool
+        self.tool_name = "free_point"
+        self.tool_itypes = self.name_to_itypes[self.tool_name]
 
     def get_coor(self, e):
         return np.array([e.x, e.y])/self.scale - self.shift
@@ -117,14 +149,18 @@ class Drawing(Gtk.Window):
         if e.state & Gdk.ModifierType.BUTTON1_MASK:
             if self.tool == self.move_tool and self.tool_data is not None:
                 step = self.tool_data
-                assert(isinstance(step, ConstrMovable))
-                step.coor = self.get_coor(e)
-                self.constr.refresh()
+                step.meta_args = tuple(self.get_coor(e))
+                self.steps_refresh()
                 self.darea.queue_draw()
         if e.state & Gdk.ModifierType.BUTTON2_MASK:
             if self.mb_grasp is None: return
             self.shift = np.array([e.x, e.y])/self.scale - self.mb_grasp
             self.darea.queue_draw()
+
+    def steps_refresh(self):
+        self.model = LogicModel()
+        self.step_env = ToolStepEnv(self.model)
+        self.step_env.run_steps(self.steps, 1, catch_errors = True)
 
     def on_draw(self, wid, cr):
 
@@ -138,9 +174,9 @@ class Drawing(Gtk.Window):
         cr.set_source_rgb(1, 1, 1)
         cr.fill()
 
-        for obj in self.point_sets():
+        for ti,li,obj in self.point_sets():
             obj.draw(cr, corners, self.scale)
-        for obj in self.points():
+        for ti,li,obj in self.points():
             obj.draw(cr, corners, self.scale)
 
     def on_key_press(self,w,e):
@@ -148,15 +184,7 @@ class Drawing(Gtk.Window):
         keyval = e.keyval
         keyval_name = Gdk.keyval_name(keyval)
         #print(keyval_name)
-        if keyval_name == 'p':
-            self.tool = self.point_tool
-            print("Point tool")
-            self.tool_data = []
-        elif keyval_name == 'd':
-            self.tool = self.dep_point_tool
-            print("Dependent point tool")
-            self.tool_data = []
-        elif keyval_name == 'm':
+        if keyval_name == 'm':
             self.tool = self.move_tool
             print("Move tool")
             self.tool_data = None
@@ -166,75 +194,106 @@ class Drawing(Gtk.Window):
             self.tool_data = None
         elif keyval_name == 'BackSpace':
             print("BACK")
-            self.constr.pop()
+            if not self.steps:
+                print("No more steps to undo")
+                return
+            step = self.steps.pop()
+            if len(step.tool.out_types) > 0:
+                del self.obj_to_step[-len(step.tool.out_types):]
+            self.steps_refresh()
             self.darea.queue_draw()
         elif keyval_name == "Escape":
             Gtk.main_quit()
+        elif keyval_name in self.key_to_tool:
+            tool_name = self.key_to_tool[keyval_name]
+            print(tool_name)
+            self.tool_buttons[tool_name].set_active(True)
         else:
             return False
 
     def on_button_press(self, w, e):
 
         coor = self.get_coor(e)
-        if e.button == 1:
+        if e.button == 1 and self.tool is not None:
             if e.type != Gdk.EventType.BUTTON_PRESS: return
             self.tool(coor)
             self.darea.queue_draw()
         if e.button == 2:
             self.mb_grasp = coor
 
-    def point_tool(self, coor):
-        ConstrFreePoint(self.constr, coor)
-
-    def dep_point_tool(self, coor):
-        _,ps_num = self.closest_set(coor)
-        if ps_num is None: return
-
-        ConstrDepPoint(self.constr, coor, ps_num)
-
     def scripted_tool(self, coor):
         obj = self.select_obj(coor)
         if obj is None: self.tool_data = []
-        else:
-            self.tool_data.append(obj)
-            type_list = tuple(type(x) for x in self.tool_data)
-            tool, _ = self.toolbox.tool_dict.get((self.tool_name, type_list), (None,None))
+        else: self.tool_data.append(obj)
+
+        type_list = tuple(
+            self.model.obj_types[self.step_env.local_to_global[x]]
+            for x in self.tool_data
+        )
+        tool = self.tool_dict.get((self.tool_name, type_list), None)
+        if tool is None: tool = self.tool_dict.get((self.tool_name, (float, float)+type_list), None)
+        if tool is None and len(self.tool_data) == 1:
+            tool = self.tool_dict.get((self.tool_name, (float, float)), None)
             if tool is not None:
-                print("APPLY")
-                print("tool_data: {}".format(' '.join(type_to_c[type(x)] for x in self.tool_data)))
-                ConstrTool(self.constr, tool, self.tool_data)
-
                 self.tool_data = []
-            else:
-                n = len(type_list)
-                if all(itype[:n] != type_list
-                       for itype in self.tool_itypes):
-                    self.tool_data = []
+                type_list = []
+        if tool is not None:
+            print("tool_data: {}".format(' '.join(type_to_c[x] for x in type_list)))
+            print("APPLY")
+            if isinstance(tool, MovableTool):
+                meta_args = tuple(coor)
+            else: meta_args = ()
+            step = ToolStep(tool, meta_args, self.tool_data)
 
-        print("tool_data: {}".format(' '.join(type_to_c[type(x)] for x in self.tool_data)))
+            try:
+                self.step_env.run_steps((step,), 1)
+                self.obj_to_step += [len(self.steps)]*len(step.tool.out_types)
+                self.steps.append(step)
+            except ToolError as e:
+                if isinstance(e, ToolErrorException): raise e.e
+                print("Construction failed: {}".format(e))
+                self.steps_refresh()
+
+            self.tool_data = []
+            type_list = []
+        else:
+            n = len(type_list)
+            if all(itype[:n] != type_list
+                   for itype in self.tool_itypes):
+                self.tool_data = []
+                type_list = []
+
+        print("tool_data: {}".format(' '.join(type_to_c[x] for x in type_list)))
 
     def move_tool(self, coor):
         _,p = self.closest_point(coor)
         if p is None:
             tool_data = None
             print("No point under cursor")
-        step_i,_ = self.constr.to_constr_index(p)
-        step = self.constr.steps[step_i]
-        if isinstance(step, ConstrMovable): self.tool_data = step
+            return
+        step_i = self.obj_to_step[p]
+        step = self.steps[step_i]
+        if isinstance(step.tool, MovableTool): self.tool_data = step
         else:
             self.tool_data = None
             print("Point is not movable")
 
     def hide_tool(self, coor):
+        TODO_later
         obj = self.select_obj(coor)
         if obj is None: return
         self.constr.hide(obj)
         self.darea.queue_draw()
 
     def objs_of_type(self, obj_type):
-        objs = (self.constr.num_model[n] for n in self.constr.visible_li)
-        objs = filter(lambda obj: obj is not None and isinstance(obj, obj_type), objs)
-        return objs
+        used = set()
+        for top_level_i, logic_i in enumerate(self.step_env.local_to_global):
+            if logic_i is None: continue
+            if not issubclass(self.model.obj_types[logic_i], obj_type): continue
+            logic_i = self.model.ufd.obj_to_root(logic_i)
+            if logic_i in used: continue
+            used.add(logic_i)
+            yield top_level_i, logic_i, self.model.num_model[logic_i]
 
     def points(self):
         return self.objs_of_type(Point)
@@ -244,8 +303,8 @@ class Drawing(Gtk.Window):
     def closest_obj_of_type(self, coor, obj_type):
 
         obj_dist = [
-            (obj.dist_from(coor), obj)
-            for obj in self.objs_of_type(obj_type)
+            (obj.dist_from(coor), ti)
+            for (ti,li,obj) in self.objs_of_type(obj_type)
         ]
         if len(obj_dist) == 0: return 0, None
         return min(obj_dist, key = lambda x: x[0])

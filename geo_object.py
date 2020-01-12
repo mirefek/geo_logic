@@ -204,7 +204,7 @@ def intersection_cc(circle1, circle2):
 
     return list(center + center_deviation)
 
-def intersection(point_set1, point_set2):
+def intersection_univ(point_set1, point_set2):
     if isinstance(point_set1, Line) and isinstance(point_set2, Line):
         return intersection_ll(point_set1, point_set2)
     elif isinstance(point_set1, Line) and isinstance(point_set2, Circle):

@@ -1,36 +1,40 @@
-* simple logic changes
-  * unit and unit circle (a prime number)
-  * midpoint as a basic operation
+Now
+* commands
+  * funkcionalita jedničky
+  * triggers
+    * follow uniquely dict, if possible
+    * set of different objects (possibly numericaly equal)
+    * order logically
+      * (1) unification on the uf_dict level
+      * (2) adding new relations
+      * (3) triggering triggers
+    * template compilation?
+  * better movable tools
+* Numerical models outside GUI
 
-* numerical model inside logic
-  * fraction elimination of angles
-    + numerical checking
-    -> angle_div not needed
-  * automatically applied uniqueness
-    * lines
-    * circles
-    * intersections (even of circles)
-      * even when the circle is not explicitely specified
-  * automatically applied other facts, e.g.:
-    * radius_dist
-    * point_on_line_bisector
-  * proof of universality of a construction
+current GUI
+* odbastlit výběr prvků pro konstrukci
+* hiding
 
+long term
+* sparse_elim: zahazovat duplicitní proměnné
+* skrývání objektů
 * visualisation of some facts
   * lies_on
   * equal angles
     * right angle (perpendicular)
     * parallel
 * selection of ambiguous (numerically equivalent) object
-* Numerical models outside GUI
   * Lemma proven for a special case can be used in general
     * possible cheating:
       * equilateral_aa -> ss can be used
         for proving that C is a midpoint of AB, if A,B,C are collinear
 	and it is checked numerically
-  * GUI <-> file (save / load)
-  * in composite tools: distinguish steps that
-    * can fail (assumptions)
-    * that can numerically fail (proof steps)
-    * and that should not fail (conclusions)
-* gamification -- problem format, given goal, detection of solution
+* GUI <-> file (save / load)
+* in composite tools: distinguish steps that
+  * can fail (assumptions)
+  * that can numerically fail (proof steps)
+  * and that should not fail (conclusions)
+
+Gamification
+* problem format, given goal, detection of solution
