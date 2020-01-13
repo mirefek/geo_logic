@@ -5,7 +5,7 @@ import primitive_constr
 import primitive_pred
 from itertools import product
 
-def angle_const(x): return np.pi*(x%1)
+def angle_const(x): return float(x%1)
 def angle_postulate(model, *args): model.add_angle_equation(*args)
 def angle_check(model, *args): return model.check_angle_equation(*args)
 
@@ -36,35 +36,38 @@ def make_primitive_tool_dict():
         for in_types in intypes_iter(f):
             if name == "lies_on": willingness = 0
             else: willingness = 1
-            d[name, in_types] = PrimitivePred(f, in_types, willingness = willingness)
+            d[name, in_types] = PrimitivePred(f, in_types, name = name, willingness = willingness)
 
     # load constructions and movable tools
-    for name, f in primitive_constr.__dict__.items():
-        if not callable(f) or name.startswith('_') or name in geo_object.__dict__:
+    for fname, f in primitive_constr.__dict__.items():
+        if not callable(f) or fname.startswith('_') or fname in geo_object.__dict__:
             continue
         out_type = f.__annotations__['return']
         for in_types in intypes_iter(f):
-            if name in ("intersection_remoter", "intersection0") and in_types[:2] == (Line, Line):
+            if fname in ("intersection_remoter", "intersection0") and in_types[:2] == (Line, Line):
                 continue
             out_types = (out_type,)
             if in_types[:2] == (float, float):
-                tool = MovableTool(f, in_types[2:], out_types)
-                d[name, in_types] = tool
-                if name == "point_on":
+                name = fname
+                tool = MovableTool(f, in_types[2:], out_types, name = name)
+                if fname == "point_on":
                     tool.add_effect(d["lies_on", out_types+in_types[2:]])
             else:
-                d["prim__"+name, in_types] = PrimitiveConstr(f, in_types, out_types)
+                name = "prim__"+fname
+                tool = PrimitiveConstr(f, in_types, out_types, name = name)
+
+            d[name, in_types] = tool
 
     # dimension tools
-    d["angle_compute"] = DimCompute(Angle, angle_const, angle_postulate)
-    d["ratio_compute"] = DimCompute(Ratio, ratio_const, ratio_postulate)
-    d["angle_pred"] = DimPred(Angle, angle_postulate, angle_check)
-    d["ratio_pred"] = DimPred(Ratio, ratio_postulate, ratio_check)
+    DimCompute(Angle, angle_const, angle_postulate, "angle_compute", d)
+    DimCompute(Ratio, ratio_const, ratio_postulate, "ratio_compute", d)
+    DimPred(Angle, angle_postulate, angle_check, "angle_pred", d)
+    DimPred(Ratio, ratio_postulate, ratio_check, "ratio_pred", d)
 
     # equality tool
     eq_tool = EqualObjects()
     for t in (Point, Line, Circle, Angle, Ratio):
-        d["==", (t,t)] = eq_tool
+        d[eq_tool.name, (t,t)] = eq_tool
 
     return d
 

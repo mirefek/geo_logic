@@ -212,8 +212,8 @@ class AngleChasing:
             assert(coef.denominator == 1)
             num_val += self.value[v] * coef.numerator
 
-        num_val += float(frac_offset)*pi
-        num_val = (num_val+1) % pi - 1
+        num_val += float(frac_offset)
+        num_val = (num_val+0.5) % 1 - 0.5
         return eps_identical(num_val, 0)
 
     def postulate(self, equation, frac_offset):
@@ -241,8 +241,7 @@ class AngleChasing:
 
             # find fractional difference between x,y
 
-            frac_dist_f = (self.value[y] - self.value[x]) / pi
-            numer_f = frac_dist_f * denom + 0.5
+            numer_f = (self.value[y] - self.value[x]) * denom + 0.5
             numer = int(floor(numer_f)) % denom
             numer_f = numer_f % denom - 0.5
             assert(eps_identical(numer, numer_f))

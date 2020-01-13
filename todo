@@ -1,6 +1,5 @@
 Now
 * commands
-  * funkcionalita jedničky
   * triggers
     * follow uniquely dict, if possible
     * set of different objects (possibly numericaly equal)
@@ -9,12 +8,6 @@ Now
       * (2) adding new relations
       * (3) triggering triggers
     * template compilation?
-  * better movable tools
-* Numerical models outside GUI
-
-current GUI
-* odbastlit výběr prvků pro konstrukci
-* hiding
 
 long term
 * sparse_elim: zahazovat duplicitní proměnné
@@ -31,10 +24,6 @@ long term
         for proving that C is a midpoint of AB, if A,B,C are collinear
 	and it is checked numerically
 * GUI <-> file (save / load)
-* in composite tools: distinguish steps that
-  * can fail (assumptions)
-  * that can numerically fail (proof steps)
-  * and that should not fail (conclusions)
 
 Gamification
 * problem format, given goal, detection of solution

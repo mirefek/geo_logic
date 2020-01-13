@@ -26,10 +26,11 @@ class ToolErrorException(ToolError):
         self.e = e
 
 class Tool:
-    def __init__(self, meta_types, arg_types, out_types):
+    def __init__(self, meta_types, arg_types, out_types, name):
         self.meta_types = meta_types
         self.arg_types = arg_types
         self.out_types = out_types
+        self.name = name
     #def run(self, meta_args, obj_args, model, strictness):
         # strictness: 0 = postulate, 1 = benevolent to coexact, 2 = everything must be proved
 
@@ -48,8 +49,8 @@ class Tool:
         raise Exception("Not implemented")
 
 class MovableTool(Tool):
-    def __init__(self, num_eval, arg_types, out_types):
-        Tool.__init__(self, (float, float), arg_types, out_types)
+    def __init__(self, num_eval, arg_types, out_types, name):
+        Tool.__init__(self, (float, float), arg_types, out_types, name)
         self.num_eval = num_eval
         self.effects = []
 
@@ -69,9 +70,9 @@ class MovableTool(Tool):
         return out
 
 class EqualObjects(Tool):
-    def __init__(self, willingness = 0):
+    def __init__(self, willingness = 0, name = "=="):
         self.willingness = willingness
-        Tool.__init__(self, (), None, ())
+        Tool.__init__(self, (), None, (), name)
 
     def run(self, meta_args, obj_args, model, strictness):
         assert(len(meta_args) == 0)
@@ -84,12 +85,12 @@ class EqualObjects(Tool):
         else: # check
             if model.check_equal(a,b): return ()
             else:
-                #print('not provably equal', a, b)
+                print('not provably equal', a, b)
                 raise ToolErrorLog()
 
 class CachedTool:
-    def __init__(self, arg_types, out_types):
-        Tool.__init__(self, (), arg_types, out_types)
+    def __init__(self, arg_types, out_types, name):
+        Tool.__init__(self, (), arg_types, out_types, name)
         self.symmetries = []
     def add_symmetry(self, perm):
         perm = tuple(perm)
@@ -122,20 +123,21 @@ class CachedTool:
         raise Exception("Not implemented")
 
 class PrimitivePred(CachedTool):
-    def __init__(self, num_check, arg_types, willingness = 0):
-        CachedTool.__init__(self, arg_types, ())
+    def __init__(self, num_check, arg_types, name, willingness = 0):
+        CachedTool.__init__(self, arg_types, (), name)
         self.willingness = willingness
         self.num_check = num_check
 
     def run_no_cache(self, args, model, strictness):
         num_args = tuple(model.num_model[arg] for arg in args)
         if not self.num_check(*num_args): raise ToolErrorNum()
+        elif strictness > self.willingness: raise ToolErrorLog()
         else: return ()
 
 # almost the same as movable tool, just with cache
 class PrimitiveConstr(CachedTool):
-    def __init__(self, num_eval, arg_types, out_types):
-        CachedTool.__init__(self, arg_types, out_types)
+    def __init__(self, num_eval, arg_types, out_types, name):
+        CachedTool.__init__(self, arg_types, out_types, name)
         self.num_eval = num_eval
 
     def run_no_cache(self, args, model, strictness):
@@ -149,11 +151,12 @@ class PrimitiveConstr(CachedTool):
         return model.add_objs(num_outs)
 
 class DimCompute(Tool):
-    def __init__(self, obj_type, const_num, postulate):
-        Tool.__init__(self, None, None, (obj_type,))
+    def __init__(self, obj_type, const_num, postulate, name, d = None):
+        Tool.__init__(self, None, None, (obj_type,), name)
         self.obj_type = obj_type
         self.const_num = const_num
         self.postulate = postulate
+        if d is not None: d[name] = self
     def run(self, meta_args, args, model, strictness):
         coefs = meta_args[1:]
         assert(len(coefs) == len(args))
@@ -171,12 +174,14 @@ class DimCompute(Tool):
         return (new_obj,)
 
 class DimPred(Tool):
-    def __init__(self, obj_type, postulate, check, willingness = 0):
+    def __init__(self, obj_type, postulate, check, name,
+                 d = None, willingness = 0):
         self.obj_type = obj_type
         self.postulate = postulate
         self.check = check
         self.willingness = willingness
-        Tool.__init__(self, None, None, ())
+        Tool.__init__(self, None, None, (), name)
+        if d is not None: d[name] = self
     def run(self, meta_args, args, model, strictness):
         coefs = meta_args[1:]
         assert(len(coefs) == len(args))

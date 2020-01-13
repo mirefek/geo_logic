@@ -570,12 +570,12 @@ circumcenter A:P B:P C:P -> O:P
   <- lies_on O a
   <- lies_on O b
   <- lies_on O c
+  <- eq_dist O A O B
+  <- eq_dist O A O C
   PROOF
   <- point_on_perp_bisector O B C
   <- point_on_perp_bisector O C A
   <- point_lies_on_perp_bisector A B O
-  <- eq_dist O A O B
-  <- eq_dist O A O C
 
 circumcenter_uq A:P B:P C:P O:P -> 
   <- eq_dist O A O B

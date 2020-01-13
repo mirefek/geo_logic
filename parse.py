@@ -2,6 +2,7 @@ from primitive_tools import make_primitive_tool_dict
 from fractions import Fraction
 from geo_object import *
 from tool_step import ToolStep, CompositeTool
+from logic_model import LogicModel
 
 type_names = {
     'P' : Point,
@@ -139,13 +140,16 @@ class Parser:
                 result.append(i)
 
             self.variables, self.var_num = var_after_assump
-            proof = [
-                self.parse_line(line)
-                for line in proof
-            ]
+            if proof is not None:
+                proof = [
+                    self.parse_line(line)
+                    for line in proof
+                ]
             arg_types = tuple(arg_types)
             out_types = tuple(out_types)
-            self.add_tool(name, CompositeTool(assump, impl, result, proof, arg_types, out_types))
+            self.add_tool(name, CompositeTool(
+                assump, impl, result, proof, arg_types, out_types, name
+            ))
 
         except Exception:
             print("l{}: Tool: {}".format(header_line, header))
@@ -164,6 +168,7 @@ class Parser:
                 elif line == "PROOF":
                     assert(mode in 'postulate')
                     mode = 'proof'
+                    proof = []
                 elif "<-" in line:
                     if mode == 'assume': assump.append((i,line))
                     elif mode == 'postulate': impl.append((i,line))
@@ -175,7 +180,7 @@ class Parser:
                     if mode != 'init': self.parse_tool(header, assump, impl, proof)
                     assump = []
                     impl = []
-                    proof = []
+                    proof = None
                     header = i,line
                     mode = 'assume'
             if mode != 'init': self.parse_tool(header, assump, impl, proof)
@@ -193,3 +198,14 @@ if __name__ == "__main__":
         if out_types == '': out_types = '()'
         print("{} : {} -> {}".format(name, in_types, out_types))
 
+    parser.parse_file("construction.gl")
+    model = LogicModel()
+
+    parser.tool_dict['line', (Point, Point)].add_symmetry((1,0))
+    parser.tool_dict['midpoint', (Point, Point)].add_symmetry((1,0))
+    parser.tool_dict['dist', (Point, Point)].add_symmetry((1,0))
+    parser.tool_dict['intersection', (Line, Line)].add_symmetry((1,0))
+    parser.tool_dict['intersection0', (Circle, Circle)].add_symmetry((1,0))
+    parser.tool_dict['intersection_remoter', (Circle, Circle, Point)].add_symmetry((1,0,2))
+
+    parser.tool_dict['_', ()].run((), (), model, 1)

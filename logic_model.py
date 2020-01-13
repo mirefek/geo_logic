@@ -32,10 +32,9 @@ class EmptyTriggers():
         return ()
 
 class LogicModel():
-    def __init__(self, num_model = None, triggers = None):
+    def __init__(self, triggers = None):
         self.obj_types = []
-        if num_model is None: num_model = dict()
-        self.num_model = num_model
+        self.num_model = []
         self.ratios = ElimMatrix()
         self.ratio_consts = dict()
         self.angles = AngleChasing()
@@ -45,8 +44,8 @@ class LogicModel():
         else: self.relstr = EmptyTriggers()
 
     def add_obj(self, num_obj):
-        index = len(self.obj_types)
-        self.num_model[index] = num_obj
+        index = len(self.num_model)
+        self.num_model.append(num_obj)
         t = type(num_obj)
         self.obj_types.append(t)
         if t == Angle: self.angles.add_var(index, num_obj.data)
@@ -137,14 +136,3 @@ class LogicModel():
             for d,p in primes
         )
         return equation
-
-    #def _rat_const_sr(self, frac):
-    #    return self._rat_const_sr_from_int(frac.numerator) \
-    #        - self._rat_const_sr_from_int(frac.denominator)
-    #def _rat_const_sr_from_int(self, n):
-    #    return SparseRow(
-    #        (self._get_ratio_const(d), p)
-    #        for (d,p) in prime_decomposition(n)
-    #    )
-    #def _get_ratio_const(self, p):
-    #    if p in self.ratio_consts

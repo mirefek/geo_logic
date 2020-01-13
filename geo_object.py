@@ -39,13 +39,17 @@ class NumObject(GeoObject):
 class Angle(NumObject):
     def __init__(self, data):
         self.data = data
+    def __repr__(self, other):
+        return "Angle({})".format(self.data)
     def identical_to(self, other):
-        return eps_identical((self.data - other.data + 1) % np.pi, 1)
+        return eps_identical((self.data - other.data + 0.5) % 1, 0.5)
 
 class Ratio(NumObject):
     def __init__(self, data):
         self.x, self.dim = data
         self.data = np.array(data)
+    def __repr__(self, other):
+        return "Ratio({}):dim{}".format(np.exp(self.x), self.dim)
     def __plus__(self, other):
         return Ratio(self.data + other.data)
 
@@ -53,6 +57,8 @@ class Point(GeoObject):
     def __init__(self, coor):
         self.a = np.array(coor)
         self.data = self.a
+    def __repr__(self):
+        return "Point({}, {})".format(*self.data)
 
     def dist_from(self, np_point):
         return np.linalg.norm(self.a - np_point)
@@ -64,6 +70,7 @@ class Point(GeoObject):
         cr.arc(self.a[0], self.a[1], 3/scale, 0, 2*np.pi)
         cr.set_source_rgb(0,0,0)
         cr.fill()
+
 
 class PointSet(GeoObject):
     def contains(self, np_point):
@@ -78,6 +85,8 @@ class Circle(PointSet):
         self.r = r
         self.r_squared = self.r**2
         self.data = np.concatenate([self.c, [r]])
+    def __repr__(self):
+        return "Circle(center = {}, r = {})".format(self.c, self.r)
 
     def dist_from(self, np_point):
         center_dist = np.linalg.norm(self.c - np_point)
@@ -97,6 +106,7 @@ class Circle(PointSet):
         cr.set_line_width(1/scale)
         cr.stroke()
 
+
 class Line(PointSet):
     def __init__(self, normal_vector, c): # [x,y] in Line([a,b],c) <=> xa + yb == c
         assert((normal_vector != 0).any())
@@ -109,6 +119,9 @@ class Line(PointSet):
         self.data = np.concatenate([normal_vector, [c]])
 
         #print("n={} c={}".format(self.n, self.c))
+
+    def __repr__(self, other):
+        return "Line(normal_vector = {}, c = {})".format(self.n, self.c)
 
     def get_endpoints(self, corners):
 

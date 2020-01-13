@@ -9,7 +9,7 @@ from tools import ToolError, ToolErrorException, MovableTool
 import primitive_pred
 from logic_model import LogicModel
 from collections import defaultdict
-from tool_step import ToolStep, ToolStepEnv
+from tool_step import ToolStep, ToolStepEnv, proof_checker
 
 def corners_to_rectangle(corners):
     size = corners[1] - corners[0]
@@ -86,6 +86,7 @@ class Drawing(Gtk.Window):
 
     def __init__(self):
         super(Drawing, self).__init__()
+        proof_checker.paralelize()
         self.shift = np.array([0,0])
         self.scale = 1
         self.mb_grasp = None
@@ -94,6 +95,7 @@ class Drawing(Gtk.Window):
         self.steps_refresh()
         self.key_to_tool = {
             'p': "perp_bisector",
+            '2': "midpoint",
             'f': "free_point",
             'l': "line",
             'c': "circle",
@@ -102,10 +104,17 @@ class Drawing(Gtk.Window):
             'i': "incircle",
             'e': "excircle",
             't': "double_dir_test",
+            'o': "circumcenter",
         }
 
         hbox = Gtk.HPaned()
         hbox.add(self.make_toolbox())
+        self.parser.parse_file("construction.gl")
+        loaded_tool = self.tool_dict['_', ()]
+        self.steps = loaded_tool.assumptions
+        for i,step in enumerate(self.steps):
+            self.obj_to_step += [i]*len(step.tool.out_types)
+        self.steps_refresh()
 
         self.darea = Gtk.DrawingArea()
         self.darea.connect("draw", self.on_draw)
@@ -158,6 +167,7 @@ class Drawing(Gtk.Window):
             self.darea.queue_draw()
 
     def steps_refresh(self):
+        proof_checker.reset()
         self.model = LogicModel()
         self.step_env = ToolStepEnv(self.model)
         self.step_env.run_steps(self.steps, 1, catch_errors = True)
@@ -202,13 +212,26 @@ class Drawing(Gtk.Window):
                 del self.obj_to_step[-len(step.tool.out_types):]
             self.steps_refresh()
             self.darea.queue_draw()
+        elif keyval_name == 'F2':
+            i = 0
+            for step in self.steps:
+                i2 = i+len(step.tool.out_types)
+                tokens = ['x{}'.format(x) for x in range(i,i2)]
+                tokens.append('<-')
+                tokens.append(step.tool.name)
+                tokens.extend(map(str, step.meta_args))
+                tokens.extend('x{}'.format(x) for x in step.local_args)
+                print('  '+' '.join(tokens))
+                i = i2
         elif keyval_name == "Escape":
+            #proof_checker.stop()
             Gtk.main_quit()
         elif keyval_name in self.key_to_tool:
             tool_name = self.key_to_tool[keyval_name]
             print(tool_name)
             self.tool_buttons[tool_name].set_active(True)
         else:
+            #print(keyval_name)
             return False
 
     def on_button_press(self, w, e):
