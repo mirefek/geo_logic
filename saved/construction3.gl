@@ -1,0 +1,46 @@
+_ ->
+  x0 <- free_point 256.10409491836054 307.96710156427173
+  x1 <- free_point 175.14495849609375 545.0175170898438
+  x2 <- free_point 485.668701171875 543.0820922851562
+  x3 x4 <- midsegment x0 x1 x2
+  x5 x6 <- midsegment x1 x0 x2
+  x7 x8 <- midsegment x2 x0 x1
+  x9 x10 x11 <- reflected_ortocenter x6 x4 x3
+  x12 <- line x3 x4
+  x13 <- free_point 223.4482823834484 465.55088836903553
+  x14 <- circle9 x0 x1 x2
+  x15 <- foot x0 x1 x2
+  x16 <- isosceles_trapezoid x10 x9 x13
+  x17 <- line x10 x16
+  x18 <- midpoint x15 x10
+  x19 x20 x21 <- trisides x0 x1 x2
+  <- line_uq x15 x6 x19
+  x22 <- altitude x6 x4 x3
+  <- perpline_uq x12 x9 x22
+  <- lies_on x10 x22
+  <- line_uq x6 x10 x22
+  <- perpendicular x15 x6 x6 x10
+  <- thales_rev x15 x10 x6
+  <- circumcenter_uq x10 x15 x6 x18
+  <- circumcircle_uq x10 x15 x6 x11
+  x23 <- foot x15 x17
+  <- line_uq x23 x10 x17
+  <- thales_rev x15 x10 x23
+  <- on_circle_by_dist x23 x11
+  x24 <- diacircle x15 x16
+  <- line_uq x23 x16 x17
+  <- thales_rev x15 x16 x23
+  <- on_circle_by_dist x23 x24
+  x25 <- line x16 x13
+  x26 <- intersection x25 x19
+  <- line_uq x16 x26 x25
+  <- parallel x19 x12
+  <- line_uq x15 x26 x19
+  <- perpendicular x15 x26 x26 x16
+  <- thales_rev x15 x16 x26
+  <- on_circle_by_dist x26 x24
+  x27 <- foot x13 x21
+  x28 <- foot x13 x20
+  x29 <- circumcircle x26 x27 x28
+  x30 <- line x27 x28
+  x31 <- line x23 x26

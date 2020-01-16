@@ -75,6 +75,13 @@ circle C:P r:D -> c:C
   <- == r r'
   <- == C C'
 
+circle_uq c:C ->
+  r <- radius_of c
+  O <- center_of c
+  c' <- circle O r
+  THEN
+  <- == c c'
+
 radius_dist X:P c:C -> 
   <- lies_on X c
   THEN
@@ -580,12 +587,12 @@ circumcenter A:P B:P C:P -> O:P
 circumcenter_uq A:P B:P C:P O:P -> 
   <- eq_dist O A O B
   <- eq_dist O A O C
-  O' <- circumcenter A B C
+  a <- perp_bisector B C
+  b <- perp_bisector C A
+  O' <- intersection a b
   THEN
   <- == O O'
   PROOF
-  a <- perp_bisector B C
-  b <- perp_bisector C A
   <- point_lies_on_perp_bisector B C O
   <- point_lies_on_perp_bisector C A O
   <- intersection_uq a b O
@@ -600,6 +607,24 @@ circumcircle A:P B:P C:P -> c:C
   PROOF
   <- on_circle_by_dist B c
   <- on_circle_by_dist C c
+
+circumcircle_uq A:P B:P C:P c:C ->
+  <- lies_on A c
+  <- lies_on B c
+  <- lies_on C c
+  a <- perp_bisector B C
+  b <- perp_bisector C A
+  O' <- intersection a b  
+  c' <- circle O' A
+  THEN
+  <- == c c'
+  PROOF
+  O <- center_of c
+  <- circle_uq c
+  <- radius_dist A c
+  <- radius_dist B c
+  <- radius_dist C c
+  <- circumcenter_uq A B C O
 
 copy_triangle A0:P B0:P C0:P A1:P B1:P -> C1:P
   alpha beta gamma <- tri_angles A0 B0 C0
@@ -1151,13 +1176,15 @@ reflect A:P l:L -> B:P
   M <- intersection p l
   c <- circle M A
   B <- intersection_remoter c p A
+  M' <- midpoint A B
   l' <- perp_bisector A B
   THEN
   <- == l l'
+  <- == M M'
   PROOF
   <- line_uq A B p
   <- radius_dist B c
-  <- point_lies_on_perp_bisector A B M
+  <- midpoint_uq A B M
   <- parallel_eq l' l M
 reflect A:P M:P -> B:P
   l <- line A M
@@ -1178,6 +1205,7 @@ isogonal_by_refl X:P A:P B:P C:P -> l:L
   l <- perp_bisector Xb Xc
   x <- line X A
   THEN
+  <- lies_on A l
   <- eq_angle b x l c
   PROOF
   <- point_on_perp_bisector A X Xb
@@ -1236,3 +1264,74 @@ inverse A:P c:C -> A':P
   d <- dist A C
   d' <- ratio_compute 1 r 2 d -1
   A' <- double_direction C dir d'
+
+collinear_by_angle A:P B:P C:P ->
+  ab <- line A B
+  bc <- line B C
+  ac <- line A C
+  ang <- angle A B C
+  <- angle_pred 0 ang 1
+  THEN
+  <- == ab ac
+  <- == ab bc
+  PROOF
+  <- parallel_eq ab bc B
+  <- line_uq A C ab
+
+isosceles_trapezoid A':P A:P B:P -> B':P
+  p <- perp_bisector A A'
+  B' <- reflect B p
+  THEN
+  dist_ab <- dist A B
+  dist_ab' <- dist A' B'
+  <- ratio_pred 1 dist_ab 1 dist_ab' -1
+  dir_ab <- direction_of A B
+  dir_ab' <- direction_of A' B'
+  dir_p <- direction_of p
+  <- angle_pred 0 dir_ab 1 dir_ab' 1 dir_p -2
+  PROOF
+  M <- midpoint A A'
+  <- point_on_perp_bisector M B B'
+  <- cong_sas_r A M B A' M B'
+
+reflected_concurrent A:P A':P B:P B':P -> X:P
+  p <- perp_bisector A A'
+  pb <- perp_bisector B B'
+  <- == p pb
+  ab <- line A B
+  ab' <- line A' B'
+  X <- intersection p ab
+  <- line_uq X A ab
+  <- line_uq X B ab
+  <- point_on_perp_bisector X A A'
+  <- point_on_perp_bisector X B B'
+  <- collinear_by_angle A' X B'
+  <- lies_on X ab'
+
+reflected_ortocenter x0:P x1:P x2:P -> x3:P x6:P x4:C
+  x3 <- orthocenter x0 x1 x2
+  x4 <- circumcircle x0 x1 x2
+  x5 <- line x1 x2
+  x6 <- reflect x3 x5
+  THEN
+  <- lies_on x6 x4
+  PROOF
+  x7 <- altitude x1 x0 x2
+  x8 <- altitude x2 x0 x1
+  <- line_uq x1 x3 x7
+  <- line_uq x2 x3 x8
+  <- point_on_perp_bisector x1 x3 x6
+  <- point_on_perp_bisector x2 x3 x6
+  <- angles_to_concyclic x1 x2 x0 x4 x6
+
+fake_double_dir A:P B:P C:P ->
+  THEN
+  d1 <- direction_of B A
+  d2 <- direction_of B C
+  <- angle_pred 0 d1 1 d2 2
+
+fake_sq_dist A:P B:P C:P ->
+  THEN
+  d1 <- dist B A
+  d2 <- dist B C
+  <- ratio_pred 1 d1 1 d2 2

@@ -1,29 +1,97 @@
 Now
-* commands
-  * triggers
+* num_check dim_pred
+* triggers
+  * optimalizace
+    * aplikovat jenom na viditelné objekty?
+    * numerický check, jestli dává smysl
+    * neprocházet zbytečně symetrické a duplicitní kombinace
+      v jednoznačnosti bodu / přímky / kružnice
     * follow uniquely dict, if possible
-    * set of different objects (possibly numericaly equal)
-    * order logically
-      * (1) unification on the uf_dict level
-      * (2) adding new relations
-      * (3) triggering triggers
-    * template compilation?
+    * ověřovat znovu jenom numerické předpoklady?
+  * order logically
+    * (1) unification on the uf_dict level
+    * (2) adding new relations
+    * (3) triggering triggers
 
-long term
-* sparse_elim: zahazovat duplicitní proměnné
+
+
+vymazlení GUI
+* výběr nejednoznačného objektu
+* prohlížení rovnic o úhlech a poměrech
 * skrývání objektů
 * visualisation of some facts
   * lies_on
   * equal angles
     * right angle (perpendicular)
     * parallel
-* selection of ambiguous (numerically equivalent) object
-  * Lemma proven for a special case can be used in general
-    * possible cheating:
-      * equilateral_aa -> ss can be used
-        for proving that C is a midpoint of AB, if A,B,C are collinear
-	and it is checked numerically
-* GUI <-> file (save / load)
+  * equal distances
+* zobrazovat slabě objekty na pozadí
+* logické setřidění nástrojů, nastavitelné klávesové zkratky
 
-Gamification
-* problem format, given goal, detection of solution
+dohledná doba
+* trasování důkazů
+* neopakovat ověřování důkazů při undo
+* mazání objektů
+* "level"
+* Lemma proven for a special case can be used in general
+  * possible cheating:
+    * equilateral_aa -> ss can be used
+      for proving that C is a midpoint of AB, if A,B,C are collinear
+      and it is checked numerically
+
+
+long term (v1.0)
+* sparse_elim: zahazovat duplicitní proměnné?
+* rozdělit logiku a automatizaci
+* sofistikovanější skripty
+  * skryté konstrukce
+  * neexpandující složené predikáty
+    * jen numericky ověřované numerické predikáty
+      (hodí se pro triggers)
+  * pouze numerické spuštění konstrukce
+  * náhradní důkazy
+  * umožnit prolínat důkaz se závěry (důkaz validity konstrukce)
+  * rigidní ověření elementárních faktů (topologická argumentace)
+    * case split
+    * důkaz sporem
+    * nerovnosti -> lineární programování?
+    * predikáty:
+      * ordered: P P P, P L P, P P L
+      * oriented_as jako vlastně predikát o směrech (Angle)
+    * axiomy / lemmata?
+      * COMPLEMENTARY: A == B, A not_eq B
+      * COMPLEMENTARY: A lies_on pc, A not_on pc
+      * INCOMPATIBLE:
+        oriented_as a0 a1 a2 b0 b1 b2
+        oriented_as a0 a1 a2 b0 b2 b1
+      * COVERING:
+        oriented_as a0 a1 a2 b0 b1 b2
+        oriented_as a0 a1 a2 b0 b2 b1
+	a0 == a1
+	a1 == a2
+	a2 == a0
+	b0 == b1
+	b1 == b2
+	b2 == b0
+      * COVERING:
+	A == B
+	B == C
+	C == A
+        l = line A B, C not_on l
+        ordered A B C
+	ordered A C B
+      * A not_on l, B lies_on l -> A != B
+      * ordered A p B -> A != B, intersecting (line A B) p
+      * A not_on (line B C) -> B not_on (line A C)
+      * M = midpoint A B -> ordered A M B
+      * ordered: tranzitivita + symetrie
+      * ordered A B C -> not_eq A B, not_eq A C
+      * ordered A p B -> not_on A p, not_eq A B
+      * ordered A B p -> not_on A p, not_on B p
+      * ordered A B C, B lies_on p, A not_on p -> diff_side A p C
+        + podobné analogické
+      * oriented_as: tranzitivita + symetrie
+      * A not_on p, B C D on p, ordered B C D
+      	-> oriented_as A B C A B D
+      * angle_pred a == (const != 0) + b -> not_eq a b
+      * (direction_of l1) != (direction_of l2) -> intersecting l1, l2

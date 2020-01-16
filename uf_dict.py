@@ -55,41 +55,40 @@ class UnionFindDict:
         return result
 
     def multi_glue(self, *pairs):
-        with StopWatch('uf_dict glue'):
-            changed = []
-            to_glue = list(pairs)
-            while to_glue:
-                n1, n2 = to_glue.pop()
-                n1, n2 = map(self.obj_to_root, (n1, n2))
-                if n1 == n2: continue
+        changed = []
+        to_glue = list(pairs)
+        while to_glue:
+            n1, n2 = to_glue.pop()
+            n1, n2 = map(self.obj_to_root, (n1, n2))
+            if n1 == n2: continue
 
-                c1, c2 = [
-                    len(self.obj_to_children[n]) + len(self.obj_to_keys[n])
-                    for n in (n1, n2)
-                ]
-                if c1 < c2: n1, n2 = n2, n1
+            c1, c2 = [
+                len(self.obj_to_children[n]) + len(self.obj_to_keys[n])
+                for n in (n1, n2)
+            ]
+            if c1 < c2: n1, n2 = n2, n1
 
-                changed.append((n1, n2))
-                self.obj_to_root_d[n2] = n1
-                children1 = self.obj_to_children[n1]
-                children2 = self.obj_to_children[n2]
-                for child in children2:
-                    self.obj_to_root_d[child] = n1
-                children1.update(children2)
-                children1.add(n2)
-                children2.clear()
-                #print("{} : {}".format(n2, self.obj_to_keys[n2]))
-                for key in tuple(self.obj_to_keys[n2]):
-                    label, args = key
-                    vals = self._data_remove(label, args)
-                    args, vals = map(self.tup_to_root, (args, vals))
-                    ori_val = self.get(label, args)
-                    if ori_val is not None:
-                        assert(len(vals) == len(ori_val))
-                        to_glue.extend(zip(vals, ori_val))
-                    else: self._data_add(label, args, vals)
+            changed.append((n1, n2))
+            self.obj_to_root_d[n2] = n1
+            children1 = self.obj_to_children[n1]
+            children2 = self.obj_to_children[n2]
+            for child in children2:
+                self.obj_to_root_d[child] = n1
+            children1.update(children2)
+            children1.add(n2)
+            children2.clear()
+            #print("{} : {}".format(n2, self.obj_to_keys[n2]))
+            for key in tuple(self.obj_to_keys[n2]):
+                label, args = key
+                vals = self._data_remove(label, args)
+                args, vals = map(self.tup_to_root, (args, vals))
+                ori_val = self.get(label, args)
+                if ori_val is not None:
+                    assert(len(vals) == len(ori_val))
+                    to_glue.extend(zip(vals, ori_val))
+                else: self._data_add(label, args, vals)
 
-            return changed
+        return changed
 
     def __contains__(self, key):
         return self.tup_to_root(key) in self.data

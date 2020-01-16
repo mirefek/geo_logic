@@ -1,10 +1,11 @@
 from collections import defaultdict
+from stop_watch import StopWatch
 
 class RelStr:
     def __init__(self):
-        self.t_to_data = defaultdict(set)  # t -> [x1,x2,...,xn]
-        self.tobj_to_nb = defaultdict(set) # t,xi,i -> [x1,x2,...,xn]
-        self.obj_to_ti = defaultdict(set)   # xi -> t,i
+        self.t_to_data = defaultdict(set)  # t -> set of tuples(x1,x2,...,xn)
+        self.tobj_to_nb = defaultdict(set) # t,xi,i -> set of tuples(x1,x2,...,xn)
+        self.obj_to_ti = defaultdict(set)   # xi -> set of pairs t,i
 
     def add_rel(self, t, data):
         if data in self.t_to_data[t]: return False
@@ -14,14 +15,46 @@ class RelStr:
             self.obj_to_ti[x].add((t,i))
         return True
 
-    def discard_node(self, obj):
-        removed_edges = []
+    def check_consistency(self):
+        test_tobj_to_nb = defaultdict(set)
+        test_obj_to_ti = defaultdict(set)
+        for t, edges in self.t_to_data.items():
+            for edge in edges:
+                for i,x in enumerate(edge):
+                    test_obj_to_ti[x].add((t,i))
+                    test_tobj_to_nb[t,x,i].add(edge)
+
+        test_tobj_to_nb2 = dict(
+            (key, s)
+            for (key, s) in self.tobj_to_nb.items()
+            if s
+        )
+        test_obj_to_ti2 = dict(
+            (key, s)
+            for (key, s) in self.obj_to_ti.items()
+            if s
+        )
+        assert(test_tobj_to_nb == test_tobj_to_nb2)
+        objs = set(test_obj_to_ti.keys()) | set(test_obj_to_ti2.keys())
+        for obj in objs:
+            s = test_obj_to_ti[obj]
+            s2 = test_obj_to_ti2.get(obj, set())
+            assert(s <= s2)
+
+    def discard_node(self, obj, store_disc_edges = None):
         for t,i in self.obj_to_ti[obj]:
-            removed_edges.extend(self.tobj_to_nb[t,obj,i])
-            t_to_data[t].difference_update(edge)
-            del self.tobj_to_nb[t,obj,i]
+            edges = self.tobj_to_nb.pop((t,obj,i))
+            self.t_to_data[t].difference_update(edges)
+            for edge in edges:
+                for i2,obj2 in enumerate(edge):
+                    if obj2 != obj:
+                        self.tobj_to_nb[t,obj2,i2].discard(edge)
+            if store_disc_edges is not None:
+                store_disc_edges.extend(
+                    (t, data)
+                    for data in edges
+                )
         del self.obj_to_ti[obj]
-        return removed_edges
 
     def copy(self):
         res = Relstr()
@@ -175,10 +208,11 @@ class PartialHomo:
         return True
 
     def run_trigger(self, cmd, to_run_list):
-        while True:
-            if self.is_full():
-                to_run_list.append((cmd, self.x_dto_y))
-            if not self.search(): return
+        with StopWatch('trigger {}'.format(cmd.__name__)):
+            while True:
+                if self.is_full():
+                    to_run_list.append((cmd, dict(self.x_dto_y)))
+                if not self.search(): return
 
 class TriggerEnv:
     def __init__(self):
@@ -218,19 +252,10 @@ class TriggerEnv:
     def get_edge_labels(self):
         return set(self.t_trigger.keys())
 
-class RelstrEnvBase:
-    def add(self, *args):
-        pass
-    def run_triggers(self):
-        pass
-    def discard_node(self, *args):
-        return ()
-
-class RelstrEnv:
-    def __init__(self, triggers, logic):
+class RelStrEnv:
+    def __init__(self, triggers):
         self.relstr = RelStr()
         self.triggers = triggers
-        self.logic = logic
         self.edge_labels = triggers.get_edge_labels()
         self.to_run = []
         self.discarded = set()
@@ -239,17 +264,23 @@ class RelstrEnv:
     def add(self, edge_label, data):
         if edge_label not in self.edge_labels: return
         if self.relstr.add_rel(edge_label, data):
-            self.to_run.extend(
-                self.triggers.edge_added(self.relstr, edge_label, data, self.to_run)
-            )
+            self.triggers.edge_added(self.relstr, edge_label, data, self.to_run)
+
     def run_triggers(self):
         if self.triggers_running: return
         self.triggers_running = True
         while self.to_run:
             action, x_to_y = self.to_run.pop()
             if any(y in self.discarded for y in x_to_y.values()): continue
-            action.run(self.logic)
+            action(x_to_y)
         self.triggers_running = False
-    def discard_node(self, n):
+
+    def discard_node(self, n, store_disc_edges = None):
         self.discarded.add(n)
-        return self.relstr.discard_node(n)
+        self.relstr.discard_node(n, store_disc_edges)
+
+    def glue_nodes(self, glue_dict):
+        disc_edges = []
+        for src in glue_dict.keys(): self.discard_node(src, disc_edges)
+        for t,data in disc_edges:
+            self.add(t, tuple(glue_dict.get(x, x) for x in data))

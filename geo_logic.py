@@ -1,6 +1,6 @@
 import gi
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, Gdk
+from gi.repository import Gtk, Gdk, GLib
 import cairo
 import numpy as np
 from geo_object import *
@@ -10,6 +10,9 @@ import primitive_pred
 from logic_model import LogicModel
 from collections import defaultdict
 from tool_step import ToolStep, ToolStepEnv, proof_checker
+from file_chooser import select_file_open, select_file_save
+from relstr import TriggerEnv, RelStr
+from stop_watch import print_times
 
 def corners_to_rectangle(corners):
     size = corners[1] - corners[0]
@@ -86,34 +89,39 @@ class Drawing(Gtk.Window):
 
     def __init__(self):
         super(Drawing, self).__init__()
-        proof_checker.paralelize()
         self.shift = np.array([0,0])
         self.scale = 1
         self.mb_grasp = None
         self.steps = []
         self.obj_to_step = []
-        self.steps_refresh()
         self.key_to_tool = {
             'p': "perp_bisector",
             '2': "midpoint",
             'f': "free_point",
             'l': "line",
             'c': "circle",
+            'C': "compass",
             'x': "intersection0",
             '9': "circle9",
             'i': "incircle",
             'e': "excircle",
-            't': "double_dir_test",
             'o': "circumcenter",
+            'X': "intersection_remoter",
+            'd': "point_on",
+            'question': "lies_on",
+            'exclam': "line_uq",
+            '1': "radius_dist",
+            '2': "on_circle_by_dist",
+            '3': "cong_sss",
+            '4': "collinear_by_angle",
+            't': "circumcircle_uq",
         }
+        self.default_fname = None
 
         hbox = Gtk.HPaned()
         hbox.add(self.make_toolbox())
-        self.parser.parse_file("construction.gl")
-        loaded_tool = self.tool_dict['_', ()]
-        self.steps = loaded_tool.assumptions
-        for i,step in enumerate(self.steps):
-            self.obj_to_step += [i]*len(step.tool.out_types)
+
+        self.triggers = self.make_triggers()
         self.steps_refresh()
 
         self.darea = Gtk.DrawingArea()
@@ -123,7 +131,11 @@ class Drawing(Gtk.Window):
                               Gdk.EventMask.SCROLL_MASK |
                               Gdk.EventMask.BUTTON1_MOTION_MASK |
                               Gdk.EventMask.BUTTON2_MOTION_MASK )
-        hbox.add(self.darea)
+        self.darea_vbox = Gtk.VBox()
+        self.darea_vbox.add(self.darea)
+        self.progress_bar = Gtk.ProgressBar(show_text=False)
+        self.darea_vbox.pack_end(self.progress_bar, False, False, 0)
+        hbox.add(self.darea_vbox)
         self.add(hbox)
 
         self.darea.connect("button-press-event", self.on_button_press)
@@ -143,9 +155,120 @@ class Drawing(Gtk.Window):
         self.tool_name = "free_point"
         self.tool_itypes = self.name_to_itypes[self.tool_name]
 
+        def update_progress_bar(done, size):
+            if size == 0: self.progress_bar.set_fraction(0)
+            else: self.progress_bar.set_fraction(done / size)
+            return False
+        def update_progress_bar_idle(done, size):
+            GLib.idle_add(update_progress_bar, done, size)
+        proof_checker.paralelize(progress_hook = update_progress_bar_idle)
+
+    def load_file(self, fname):
+        if fname is None: return
+        self.default_fname = fname
+        self.parser.parse_file(fname)
+        loaded_tool = self.tool_dict['_', ()]
+        del self.tool_dict['_', ()]
+        self.steps = loaded_tool.assumptions
+        self.obj_to_step = []
+        for i,step in enumerate(self.steps):
+            self.obj_to_step += [i]*len(step.tool.out_types)
+        self.steps_refresh()
+
+    def save_file(self, fname):
+        if fname is None: return
+        self.default_fname = fname
+        with open(fname, 'w') as f:
+            f.write('_ ->\n')
+            i = 0
+            for step in self.steps:
+                i2 = i+len(step.tool.out_types)
+                tokens = ['x{}'.format(x) for x in range(i,i2)]
+                tokens.append('<-')
+                tokens.append(step.tool.name)
+                tokens.extend(map(str, step.meta_args))
+                tokens.extend('x{}'.format(x) for x in step.local_args)
+                f.write('  '+' '.join(tokens)+'\n')
+                i = i2
+
+    def make_triggers(self):
+        triggers = TriggerEnv()
+        lies_on_l = self.tool_dict['lies_on', (Point, Line)]
+        lies_on_c = self.tool_dict['lies_on', (Point, Circle)]
+        radius_of = self.tool_dict['radius_of', (Circle,)]
+        direction_of = self.tool_dict['direction_of', (Line,)]
+        center_of = self.tool_dict['center_of', (Circle,)]
+        dist_pp = self.tool_dict['dist', (Point, Point)]
+        radius_dist = self.tool_dict['radius_dist', (Point, Circle)]
+
+        p2l2 = RelStr()
+        p2l2.add_rel(lies_on_l, ('A','l'))
+        p2l2.add_rel(lies_on_l, ('A','m'))
+        p2l2.add_rel(lies_on_l, ('B','l'))
+        p2l2.add_rel(lies_on_l, ('B','m'))
+        def p2l2_trig(d):
+            A, B, l, m = d['A'], d['B'], d['l'], d['m']
+            if A == B or l == m: return
+            #print("p2l2_trig", A, B, l, m)
+            if not self.model.num_model[A].identical_to(self.model.num_model[B]):
+                #print("glue lines")
+                self.model.glue(l, m)
+            elif not self.model.num_model[l].identical_to(self.model.num_model[m]):
+                #print("glue points")
+                self.model.glue(A, B)
+        triggers.add(p2l2, p2l2_trig)
+
+        p3c2 = RelStr()
+        p3c2.add_rel(lies_on_c, ('A','b'))
+        p3c2.add_rel(lies_on_c, ('A','c'))
+        p3c2.add_rel(lies_on_c, ('B','b'))
+        p3c2.add_rel(lies_on_c, ('B','c'))
+        p3c2.add_rel(lies_on_c, ('C','b'))
+        p3c2.add_rel(lies_on_c, ('C','c'))
+        def p3c2_trig(d):
+            A, B, C, b, c = d['A'], d['B'], d['l'], d['m']
+            if A == B or B == C or C == A or l == m: return
+            #print("p2l2_trig", A, B, l, m)
+            nA, nB, nC = (self.model.num_model[x] for x in (A, B, C))
+            if not (A.identical_to(B) or A.identical_to(C) or B.identical_to(C)):
+                self.model.glue(b, c)
+        triggers.add(p3c2, p3c2_trig)
+
+        pal2 = RelStr()
+        pal2.add_rel(lies_on_l, ('A','l'))
+        pal2.add_rel(lies_on_l, ('A','m'))
+        pal2.add_rel(direction_of, ('l','d'))
+        pal2.add_rel(direction_of, ('m','d'))
+        def pal2_trig(d):
+            l, m = d['l'], d['m']
+            if l != m: self.model.glue(l, m)
+        triggers.add(pal2, pal2_trig)
+
+        on_circ = RelStr()
+        on_circ.add_rel(lies_on_c, ('A','c'))
+        on_circ.add_rel(radius_of, ('c','r'))
+        on_circ.add_rel(center_of, ('c','C'))
+        def on_circ_trig(d):
+            A, c = d['A'], d['c']
+            #print("on_circ_trig", A, c)
+            radius_dist.run((), (A, c), self.model, 1)
+        triggers.add(on_circ, on_circ_trig)
+
+        rad_dist = RelStr()
+        rad_dist.add_rel(radius_of, ('c','r'))
+        rad_dist.add_rel(center_of, ('c','C'))
+        rad_dist.add_rel(dist_pp, ('C','A','r'))
+        def rad_dist_trig(d):
+            c, r, C, A = d['c'], d['r'], d['C'], d['A']
+            #print("rad_dist_trig", c, r, C, A)
+            lies_on_c.run((), (A, c), self.model, 0)
+        triggers.add(rad_dist, rad_dist_trig)
+
+        return triggers
+
     def get_coor(self, e):
         return np.array([e.x, e.y])/self.scale - self.shift
-        
+
     def on_scroll(self,w,e):
         coor = self.get_coor(e)
         if e.direction == Gdk.ScrollDirection.DOWN: self.scale *= 0.9
@@ -168,7 +291,7 @@ class Drawing(Gtk.Window):
 
     def steps_refresh(self):
         proof_checker.reset()
-        self.model = LogicModel()
+        self.model = LogicModel(self.triggers)
         self.step_env = ToolStepEnv(self.model)
         self.step_env.run_steps(self.steps, 1, catch_errors = True)
 
@@ -194,11 +317,13 @@ class Drawing(Gtk.Window):
         keyval = e.keyval
         keyval_name = Gdk.keyval_name(keyval)
         #print(keyval_name)
+        ctrl = (e.state & Gdk.ModifierType.CONTROL_MASK)
         if keyval_name == 'm':
             self.tool = self.move_tool
             print("Move tool")
             self.tool_data = None
         elif keyval_name == 'h':
+            TODO
             self.tool = self.hide_tool
             print("Hide tool")
             self.tool_data = None
@@ -212,21 +337,21 @@ class Drawing(Gtk.Window):
                 del self.obj_to_step[-len(step.tool.out_types):]
             self.steps_refresh()
             self.darea.queue_draw()
-        elif keyval_name == 'F2':
-            i = 0
-            for step in self.steps:
-                i2 = i+len(step.tool.out_types)
-                tokens = ['x{}'.format(x) for x in range(i,i2)]
-                tokens.append('<-')
-                tokens.append(step.tool.name)
-                tokens.extend(map(str, step.meta_args))
-                tokens.extend('x{}'.format(x) for x in step.local_args)
-                print('  '+' '.join(tokens))
-                i = i2
         elif keyval_name == "Escape":
-            #proof_checker.stop()
+            print_times()
             Gtk.main_quit()
-        elif keyval_name in self.key_to_tool:
+        elif ctrl and keyval_name == 'o':
+            fname = select_file_open(self)
+            self.load_file(fname)
+            self.darea.queue_draw()
+        elif ctrl and keyval_name == 'S':
+            fname = select_file_save(self)
+            self.open_file(fname)
+        elif ctrl and keyval_name == 's':
+            fname = self.default_fname
+            if fname is None: fname = select_file_save(self)
+            self.save_file(fname)
+        elif not ctrl and keyval_name in self.key_to_tool:
             tool_name = self.key_to_tool[keyval_name]
             print(tool_name)
             self.tool_buttons[tool_name].set_active(True)
@@ -272,6 +397,7 @@ class Drawing(Gtk.Window):
                 self.step_env.run_steps((step,), 1)
                 self.obj_to_step += [len(self.steps)]*len(step.tool.out_types)
                 self.steps.append(step)
+                print("correct")
             except ToolError as e:
                 if isinstance(e, ToolErrorException): raise e.e
                 print("Construction failed: {}".format(e))

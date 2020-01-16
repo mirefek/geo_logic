@@ -2,7 +2,6 @@ from fractions import Fraction
 from tools import CachedTool, ToolError, DimCompute, DimPred, ToolErrorException
 from logic_model import LogicModel
 from geo_object import Point
-import time
 
 class ToolStep:
     __slots__ = ["tool", "meta_args", "local_args", "debug_msg"]
@@ -13,13 +12,6 @@ class ToolStep:
         else: self.meta_args = tuple(meta_args)
         self.local_args = tuple(local_args)
         self.debug_msg = debug_msg
-
-def proof_deep_len(steps):
-    deep_len = 1
-    for step in steps:
-        if isinstance(step.tool, CompositeTool) and step.tool.proof is not None:
-            deep_len += step.tool.deep_len
-    return deep_len
 
 class ToolStepEnv:
     def __init__(self, logic_model, ini_vars = ()):
@@ -49,9 +41,20 @@ class CompositeTool(CachedTool):
         self.result = result
         self.proof = proof
 
-        if proof is not None:
-            self.deep_len = \
-                proof_deep_len(implications) + proof_deep_len(proof)
+        self.deep_len_all = sum(
+            step.tool.deep_len_all
+            for step in assumptions
+            if isinstance(step.tool, CompositeTool)
+        )
+        if proof is None:
+            self.deep_len_proof = 0
+        else:
+            self.deep_len_proof = 1 + sum(
+                step.tool.deep_len_all
+                for step in implications + proof
+                if isinstance(step.tool, CompositeTool)
+            )
+            self.deep_len_all += self.deep_len_proof
 
     def run_no_cache(self, args, model, strictness):
         env = ToolStepEnv(model, args)
@@ -90,14 +93,20 @@ class CompositeTool(CachedTool):
 
 import threading
 from queue import Queue, Empty
+from collections import deque
+import time
 
 class ProofChecker:
     def __init__(self):
         self.t = threading.Thread(target=self.process, daemon = True)
         self.q = Queue()
-        self.to_check = []
+        self.stack = []
+        self.checked_num = 0
+        self.task_index = 0
+        self.tasks = []
 
-    def paralelize(self):
+    def paralelize(self, progress_hook = None):
+        self.progress_hook = progress_hook
         self.t.start()
     #def start(self):
     #    self.t.start()
@@ -112,7 +121,11 @@ class ProofChecker:
         if threading.current_thread() != self.t:
             self.q.put((tool, num_args))
         else:
-            self.to_check.append((tool, num_args))
+            self.stack.append((tool, num_args))
+            #print("  |{}+ adding {} [{}:{}]...".format(
+            #    '  '*len(self.stack), tool.name,
+            #    tool.deep_len_proof,tool.deep_len_all,
+            #))
 
     def reset(self):
         self.q.put((None, "reset"))
@@ -120,24 +133,52 @@ class ProofChecker:
     def read_queue(self, block):
         tool, args = self.q.get(block)
         if tool is not None:
-            self.to_check.append((tool, args))
+            self.tasks.append((tool, args))
+            #print("to_check", tool.name, tool.deep_len_proof)
             #print("from queue:", tool.name)
         elif args == "reset":
-            self.to_check = []
+            self.stack = []
+            self.tasks = []
+            self.task_index = 0
+            self.time = time.time()
+            self.checked_num = 0
+
+    def update_progress(self):
+        if self.progress_hook is None: return
+        remains = sum(tool.deep_len_proof for (tool,_) in self.stack + self.tasks[self.task_index:])
+        size = sum(tool.deep_len_proof for (tool,_) in self.tasks)
+        self.progress_hook(size - remains, size)
 
     def process(self):
+        sleepiness = 0
         while True:
             while not self.q.empty():
                 self.read_queue(False)
-            while not self.to_check: self.read_queue(True)
-            time.sleep(0.01) # prevent GUI from lagging
+            while not self.stack and self.task_index >= len(self.tasks):
+                self.task_index = 0
+                self.tasks = []
+                self.update_progress()
+                self.read_queue(True)
+            if not self.stack and self.task_index < len(self.tasks):
+                self.stack.append(self.tasks[self.task_index])
+                self.task_index += 1
 
-            tool, num_args = self.to_check.pop()
+            if sleepiness == 5:
+                sleepiness = 0
+                self.update_progress()
+                time.sleep(0.01) # prevent GUI from lagging
+            else: sleepiness += 1
+
+            tool, num_args = self.stack.pop()
             try:
-                #print("checking {} ...".format(tool.name))
+                self.checked_num += 1
                 tool.proof_check(num_args)
             except ToolError as e:
                 print("Proof check failed: {}".format(e))
-            if not self.to_check: print("DONE", tool.name)
+            if not self.stack and self.task_index == len(self.tasks):
+                print("DONE [{}:{}] {}".format(
+                    self.checked_num, sum(tool.deep_len_proof for (tool, _) in self.tasks),
+                    time.time() - self.time,
+                ))
 
 proof_checker = ProofChecker()

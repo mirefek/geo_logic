@@ -2,7 +2,8 @@
 Tool for euclidean geometry aware of logic
 
 ## Dependencies
-+ cairo
++ Python3
++ pycairo
 + pyGtk3
 
 ## Controls

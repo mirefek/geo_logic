@@ -3,6 +3,7 @@ from geo_object import Angle, Ratio
 from sparse_elim import SparseRow, EquationIndex, ElimMatrix, AngleChasing, equality_sr
 from uf_dict import UnionFindDict
 from fractions import Fraction
+from relstr import TriggerEnv, RelStrEnv
 
 def prime_decomposition(n):
     assert(n > 0)
@@ -23,14 +24,6 @@ def prime_decomposition(n):
     if n > 1: result.append((n, 1))
     return result
 
-class EmptyTriggers():
-    def run_triggers(self):
-        pass
-    def add(self, constr_id, args):
-        pass
-    def discard_node(self, x):
-        return ()
-
 class LogicModel():
     def __init__(self, triggers = None):
         self.obj_types = []
@@ -39,9 +32,9 @@ class LogicModel():
         self.ratio_consts = dict()
         self.angles = AngleChasing()
         self.ufd = UnionFindDict()
-        if triggers is not None:
-            self.relstr = TriggerRelstr(triggers, self)
-        else: self.relstr = EmptyTriggers()
+
+        if triggers is None: triggers = TriggerEnv()
+        self.relstr = RelStrEnv(triggers)
 
     def add_obj(self, num_obj):
         index = len(self.num_model)
@@ -93,8 +86,8 @@ class LogicModel():
                 assert(self.obj_types[a] == self.obj_types[b])
                 to_glue_elim.extend(self.ufd.glue(a, b))
             elif to_glue_elim:
-                dnodes_moved.append(b)
                 a,b = to_glue_elim.pop()
+                dnodes_moved.append(b)
                 na, nb = self.num_model[a], self.num_model[b]
                 assert(na == nb)
                 t = type(na)
@@ -111,12 +104,10 @@ class LogicModel():
                     )
             else: break
 
-        removed_edges = []
-        for x in dnodes_moved:
-            removed_edges.extend(self.relstr.discard_node(x))
-        for label, nodes in removed_edges:
-            nodes = self.ufd.tup_to_root(nodes)
-            self.relstr.add(label, nodes)
+        self.relstr.glue_nodes(dict(
+            (x, self.ufd.obj_to_root(x))
+            for x in dnodes_moved
+        ))
         self.relstr.run_triggers()
 
     def _make_ratio_equation(self, equation, frac_const = 1, new_const = True):
