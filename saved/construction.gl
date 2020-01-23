@@ -1,0 +1,9 @@
+_ ->
+  x0 <- free_point 227.33251953125 267.0816955566406
+  x1 <- free_point 213.17431640625 431.1785888671875
+  x2 <- free_point 475.8917236328125 429.10931396484375
+  x3 <- circle9 x0 x1 x2
+  x4 <- incircle x2 x0 x1
+  x5 <- excircle x1 x0 x2
+  x6 <- excircle x2 x0 x1
+  x7 <- excircle x0 x1 x2

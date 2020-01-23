@@ -1,0 +1,15 @@
+_ ->
+  x0 <- free_point 220.3328857421875 175.3681640625
+  x1 <- free_point 143.23553466796875 283.19873046875
+  x2 <- free_point 212.6192626953125 313.7845458984375
+  x3 <- free_point 298.0213623046875 290.93505859375
+  x4 x5 <- quadrilateral_PQ x0 x1 x2 x3
+  x6 <- miquel x0 x1 x2 x3
+  x7 <- circumcircle x3 x0 x4
+  x8 <- circumcircle x0 x1 x5
+  x9 <- opposite_point x0 x7
+  x10 <- opposite_point x0 x8
+  <- point_on_diacircle x6 x9 x0
+  <- point_on_diacircle x6 x10 x0
+  x11 <- line x9 x10
+  <- lies_on x6 x11

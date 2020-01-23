@@ -2,8 +2,9 @@
 Tool for euclidean geometry aware of logic
 
 ## Dependencies
++ Python3
++ pycairo
 + pyGtk3
-+ sortedcontainers
 
 ## Controls
 (the GUI is highly provisional so far)

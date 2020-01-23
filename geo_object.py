@@ -39,13 +39,17 @@ class NumObject(GeoObject):
 class Angle(NumObject):
     def __init__(self, data):
         self.data = data
+    def __repr__(self):
+        return "Angle({})".format(self.data)
     def identical_to(self, other):
-        return eps_identical((self.data - other.data + 1) % np.pi, 1)
+        return eps_identical((self.data - other.data + 0.5) % 1, 0.5)
 
 class Ratio(NumObject):
     def __init__(self, data):
         self.x, self.dim = data
         self.data = np.array(data)
+    def __repr__(self):
+        return "Ratio({}):dim{}".format(np.exp(self.x), self.dim)
     def __plus__(self, other):
         return Ratio(self.data + other.data)
 
@@ -53,17 +57,19 @@ class Point(GeoObject):
     def __init__(self, coor):
         self.a = np.array(coor)
         self.data = self.a
+    def __repr__(self):
+        return "Point({}, {})".format(*self.data)
 
     def dist_from(self, np_point):
         return np.linalg.norm(self.a - np_point)
 
     def draw(self, cr, corners, scale):
-        #cr.arc(self.a[0], self.a[1], 10, 0, 2*np.pi)
-        #cr.set_source_rgb(1,1,1)
-        #cr.fill()
         cr.arc(self.a[0], self.a[1], 3/scale, 0, 2*np.pi)
         cr.set_source_rgb(0,0,0)
         cr.fill()
+
+    def add_shadow_curve(self, cr, corners, scale):
+        cr.arc(self.a[0], self.a[1], 10/scale, 0, 2*np.pi)
 
 class PointSet(GeoObject):
     def contains(self, np_point):
@@ -78,6 +84,8 @@ class Circle(PointSet):
         self.r = r
         self.r_squared = self.r**2
         self.data = np.concatenate([self.c, [r]])
+    def __repr__(self):
+        return "Circle(center = {}, r = {})".format(self.c, self.r)
 
     def dist_from(self, np_point):
         center_dist = np.linalg.norm(self.c - np_point)
@@ -97,6 +105,7 @@ class Circle(PointSet):
         cr.set_line_width(1/scale)
         cr.stroke()
 
+
 class Line(PointSet):
     def __init__(self, normal_vector, c): # [x,y] in Line([a,b],c) <=> xa + yb == c
         assert((normal_vector != 0).any())
@@ -109,6 +118,9 @@ class Line(PointSet):
         self.data = np.concatenate([normal_vector, [c]])
 
         #print("n={} c={}".format(self.n, self.c))
+
+    def __repr__(self):
+        return "Line(normal_vector = {}, c = {})".format(self.n, self.c)
 
     def get_endpoints(self, corners):
 
@@ -169,7 +181,7 @@ def intersection_ll(line1, line2):
     matrix = np.stack((line1.n, line2.n))
     b = np.array((line1.c, line2.c))
     if abs(np.linalg.det(matrix)) < epsilon: return []
-    return [np.linalg.solve(matrix, b)]
+    return np.linalg.solve(matrix, b)
 
 def intersection_lc(line, circle):
     # shift circle to center
@@ -204,9 +216,9 @@ def intersection_cc(circle1, circle2):
 
     return list(center + center_deviation)
 
-def intersection(point_set1, point_set2):
+def intersection_univ(point_set1, point_set2):
     if isinstance(point_set1, Line) and isinstance(point_set2, Line):
-        return intersection_ll(point_set1, point_set2)
+        return [intersection_ll(point_set1, point_set2)]
     elif isinstance(point_set1, Line) and isinstance(point_set2, Circle):
         return intersection_lc(point_set1, point_set2)
     elif isinstance(point_set1, Circle) and isinstance(point_set2, Line):
@@ -214,3 +226,12 @@ def intersection(point_set1, point_set2):
     elif isinstance(point_set1, Circle) and isinstance(point_set2, Circle):
         result = intersection_cc(point_set1, point_set2)
         return result
+
+def intersecting_lc(l,c):
+    return eps_smaller(l.dist_from(c.c), c.r)
+def intersecting_cc(c1,c2):
+    dist = np.linalg.norm(c1.c - c2.c)
+    if not eps_smaller(dist, c1.r + c2.r): return False
+    if not eps_smaller(c1.r, dist + c2.r): return False
+    if not eps_smaller(c2.r, dist + c1.r): return False
+    return True

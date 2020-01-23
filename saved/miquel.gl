@@ -1,0 +1,25 @@
+_ ->
+  x0 <- free_point 226.4990234375 174.25936889648438
+  x1 <- free_point 149.1304931640625 273.3569030761719
+  x2 <- free_point 240.6124267578125 295.6327209472656
+  x3 <- free_point 330.215087890625 261.24407958984375
+  x4 x5 <- quadrilateral_PQ x0 x1 x2 x3
+  x6 <- miquel x0 x1 x2 x3
+  x7 <- line x0 x1
+  x8 <- line x0 x3
+  x9 <- line x3 x2
+  x10 <- line x2 x1
+  x11 <- perpline x7 x4
+  x12 <- perpline x8 x3
+  x13 <- perpline x7 x1
+  x14 <- perpline x8 x5
+  x15 <- intersection x12 x11
+  x16 <- intersection x14 x13
+  <- point_to_diacircle x4 x15 x0
+  <- point_to_diacircle x3 x15 x0
+  <- point_on_diacircle x6 x15 x0
+  <- point_to_diacircle x5 x16 x0
+  <- point_to_diacircle x1 x16 x0
+  <- point_on_diacircle x6 x16 x0
+  x17 <- line x15 x16
+  <- lies_on x6 x17
