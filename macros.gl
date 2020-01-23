@@ -1,0 +1,1016 @@
+circle C:P A:P -> w:C
+  w <- compass A C C
+  <- point_to_circle A w
+
+tri_sides A:P B:P C:P -> a:L b:L c:L
+  a <- line B C
+  b <- line C A
+  c <- line A B
+tri_angles A:P B:P C:P -> alpha:A beta:A gamma:A
+  alpha <- angle C A B
+  beta <- angle A B C
+  gamma <- angle B C A
+
+copy_triangle A0:P B0:P C0:P A1:P B1:P -> C1:P
+  alpha beta gamma <- tri_angles A0 B0 C0
+  dc1 <- direction_of A1 B1
+  da1 <- angle_compute 0 dc1 1 beta 1
+  db1 <- angle_compute 0 dc1 1 alpha -1
+  a1 <- line_with_direction B1 da1
+  b1 <- line_with_direction A1 db1
+  C1 <- intersection a1 b1
+  <- sim_aa A0 B0 C0 A1 B1 C1
+copy_triangle_r A0:P B0:P C0:P A1:P B1:P -> C1:P
+  alpha beta gamma <- tri_angles A0 B0 C0
+  c1 <- line A1 B1
+  dc1 <- direction_of A1 B1
+  da1 <- angle_compute 0 dc1 1 beta -1
+  db1 <- angle_compute 0 dc1 1 alpha 1
+  a1 <- line_with_direction B1 da1
+  b1 <- line_with_direction A1 db1
+  C1 <- intersection a1 b1
+  <- sim_aa_r A0 B0 C0 A1 B1 C1
+
+sim_sss A0:P B0:P C0:P A1:P B1:P C1:P -> 
+  <- oriented_as A0 B0 C0 A1 B1 C1
+  ra <- dist_ratio B0 C0 B1 C1
+  rb <- dist_ratio C0 A0 C1 A1
+  rc <- dist_ratio A0 B0 A1 B1
+  <- == ra rb
+  <- == ra rc
+  THEN
+  <- eq_angle C0 A0 B0 C1 A1 B1
+  <- eq_angle B0 C0 A0 B1 C1 A1
+  <- eq_angle A0 B0 C0 A1 B1 C1
+  PROOF
+  C1' <- copy_triangle A0 B0 C0 A1 B1
+  wA <- circle A1 C1
+  <- point_to_circle C1' wA
+  wB <- circle B1 C1
+  <- point_to_circle C1' wB
+  <- == C1 C1'
+sim_sas A0:P B0:P C0:P A1:P B1:P C1:P -> 
+  <- oriented_as A0 B0 C0 A1 B1 C1
+  ra <- dist_ratio B0 C0 B1 C1
+  rb <- dist_ratio C0 A0 C1 A1
+  rc <- dist_ratio A0 B0 A1 B1
+  <- == ra rc
+  <- eq_angle A0 B0 C0 A1 B1 C1
+  THEN
+  <- == rb ra
+  <- eq_angle C0 A0 B0 C1 A1 B1
+  <- eq_angle B0 C0 A0 B1 C1 A1
+  PROOF
+  C1' <- copy_triangle A0 B0 C0 A1 B1
+  lB <- line B1 C1
+  <- lies_on C1' lB
+  wB <- circle B1 C1
+  <- point_to_circle C1' wB
+  <- == C1 C1'
+sim_Ssa A0:P B0:P C0:P A1:P B1:P C1:P ->
+  <- oriented_as A0 B0 C0 A1 B1 C1
+  c <- dist A0 B0
+  a <- dist B0 C0
+  <- dim_less a c
+  ra <- dist_ratio B0 C0 B1 C1
+  rb <- dist_ratio C0 A0 C1 A1
+  rc <- dist_ratio A0 B0 A1 B1
+  <- == rc ra
+  <- eq_angle B0 C0 A0 B1 C1 A1
+  THEN
+  <- eq_angle A0 B0 C0 A1 B1 C1
+  <- eq_angle C0 A0 B0 C1 A1 B1
+  <- == ra rb
+  PROOF
+  A1' <- copy_triangle B0 C0 A0 B1 C1
+  lC <- line C1 A1
+  <- lies_on A1' lC
+  wB <- circle B1 A1
+  <- point_to_circle A1' wB
+  <- == A1 A1'
+
+sim_sss_r A0:P B0:P C0:P A1:P B1:P C1:P -> 
+  <- oriented_as A0 B0 C0 A1 C1 B1
+  ra <- dist_ratio B0 C0 B1 C1
+  rb <- dist_ratio C0 A0 C1 A1
+  rc <- dist_ratio A0 B0 A1 B1
+  <- == ra rb
+  <- == ra rc
+  THEN
+  <- eq_angle C0 A0 B0 B1 A1 C1
+  <- eq_angle A0 B0 C0 C1 B1 A1
+  <- eq_angle B0 C0 A0 A1 C1 B1
+  PROOF
+  C1' <- copy_triangle_r A0 B0 C0 A1 B1
+  wA <- circle A1 C1
+  <- point_to_circle C1' wA
+  wB <- circle B1 C1
+  <- point_to_circle C1' wB
+  <- == C1 C1'
+sim_sas_r A0:P B0:P C0:P A1:P B1:P C1:P -> 
+  <- oriented_as A0 B0 C0 A1 C1 B1
+  ra <- dist_ratio B0 C0 B1 C1
+  rb <- dist_ratio C0 A0 C1 A1
+  rc <- dist_ratio A0 B0 A1 B1
+  <- == ra rc
+  <- eq_angle A0 B0 C0 C1 B1 A1
+  THEN
+  <- == rb ra
+  <- eq_angle C0 A0 B0 B1 A1 C1
+  <- eq_angle B0 C0 A0 A1 C1 B1
+  PROOF
+  C1' <- copy_triangle_r A0 B0 C0 A1 B1
+  lB <- line B1 C1
+  <- lies_on C1' lB
+  wB <- circle B1 C1
+  <- point_to_circle C1' wB
+  <- == C1 C1'
+sim_Ssa_r A0:P B0:P C0:P A1:P B1:P C1:P ->
+  <- oriented_as A0 B0 C0 A1 C1 B1
+  c <- dist A0 B0
+  a <- dist B0 C0
+  <- dim_less a c
+  ra <- dist_ratio B0 C0 B1 C1
+  rb <- dist_ratio C0 A0 C1 A1
+  rc <- dist_ratio A0 B0 A1 B1
+  <- == rc ra
+  <- eq_angle B0 C0 A0 A1 C1 B1
+  THEN
+  <- eq_angle A0 B0 C0 C1 B1 A1
+  <- eq_angle C0 A0 B0 B1 A1 C1
+  <- == ra rb
+  PROOF
+  A1' <- copy_triangle_r B0 C0 A0 B1 C1
+  lC <- line C1 A1
+  <- lies_on A1' lC
+  wB <- circle B1 A1
+  <- point_to_circle A1' wB
+  <- == A1 A1'
+
+cong_sss A0:P B0:P C0:P A1:P B1:P C1:P -> 
+  <- oriented_as A0 B0 C0 A1 B1 C1
+  <- eq_dist A0 B0 A1 B1
+  <- eq_dist B0 C0 B1 C1
+  <- eq_dist C0 A0 C1 A1
+  THEN
+  <- eq_angle C0 A0 B0 C1 A1 B1
+  <- eq_angle A0 B0 C0 A1 B1 C1
+  <- eq_angle B0 C0 A0 B1 C1 A1
+  PROOF
+  <- sim_sss A0 B0 C0 A1 B1 C1
+cong_sas A0:P B0:P C0:P A1:P B1:P C1:P -> 
+  <- not_collinear A0 B0 C0
+  <- eq_dist A0 B0 A1 B1
+  <- eq_angle A0 B0 C0 A1 B1 C1
+  <- eq_dist B0 C0 B1 C1
+  THEN
+  <- eq_angle C0 A0 B0 C1 A1 B1
+  <- eq_dist C0 A0 C1 A1
+  <- eq_angle B0 C0 A0 B1 C1 A1
+  PROOF
+  <- sim_sas A0 B0 C0 A1 B1 C1
+cong_asa A0:P B0:P C0:P A1:P B1:P C1:P -> 
+  <- oriented_as A0 B0 C0 A1 B1 C1
+  <- eq_angle C0 A0 B0 C1 A1 B1
+  <- eq_dist A0 B0 A1 B1
+  <- eq_angle A0 B0 C0 A1 B1 C1
+  THEN
+  <- eq_dist B0 C0 B1 C1
+  <- eq_angle B0 C0 A0 B1 C1 A1
+  <- eq_dist C0 A0 C1 A1
+  PROOF
+  <- sim_aa A0 B0 C0 A1 B1 C1
+cong_Ssa A0:P B0:P C0:P A1:P B1:P C1:P -> 
+  <- oriented_as A0 B0 C0 A1 B1 C1
+  c <- dist A0 B0
+  a <- dist B0 C0
+  <- dim_less a c
+  <- eq_dist A0 B0 A1 B1
+  <- eq_dist B0 C0 B1 C1
+  <- eq_angle B0 C0 A0 B1 C1 A1
+  THEN
+  <- eq_angle A0 B0 C0 A1 B1 C1
+  <- eq_angle C0 A0 B0 C1 A1 B1
+  <- eq_dist C0 A0 C1 A1
+  PROOF
+  <- sim_Ssa A0 B0 C0 A1 B1 C1
+
+cong_sss_r A0:P B0:P C0:P A1:P B1:P C1:P -> 
+  <- oriented_as A0 B0 C0 A1 C1 B1
+  <- eq_dist A0 B0 A1 B1
+  <- eq_dist B0 C0 B1 C1
+  <- eq_dist C0 A0 C1 A1
+  THEN
+  <- eq_angle C0 A0 B0 B1 A1 C1
+  <- eq_angle A0 B0 C0 C1 B1 A1
+  <- eq_angle B0 C0 A0 A1 C1 B1
+  PROOF
+  <- sim_sss_r A0 B0 C0 A1 B1 C1
+cong_sas_r A0:P B0:P C0:P A1:P B1:P C1:P -> 
+  <- oriented_as A0 B0 C0 A1 C1 B1
+  <- eq_dist A0 B0 A1 B1
+  <- eq_angle A0 B0 C0 C1 B1 A1
+  <- eq_dist B0 C0 B1 C1
+  THEN
+  <- eq_angle C0 A0 B0 B1 A1 C1
+  <- eq_dist C0 A0 C1 A1
+  <- eq_angle B0 C0 A0 A1 C1 B1
+  PROOF
+  <- sim_sas_r A0 B0 C0 A1 B1 C1
+cong_asa_r A0:P B0:P C0:P A1:P B1:P C1:P -> 
+  <- not_collinear A0 B0 C0
+  <- eq_angle C0 A0 B0 B1 A1 C1
+  <- eq_dist A0 B0 A1 B1
+  <- eq_angle A0 B0 C0 C1 B1 A1
+  THEN
+  <- eq_dist B0 C0 B1 C1
+  <- eq_angle A0 B0 C0 C1 B1 A1
+  <- eq_dist C0 A0 C1 A1
+  PROOF
+  <- sim_aa_r A0 B0 C0 A1 B1 C1
+cong_Ssa_r A0:P B0:P C0:P A1:P B1:P C1:P -> 
+  <- oriented_as A0 B0 C0 A1 C1 B1
+  c <- dist A0 B0
+  a <- dist B0 C0
+  <- dim_less a c
+  <- eq_dist A0 B0 A1 B1
+  <- eq_dist B0 C0 B1 C1
+  <- eq_angle B0 C0 A0 A1 C1 B1
+  THEN
+  <- eq_angle A0 B0 C0 C1 B1 A1
+  <- eq_angle C0 A0 B0 B1 A1 C1
+  <- eq_dist C0 A0 C1 A1
+  PROOF
+  <- sim_Ssa_r A0 B0 C0 A1 B1 C1
+
+isosceles_aa A:P B:P C:P -> 
+  <- not_collinear A B C
+  <- eq_angle A B C B C A
+  THEN
+  <- eq_dist A B A C
+  PROOF
+  <- sim_aa_r C A B B A C
+equilateral_a A:P B:P C:P ->
+  <- not_collinear A B C
+  <- eq_angle A B C B C A
+  <- eq_angle A B C C A B
+  THEN
+  <- eq_dist A B A C
+  <- eq_dist A B B C
+  PROOF
+  <- sim_aa A B C B C A
+equilateral_s A:P B:P C:P ->
+  <- eq_dist A B A C
+  <- eq_dist A B B C
+  THEN
+  <- eq_angle A B C B C A
+  <- eq_angle A B C C A B
+  PROOF
+  <- sim_sss A B C B C A
+
+midpoint_uq M:P A:P B:P -> 
+  l <- line A B
+  <- lies_on M l
+  <- not_eq A B
+  <- eq_dist A M M B
+  M' <- midpoint A B
+  THEN
+  <- == M M'
+  PROOF
+  <- point_to_perp_bisector M A B
+
+parallel l0:L l1:L -> 
+  ang <- angle l0 l1
+  <- angle_pred 0 ang 1
+parallel l0:L A1:P B1:P -> 
+  ang <- angle l0 A1 B1
+  <- angle_pred 0 ang 1
+parallel A0:P B0:P l1:L -> 
+  ang <- angle A0 B0 l1
+  <- angle_pred 0 ang 1
+parallel A0:P B0:P A1:P B1:P -> 
+  ang <- angle A0 B0 A1 B1
+  <- angle_pred 0 ang 1
+
+paraline l:L A:P -> pa:L
+  dir <- direction_of l
+  pa <- line_with_direction A dir
+  THEN
+  <- parallel l pa
+  PROOF
+paraline X0:P X1:P A:P -> pa:L
+  l <- line X0 X1
+  pa <- paraline l A
+
+perpendicular l0:L l1:L ->
+  ang <- angle l0 l1
+  <- angle_pred -1/2 ang 1
+perpendicular l0:L A1:P B1:P ->
+  ang <- angle l0 A1 B1
+  <- angle_pred -1/2 ang 1
+perpendicular A0:P B0:P l1:L ->
+  ang <- angle A0 B0 l1
+  <- angle_pred -1/2 ang 1  
+perpendicular A0:P B0:P A1:P B1:P -> 
+  ang <- angle A0 B0 A1 B1
+  <- angle_pred -1/2 ang 1  
+
+foot A:P l:L -> F:P
+  p <- perpline l A
+  F <- intersection p l
+foot A:P X0:P X1:P -> F:P
+  l <- line X0 X1
+  F <- foot A l
+foot A:P w:C -> F:P
+  r <- radius_of w
+  O <- center_of w
+  dir <- half_direction O A
+  F <- double_direction O dir r
+  THEN
+  <- lies_on F w
+  PROOF
+  <- point_to_circle F w
+
+dist A:P l:L -> d:D
+  <- not_on A l
+  F <- foot A l
+  d <- dist A F
+dist l:L A:P -> d:D
+  d <- dist A l
+eq_dist A0:P l0:L A1:P l1:L ->
+  d0 <- dist A0 l0
+  d1 <- dist A1 l1
+  <- == d0 d1
+
+copy_vector A:P B:P C:P -> D:P
+  d <- dist A B
+  dir <- half_direction A B
+  D <- double_direction C dir d
+
+reflect A:P M:P -> B:P
+  B <- copy_vector A M M
+  M' <- midpoint A B
+  THEN
+  <- == M M'
+  PROOF
+  <- midpoint_uq M A B
+reflect A:P l:L -> B:P
+  M <- foot A l
+  B <- reflect A M
+  THEN
+  M' <- midpoint A B
+  l' <- perp_bisector A B
+  <- == M M'
+  <- == l l'
+  PROOF
+
+opposite_point A:P w:C -> B:P
+  <- lies_on A w
+  O <- center_of w
+  B <- reflect A O
+  THEN
+  <- lies_on B w
+  r <- radius_of w
+  d <- dist A O
+  <- == r d
+  PROOF
+  <- point_on_circle A w
+  <- point_to_circle B w
+
+isosceles_trapezoid A':P A:P B:P -> B':P
+  p <- perp_bisector A A'
+  B' <- reflect B p
+  THEN
+  <- eq_dist A B A' B'
+  dir_ab <- direction_of A B
+  dir_ab' <- direction_of A' B'
+  dir_p <- direction_of p
+  <- angle_pred 0 dir_ab 1 dir_ab' 1 dir_p -2
+  PROOF
+  M <- midpoint A A'
+  <- point_on_perp_bisector M B B'
+  <- cong_sas_r A M B A' M B'
+reflected_concurrent A:P A':P B:P B':P -> X:P
+  p <- perp_bisector A A'
+  pb <- perp_bisector B B'
+  <- == p pb
+  ab <- line A B
+  ab' <- line A' B'
+  X <- intersection p ab
+  <- point_on_perp_bisector X A A'
+  <- point_on_perp_bisector X B B'
+  <- lies_on X ab'
+
+midsegment A:P B:P C:P -> C':P B':P
+  C' <- midpoint A B
+  B' <- midpoint C A
+  THEN
+  <- parallel B C B' C'
+  r <- dist_ratio B' C' B C
+  <- ratio_pred 2 r 1
+  PROOF
+  <- sim_sas B A C C' A B'
+
+parallelogram_aa A:P B:P C:P D:P ->
+  <- not_collinear A B C
+  <- parallel A B C D
+  <- parallel B C D A
+  THEN
+  <- eq_dist A B C D
+  <- eq_dist B C D A
+  PROOF
+  <- cong_asa A C B C A D
+parallelogram_ss A:P B:P C:P D:P -> 
+  <- oriented_as A B C C D A
+  <- eq_dist A B C D
+  <- eq_dist B C D A
+  THEN
+  <- parallel A B C D
+  <- parallel B C D A
+  PROOF
+  <- cong_sss A B C C D A
+parallelogram_sa A:P B:P C:P D:P -> 
+  <- oriented_as A B C C D A
+  <- eq_dist A B C D
+  <- parallel A B C D
+  THEN
+  <- eq_dist B C D A
+  <- parallel B C D A
+  PROOF
+  <- cong_sas C A B A C D
+
+rectangle_axis A:P B:P C:P D:P -> l:L
+  <- perpendicular A B B C
+  <- perpendicular B C C D
+  <- perpendicular C D D A
+  M0 <- midpoint A B
+  M1 <- midpoint C D
+  l <- line M0 M1
+  THEN
+  l0 <- perp_bisector A B
+  l1 <- perp_bisector C D
+  <- == l0 l
+  <- == l1 l
+  PROOF
+  <- parallelogram_aa A B C D
+  <- parallelogram_sa M0 B C M1
+  <- perpendicular M0 M1 A B
+
+circumcenter A:P B:P C:P -> O:P
+  <- not_collinear A B C
+  a <- perp_bisector B C
+  b <- perp_bisector C A
+  c <- perp_bisector A B
+  w <- circumcircle A B C
+  O <- center_of w
+  THEN
+  <- lies_on O a
+  <- lies_on O b
+  <- lies_on O c
+  <- eq_dist O A O B
+  <- eq_dist O A O C
+  r <- radius_of w
+  <- eq_dist O A r
+  PROOF
+  <- point_on_circle A w
+  <- point_on_circle B w
+  <- point_on_circle C w
+  <- point_to_perp_bisector O A B
+  <- point_to_perp_bisector O B C
+  <- point_to_perp_bisector O C A
+
+cong_circumradius A0:P B0:P C0:P A1:P B1:P C1:P -> 
+  <- cong_sss A0 B0 C0 A1 B1 C1
+  w0 <- circumcircle A0 B0 C0
+  w1 <- circumcircle A1 B1 C1
+  r0 <- radius_of w0
+  r1 <- radius_of w1
+  THEN
+  <- == r0 r1
+  PROOF
+  O0 <- circumcenter A0 B0 C0
+  O1 <- copy_triangle A0 B0 O0 A1 B1
+  <- cong_sas O0 A0 C0 O1 A1 C1
+  w1' <- circle O1 A1
+  <- point_to_circle B1 w1'
+  <- point_to_circle C1 w1'
+
+circle_pos_of A:P w:C -> pos:A
+  <- lies_on A w
+  O <- center_of w
+  pos <- half_direction O A
+of_circle_pos pos:A w:C -> A:P
+  O <- center_of w
+  r <- radius_of w
+  A <- double_direction O pos r
+arc_length A:P B:P w:C -> al:A
+  pA <- circle_pos_of A w
+  pB <- circle_pos_of B w
+  al <- angle_compute 0 pA -1 pB 1
+eq_arcs A:P B:P C:P D:P w:C ->
+  AB <- arc_length A B w
+  CD <- arc_length C D w
+  <- == AB CD
+
+eq_arcs_to_eq_dist A:P B:P C:P D:P w:C ->
+  <- eq_arcs A B C D w
+  THEN
+  <- eq_dist A B C D
+  PROOF
+  <- point_on_circle A w
+  <- point_on_circle B w
+  <- point_on_circle C w
+  <- point_on_circle D w
+  O <- center_of w
+  <- cong_sas A O B C O D
+eq_dist_to_eq_arcs A:P B:P C:P D:P w:C ->
+  <- lies_on A w
+  <- lies_on B w
+  <- lies_on C w
+  <- lies_on D w
+  <- eq_dist A B C D
+  O <- center_of w
+  <- oriented_as O A B O C D
+  THEN
+  <- eq_arcs A B C D w
+  PROOF
+  <- point_on_circle A w
+  <- point_on_circle B w
+  <- point_on_circle C w
+  <- point_on_circle D w
+  <- cong_sss O A B O C D
+
+secant_direction A:P B:P w:C -> d:A
+  <- lies_on A w
+  <- lies_on B w
+  pa <- circle_pos_of A w
+  pb <- circle_pos_of B w
+  d <- direction_of A B
+  THEN
+  <- angle_pred 1/2 pa 1 pb 1 d -1
+  PROOF
+  O <- center_of w
+  <- point_on_circle A w
+  <- point_on_circle B w
+  <- isosceles_ss O A B
+
+inscribed_angle X:P Y:P Z:P -> ins_angle:A
+  w <- circumcircle X Y Z
+  C <- center_of w
+  ins_angle <- angle X Y Z
+  al <- arc_length X Z w
+  THEN
+  <- == ins_angle al
+  PROOF
+  _ <- secant_direction Y X w
+  _ <- secant_direction Y Z w
+
+diacircle A:P B:P -> w:C
+  M <- midpoint A B
+  w <- circle M A
+  THEN
+  <- lies_on A w
+  <- lies_on B w
+  PROOF
+  <- point_to_circle A w
+  <- point_to_circle B w
+
+point_on_diacircle X:P A:P B:P ->
+  <- not_eq A X
+  <- not_eq B X
+  c <- diacircle A B
+  <- lies_on X c
+  THEN
+  <- perpendicular A X X B
+  PROOF
+  _ <- inscribed_angle A X B
+
+point_to_diacircle X:P A:P B:P ->
+  <- perpendicular A X X B
+  M <- midpoint A B
+  w <- diacircle A B
+  THEN
+  <- lies_on X w
+  <- eq_dist M A M X
+  PROOF
+  _ _ <- midsegment A B X
+  <- point_on_perp_bisector M A X
+  <- point_to_circle X w
+
+is_tangent w:C l:L -> 
+  O <- center_of w
+  X <- foot O l
+  <- lies_on X w
+is_tangent l:L w:C ->
+  <- is_tangent w l
+
+touchpoint w:C l:L -> X:P
+  <- is_tangent w l
+  THEN
+  O <- center_of w
+  X <- foot O l
+  <- lies_on X l
+  PROOF
+touchpoint l:L w:C -> X:P
+  X <- touchpoint w l
+
+tangent_at A:P w:C -> t:L
+  <- lies_on A w
+  O <- center_of w
+  l <- line A O
+  t <- perpline l A
+  THEN
+  <- is_tangent w t
+  PROOF
+
+tangent0 A:P w:C -> l:L X:P
+  O <- center_of w
+  d <- diacircle A O
+  X <- intersection0 w d
+  l <- line A X
+  THEN
+  <- is_tangent l w
+  PROOF
+  <- point_on_diacircle X A O
+tangent1 A:P w:C -> l:L X:P
+  O <- center_of w
+  d <- diacircle A O
+  X <- intersection1 w d
+  l <- line A X
+  THEN
+  <- is_tangent l w
+  PROOF
+  <- point_on_diacircle X A O
+tangents A:P w:C -> t1:L X1:P t2:L X2:P
+  t1 X1 <- tangent0 A w
+  t2 X2 <- tangent1 A w
+tangent_closer A:P w:C P:P -> l:L X:P
+  O <- center_of w
+  d <- diacircle A O
+  X <- intersection_closer w d P
+  l <- line A X
+  THEN
+  <- is_tangent l w
+  PROOF
+  <- point_on_diacircle X A O
+tangent_remoter A:P w:C P:P -> l:L X:P
+  O <- center_of w
+  d <- diacircle A O
+  X <- intersection_remoter w d P
+  l <- line A X
+  THEN
+  <- is_tangent l w
+  PROOF
+  <- point_on_diacircle X A O
+
+concyclic A:P B:P C:P D:P ->
+  w <- circumcircle A B C
+  <- lies_on D w
+
+concyclic_to_angles X:P Y:P A:P B:P ->
+  <- concyclic X Y A B
+  THEN
+  <- eq_angle X A Y X B Y
+  PROOF
+  alpha <- inscribed_angle X A Y
+  beta <- inscribed_angle X B Y
+  <- == alpha beta
+angles_to_concyclic X:P Y:P A:P B:P -> 
+  <- eq_angle X A Y X B Y
+  THEN
+  <- concyclic X Y A B
+  PROOF
+  y <- line Y B
+  w <- circumcircle X Y A
+  B' <- intersection_remoter y w Y
+  <- concyclic_to_angles X Y A B'
+
+deltoid A:P B:P C:P D:P -> 
+  <- isosceles_ss A B D
+  <- eq_dist B C C D
+  THEN
+  <- eq_angle D A C C A B
+  <- eq_angle B C A A C D
+  <- perpendicular A C B D
+  PROOF
+  <- cong_sss_r D A C B A C
+chord_is_perp w0:C w1:C ->
+  X0 X1 <- intersections w0 w1
+  O0 <- center_of w0
+  O1 <- center_of w1
+  THEN
+  <- perpendicular O0 O1 X0 X1
+  PROOF
+  <- point_on_circle X0 w0
+  <- point_on_circle X0 w1
+  <- point_on_circle X1 w0
+  <- point_on_circle X1 w1
+  <- deltoid O0 X0 O1 X1
+
+angle_bisector_int A:P B:P C:P -> l:L
+  l1 <- line B A
+  l2 <- line B C
+  d1 <- half_direction B A
+  d2 <- half_direction B C
+  dir <- angle_compute 0 d1 1 d2 1
+  l <- line_with_direction B dir
+angle_bisector_ext A:P B:P C:P -> l:L
+  l1 <- line B A
+  l2 <- line B C
+  d1 <- half_direction A B
+  d2 <- half_direction B C
+  dir <- angle_compute 0 d1 1 d2 1
+  l <- line_with_direction B dir
+
+point_on_angle_bisector X:P l1:L l2:L ->
+  A <- intersection l1 l2
+  l <- line A X
+  <- eq_angle l1 l l l2
+  THEN
+  <- eq_dist X l1 X l2
+  PROOF
+  F1 <- foot X l1
+  F2 <- foot X l2
+  <- cong_asa_r A X F1 A X F2
+point_to_angle_bisector X:P l1:L l2:L ->
+  A <- intersection l1 l2
+  l <- line A X
+  <- eq_dist X l1 X l2
+  THEN
+  <- eq_angle l1 l l l2
+  PROOF
+  F1 <- foot X l1
+  F2 <- foot X l2
+  <- cong_Ssa_r A X F1 A X F2
+
+midpoint_op_arc A:P B:P C:P -> M:P
+  l <- angle_bisector_int A B C
+  w <- circumcircle A B C
+  M <- intersection_remoter l w B
+  THEN
+  <- eq_arcs A M M C w
+  <- eq_dist A M M C
+  PROOF
+  _ <- secant_direction B A w
+  _ <- secant_direction B M w
+  _ <- secant_direction B C w
+  <- eq_arcs_to_eq_dist A M M C w
+midpoint_arc A:P B:P C:P -> M:P
+  M_op <- midpoint_op_arc A B C
+  w <- circumcircle A B C
+  M <- opposite_point M_op w
+  l <- angle_bisector_ext A B C
+  THEN
+  <- eq_arcs A M M C w
+  <- eq_dist A M M C
+  <- lies_on M l
+  PROOF
+  _ <- secant_direction B A w
+  _ <- secant_direction B M w
+  _ <- secant_direction B C w
+  <- eq_arcs_to_eq_dist B M M C w
+
+incenter A:P B:P C:P -> I:P
+  <- not_collinear A B C
+  ia <- angle_bisector_int C A B
+  ib <- angle_bisector_int A B C
+  ic <- angle_bisector_int B C A
+  I <- intersection ia ib
+  a b c <- tri_sides A B C
+  THEN
+  <- lies_on I ia
+  <- lies_on I ib
+  <- lies_on I ic
+  <- eq_dist I a I b
+  <- eq_dist I b I c
+  PROOF
+  <- point_on_angle_bisector I b c
+  <- point_on_angle_bisector I c a
+  <- point_to_angle_bisector I a b
+incircle A:P B:P C:P -> i:C
+  I <- incenter A B C
+  a b c <- tri_sides A B C
+  F <- foot I a
+  i <- circle I F
+  THEN
+  <- is_tangent a i
+  <- is_tangent b i
+  <- is_tangent b i
+  PROOF
+  Fb <- foot I b
+  Fc <- foot I c
+  <- point_to_circle Fb i
+  <- point_to_circle Fc i
+
+excenter A:P B:P C:P -> E:P
+  <- not_collinear A B C
+  ia <- angle_bisector_int C A B
+  eb <- angle_bisector_ext A B C
+  ec <- angle_bisector_ext B C A
+  E <- intersection ia eb
+  a b c <- tri_sides A B C
+  THEN
+  <- lies_on E ia
+  <- lies_on E eb
+  <- lies_on E ec
+  <- eq_dist E a E b
+  <- eq_dist E b E c
+  PROOF
+  <- point_on_angle_bisector E b c
+  <- point_on_angle_bisector E c a
+  <- point_to_angle_bisector E a b
+excircle A:P B:P C:P -> e:C
+  E <- excenter A B C
+  a b c <- tri_sides A B C
+  F <- foot E a
+  e <- circle E F
+  THEN
+  <- is_tangent a e
+  <- is_tangent b e
+  <- is_tangent c e
+  PROOF
+  Fb <- foot E b
+  Fc <- foot E c
+  <- point_to_circle Fb e
+  <- point_to_circle Fc e
+
+median A:P B:P C:P -> m:L
+  M <- midpoint B C
+  m <- line A M
+centroid A:P B:P C:P -> G:P
+  a <- median A B C
+  b <- median B C A
+  c <- median C A B
+  Ma <- midpoint B C
+  Mb <- midpoint C A
+  Mc <- midpoint A B
+  G <- intersection b c
+  THEN
+  <- lies_on G a
+  <- lies_on G b
+  <- lies_on G c
+  PROOF
+  _ _ <- midsegment A B C
+  <- sim_aa B C G Mb Mc G
+  _ _ <- midsegment B C A
+  <- sim_sas G C A G Mc Ma
+
+altitude A:P B:P C:P -> p:L
+  a <- line B C
+  p <- perpline a A
+orthocenter A:P B:P C:P -> H:P
+  a <- altitude A B C
+  b <- altitude B C A
+  c <- altitude C A B
+  H <- intersection a b
+  THEN
+  <- lies_on H a
+  <- lies_on H b
+  <- lies_on H c
+  PROOF
+  aa <- paraline B C A
+  bb <- paraline C A B
+  cc <- paraline A B C
+  AA <- intersection bb cc
+  BB <- intersection cc aa
+  CC <- intersection aa bb
+  <- cong_asa A C B C A BB
+  <- cong_asa B A C A B CC
+  <- cong_asa C B A B C AA
+  <- midpoint_uq A BB CC
+  <- midpoint_uq B CC AA
+  <- midpoint_uq C AA BB
+  H' <- circumcenter AA BB CC
+  <- == H H'
+
+reflected_ortocenter A:P B:P C:P -> H:P H':P w:C
+  H <- orthocenter A B C
+  w <- circumcircle A B C
+  a <- line B C
+  H' <- reflect H a
+  THEN
+  <- lies_on H' w
+  PROOF
+  hb <- altitude B A C
+  ha <- altitude C A B
+  <- point_on_perp_bisector B H H'
+  <- point_on_perp_bisector C H H'
+  <- angles_to_concyclic B C A H'
+
+circle9 A:P B:P C:P -> f:C
+  Ma <- midpoint B C
+  Mb <- midpoint C A
+  Mc <- midpoint A B
+  f <- circumcircle Ma Mb Mc
+  Fa <- foot A B C
+  Fb <- foot B C A
+  Fc <- foot C A B
+  H <- orthocenter A B C
+  Ha <- midpoint H A
+  Hb <- midpoint H B
+  Hc <- midpoint H C
+  THEN
+  <- lies_on Ma f
+  <- lies_on Mb f
+  <- lies_on Mc f
+  <- lies_on Fa f
+  <- lies_on Fb f
+  <- lies_on Fc f
+  <- lies_on Ha f
+  <- lies_on Hb f
+  <- lies_on Hc f  
+  PROOF
+  _ _ <- midsegment A B C
+  _ _ <- midsegment H B C
+  _ _ <- midsegment B H A
+  _ _ <- midsegment C H A
+  _ <- rectangle_axis Mb Mc Hb Hc
+  _ _ <- midsegment B C A
+  _ _ <- midsegment H C A
+  _ _ <- midsegment C H B
+  _ _ <- midsegment A H B
+  _ <- rectangle_axis Mc Ma Hc Ha
+  fH <- circumcircle Ha Hb Hc
+  _ _ <- midsegment C A B
+  _ _ <- midsegment H A B
+  <- cong_circumradius Ma Mb Mc Ha Hb Hc
+  F <- circumcenter Ma Mb Mc
+  FH <- circumcenter Ha Hb Hc
+  <- == FH F
+  <- == fH f
+
+  <- point_to_diacircle Fa A B
+  <- point_to_diacircle Fa C A
+  <- cong_sss_r Mb Mc Fa Mc Mb Ma
+  <- angles_to_concyclic Mb Mc Ma Fa
+  <- point_to_diacircle Fb B C
+  <- point_to_diacircle Fb A B
+  <- cong_sss_r Mc Ma Fb Ma Mc Mb
+  <- angles_to_concyclic Mc Ma Mb Fb
+  <- point_to_diacircle Fc C A
+  <- point_to_diacircle Fc B C
+  <- cong_sss_r Ma Mb Fc Mb Ma Mc
+  <- angles_to_concyclic Ma Mb Mc Fc
+
+isogonal_by_refl X:P A:P B:P C:P -> l:L
+  _ b c <- tri_sides A B C
+  Xb <- reflect X b
+  Xc <- reflect X c
+  l <- perp_bisector Xb Xc
+  x <- line X A
+  THEN
+  <- lies_on A l
+  <- eq_angle b x l c
+  PROOF
+  <- point_on_perp_bisector A X Xb
+  <- point_on_perp_bisector A X Xc
+  <- isosceles_ss A Xb Xc
+  <- point_to_perp_bisector A Xb Xc
+conjugate X:P A:P B:P C:P -> Y:P
+  a b c <- tri_sides A B C
+  Xa <- reflect X a
+  Xb <- reflect X b
+  Xc <- reflect X c
+  Y <- circumcenter Xa Xb Xc
+  THEN
+  <- eq_angle X A B C A Y
+  <- eq_angle X B C A B Y
+  <- eq_angle X C A B C Y
+  PROOF
+  ia <- isogonal_by_refl X A B C
+  ib <- isogonal_by_refl X B C A
+  ic <- isogonal_by_refl X C A B
+
+inverse A:P c:C -> A':P
+  r <- radius_of c
+  C <- center_of c
+  dir <- half_direction C A
+  d <- dist A C
+  d' <- ratio_compute 1 r 2 d -1
+  A' <- double_direction C dir d'
+
+quadrilateral_PQ A:P B:P C:P D:P -> P:P Q:P
+  ab <- line A B
+  cd <- line C D
+  P <- intersection ab cd
+  bc <- line B C
+  da <- line D A
+  Q <- intersection bc da
+
+miquel A:P B:P C:P D:P -> M:P
+  P Q <- quadrilateral_PQ A B C D
+  wBC <- circumcircle C B P
+  wDA <- circumcircle D A P
+  wAB <- circumcircle A B Q
+  wCD <- circumcircle C D Q
+  M <- intersection_remoter wDA wBC P
+  THEN
+  <- lies_on M wAB
+  <- lies_on M wCD
+  PROOF
+  <- concyclic_to_angles M C P B
+  <- concyclic_to_angles M D P A
+  <- angles_to_concyclic M Q B A
+  <- concyclic_to_angles M B P C
+  <- concyclic_to_angles M A P D
+  <- angles_to_concyclic Q M D C

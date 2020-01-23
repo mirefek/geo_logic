@@ -34,12 +34,13 @@ class ToolStepEnv:
             self.local_to_global.extend(subresult)
 
 class CompositeTool(CachedTool):
-    def __init__(self, assumptions, implications, result, proof, arg_types, out_types, name):
+    def __init__(self, assumptions, implications, result, proof, arg_types, out_types, name, triggers = None):
         CachedTool.__init__(self, arg_types, out_types, name)
         self.assumptions = assumptions
         self.implications = implications
         self.result = result
         self.proof = proof
+        self.proof_triggers = triggers
 
         self.deep_len_all = sum(
             step.tool.deep_len_all
@@ -72,7 +73,7 @@ class CompositeTool(CachedTool):
 
     def proof_check(self, num_args):
         assert(self.proof is not None)
-        model = LogicModel()
+        model = LogicModel(triggers = self.proof_triggers)
         args = model.add_objs(num_args[:len(self.arg_types)])
         env = ToolStepEnv(model, args)
         try:

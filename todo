@@ -1,5 +1,8 @@
+NOW NOW
+* fix add_circ_trig
+  (uvědomění si, že kružnice se stejným středem a poloměrem jsou stejné)
+
 Now
-* num_check dim_pred
 * triggers
   * optimalizace
     * aplikovat jenom na viditelné objekty?
@@ -8,6 +11,7 @@ Now
       v jednoznačnosti bodu / přímky / kružnice
     * follow uniquely dict, if possible
     * ověřovat znovu jenom numerické předpoklady?
+    * jednoduššeji naprogramované prohledávání?
   * order logically
     * (1) unification on the uf_dict level
     * (2) adding new relations
@@ -29,6 +33,7 @@ vymazlení GUI
 * logické setřidění nástrojů, nastavitelné klávesové zkratky
 
 dohledná doba
+* dokázat věty sssaaa
 * trasování důkazů
 * neopakovat ověřování důkazů při undo
 * mazání objektů
@@ -43,6 +48,10 @@ dohledná doba
 long term (v1.0)
 * sparse_elim: zahazovat duplicitní proměnné?
 * rozdělit logiku a automatizaci
+* další varianty průsečíku?
+  * aby XC0C1 mělo stejnou orientaci jako ABC
+  * s přímkou AB víc ve směru AB
+  (oba případy jsou vlastně emulovatelné pomocí současných nástrojů)
 * sofistikovanější skripty
   * skryté konstrukce
   * neexpandující složené predikáty

@@ -99,6 +99,9 @@ class Parser:
 
     def parse_tool(self, header, assump, impl, proof):
         try:
+            if not self.allow_axioms and impl and proof is None:
+                raise Exception("Axioms are not allowed here")
+
             header_line, header = header
 
             name, *data = header.split()
@@ -148,42 +151,53 @@ class Parser:
             arg_types = tuple(arg_types)
             out_types = tuple(out_types)
             self.add_tool(name, CompositeTool(
-                assump, impl, result, proof, arg_types, out_types, name
+                assump, impl, result, proof, arg_types, out_types, name,
+                triggers = self.triggers,
             ))
 
         except Exception:
             print("l{}: Tool: {}".format(header_line, header))
             raise
 
-    def parse_file(self, fname):
-        with open(fname) as f:
-            mode = "init"
-            for i,line in enumerate(f):
-                i += 1
-                line = line.strip()
-                if line == '': continue
-                elif line == "THEN":
-                    assert(mode in 'assume')
-                    mode = 'postulate'
-                elif line == "PROOF":
-                    assert(mode in 'postulate')
-                    mode = 'proof'
-                    proof = []
-                elif "<-" in line:
-                    if mode == 'assume': assump.append((i,line))
-                    elif mode == 'postulate': impl.append((i,line))
-                    elif mode == 'proof': proof.append((i,line))
-                    else: raise Exception("l{}: unexpected mode {} for a command: {}".format(
-                            i, mode, line
-                    ))
-                else:
-                    if mode != 'init': self.parse_tool(header, assump, impl, proof)
-                    assump = []
-                    impl = []
-                    proof = None
-                    header = i,line
-                    mode = 'assume'
-            if mode != 'init': self.parse_tool(header, assump, impl, proof)
+    def parse_file(self, fname, axioms = True, triggers = None):
+        self.allow_axioms = axioms
+        self.triggers = triggers
+
+        try:
+            with open(fname) as f:
+                mode = "init"
+                for i,line in enumerate(f):
+                    i += 1
+                    line = line.strip()
+                    if line == '': continue
+                    elif line == "THEN":
+                        if mode != 'assume':
+                            raise Exception("l{}: unexpected THEN".format(i))
+                        mode = 'postulate'
+                    elif line == "PROOF":
+                        if mode != 'postulate':
+                            raise Exception("l{}: unexpected PROOF".format(i))
+                        mode = 'proof'
+                        proof = []
+                    elif "<-" in line:
+                        if mode == 'assume': assump.append((i,line))
+                        elif mode == 'postulate': impl.append((i,line))
+                        elif mode == 'proof': proof.append((i,line))
+                        else: raise Exception("l{}: unexpected mode {} for a command: {}".format(
+                                i, mode, line
+                        ))
+                    else:
+                        if mode != 'init': self.parse_tool(header, assump, impl, proof)
+                        assump = []
+                        impl = []
+                        proof = None
+                        header = i,line
+                        mode = 'assume'
+                if mode != 'init': self.parse_tool(header, assump, impl, proof)
+        except Exception:
+            print("file: {}".format(fname))
+            raise
+
 
 if __name__ == "__main__":
     parser = Parser()

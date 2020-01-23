@@ -15,8 +15,7 @@ def direction_of(l : Line) -> Angle:
 
 def intersection(l1 : Line, l2 : Line) -> Point:
     assert(isinstance(l1, Line) and isinstance(l2, Line))
-    [p] = intersection_ll(l1, l2)
-    return Point(p)
+    return Point(intersection_ll(l1, l2))
 def intersection_remoter(cl1 : PointSet, cl2 : PointSet, p : Point) -> Point:
     intersections = [Point(x) for x in intersection_univ(cl1, cl2)]
     assert(len(intersections) == 2)
@@ -60,3 +59,12 @@ def double_direction(A : Point, ang : Angle, d : Ratio) -> Point:
     vector = np.array((cplx.real, cplx.imag))
     #print("double direction: {} -> {}".format(ang.data, vector))
     return Point(A.a + vector)
+
+def circumcircle(A : Point, B : Point, C : Point) -> Circle:
+    A,B,C = A.a, B.a, C.a
+    bc = C-B
+    ca = A-C
+    ax_A = Line(bc, np.dot((B+C)/2, bc))
+    ax_B = Line(ca, np.dot((C+A)/2, ca))
+    center = intersection_ll(ax_A, ax_B)
+    return Circle(center, np.linalg.norm(center-C))

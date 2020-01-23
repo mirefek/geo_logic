@@ -1,0 +1,286 @@
+line A:P B:P -> p:L
+  <- not_eq A B
+  THEN
+  p <- prim__line A B
+  <- lies_on A p
+  <- lies_on B p
+
+direction_of l:L -> a:A
+  THEN
+  a <- prim__direction_of l
+direction_of A:P B:P -> dir:A
+  <- not_eq A B
+  l <- line A B
+  dir <- direction_of l
+
+line_with_direction A:P d:A -> p:L
+  THEN
+  p <- prim__line_with_direction A d
+  <- lies_on A p
+  d' <- direction_of p
+  <- == d' d
+
+dist A:P B:P -> d:D
+  <- not_eq A B
+  THEN
+  d <- prim__dist A B
+
+eq_dist A0:P B0:P d1:D -> 
+  d0 <- dist A0 B0
+  <- == d0 d1
+eq_dist d1:D A0:P B0:P -> 
+  d0 <- dist A0 B0
+  <- == d0 d1
+eq_dist A0:P B0:P A1:P B1:P -> 
+  d0 <- dist A0 B0
+  d1 <- dist A1 B1
+  <- == d0 d1
+
+dist_ratio A0:P B0:P A1:P B1:P -> r:D
+  <- not_eq A0 B0
+  <- not_eq A1 B1
+  d0 <- dist A0 B0
+  d1 <- dist A1 B1
+  r <- ratio_compute 1 d0 1 d1 -1
+
+circumcircle A:P B:P C:P -> c:C
+  <- not_collinear A B C
+  THEN
+  c <- prim__circumcircle A B C
+  <- lies_on A c
+  <- lies_on B c
+  <- lies_on C c
+
+radius_of c:C -> r:D
+  THEN
+  r <- prim__radius_of c
+center_of c:C -> C:P
+  THEN
+  C <- prim__center_of c
+circle C:P r:D -> c:C
+  THEN
+  c <- prim__circle C r
+  r' <- radius_of c
+  C' <- center_of c
+  <- == r r'
+  <- == C C'
+
+point_on_circle X:P c:C -> 
+  <- lies_on X c
+  THEN
+  C <- center_of c
+  d <- dist X C
+  r <- radius_of c
+  <- == r d
+point_to_circle X:P c:C -> 
+  C <- center_of c
+  r <- radius_of c
+  <- eq_dist X C r
+  THEN
+  <- lies_on X c
+
+compass A:P B:P C:P -> c:C
+  d <- dist A B
+  c <- circle C d
+
+not_parallel l0:L l1:L -> 
+  x <- direction_of l0
+  y <- direction_of l1
+  <- not_eq x y
+
+intersection a:L b:L -> X:P
+  <- not_parallel a b
+  THEN
+  X <- prim__intersection a b
+  <- lies_on X a
+  <- lies_on X b
+
+intersection0 a:C b:C -> X:P
+  <- intersecting a b
+  THEN
+  X <- prim__intersection0 a b
+  <- lies_on X a
+  <- lies_on X b
+intersection0 a:L b:C -> X:P
+  <- intersecting a b
+  THEN
+  X <- prim__intersection0 a b
+  <- lies_on X a
+  <- lies_on X b
+intersection0 a:C b:L -> X:P
+  <- intersecting a b
+  THEN
+  X <- prim__intersection0 a b
+  <- lies_on X a
+  <- lies_on X b
+
+intersection_remoter a:C b:C A:P -> X:P
+  <- intersecting a b
+  THEN
+  X <- prim__intersection_remoter a b A
+  <- lies_on X a
+  <- lies_on X b
+intersection_remoter a:C b:L A:P -> X:P
+  <- intersecting a b
+  THEN
+  X <- prim__intersection_remoter a b A
+  <- lies_on X a
+  <- lies_on X b
+intersection_remoter a:L b:C A:P -> X:P
+  <- intersecting a b
+  THEN
+  X <- prim__intersection_remoter a b A
+  <- lies_on X a
+  <- lies_on X b
+
+intersection1 a:C b:C -> X:P
+  <- intersecting a b
+  X0 <- intersection0 a b
+  X <- intersection_remoter a b X0
+intersection1 a:L b:C -> X:P
+  <- intersecting a b
+  X0 <- intersection0 a b
+  X <- intersection_remoter a b X0
+intersection1 a:C b:L -> X:P
+  <- intersecting a b
+  X0 <- intersection0 a b
+  X <- intersection_remoter a b X0
+
+intersection_closer a:C b:C Y:P -> X:P
+  <- intersecting a b
+  X0 <- intersection_remoter a b Y
+  X <- intersection_remoter a b X0
+intersection_closer a:L b:C Y:P -> X:P
+  <- intersecting a b
+  X0 <- intersection_remoter a b Y
+  X <- intersection_remoter a b X0
+intersection_closer a:C b:L Y:P -> X:P
+  <- intersecting a b
+  X0 <- intersection_remoter a b Y
+  X <- intersection_remoter a b X0
+
+intersections a:C b:C -> X0:P X1:P
+  <- intersecting a b
+  X0 <- intersection0 a b
+  X1 <- intersection_remoter a b X0
+intersections a:C b:L -> X0:P X1:P
+  <- intersecting a b
+  X0 <- intersection0 a b
+  X1 <- intersection_remoter a b X0
+intersections a:L b:C -> X0:P X1:P
+  <- intersecting a b
+  X0 <- intersection0 a b
+  X1 <- intersection_remoter a b X0
+
+angle l0:L l1:L -> alpha:A
+  d0 <- direction_of l0
+  d1 <- direction_of l1
+  alpha <- angle_compute 0 d0 -1 d1 1
+angle l0:L A1:P B1:P -> alpha:A
+  d0 <- direction_of l0
+  d1 <- direction_of A1 B1
+  alpha <- angle_compute 0 d0 -1 d1 1
+angle A0:P B0:P l1:L -> alpha:A
+  d0 <- direction_of A0 B0
+  d1 <- direction_of l1
+  alpha <- angle_compute 0 d0 -1 d1 1
+angle A0:P B0:P A1:P B1:P -> alpha:A
+  d0 <- direction_of A0 B0
+  d1 <- direction_of A1 B1
+  alpha <- angle_compute 0 d0 -1 d1 1
+angle A:P B:P C:P -> alpha:A
+  alpha <- angle B A B C
+
+eq_angle a0:L b0:L a1:L b1:L -> 
+  alpha0 <- angle a0 b0
+  alpha1 <- angle a1 b1
+  <- == alpha0 alpha1
+eq_angle A0:P B0:P C0:P a1:L b1:L -> 
+  alpha0 <- angle A0 B0 C0
+  alpha1 <- angle a1 b1
+  <- == alpha0 alpha1
+eq_angle a0:L b0:L A1:P B1:P C1:P -> 
+  alpha0 <- angle a0 b0
+  alpha1 <- angle A1 B1 C1
+  <- == alpha0 alpha1
+eq_angle A0:P B0:P C0:P A1:P B1:P C1:P -> 
+  alpha0 <- angle A0 B0 C0
+  alpha1 <- angle A1 B1 C1
+  <- == alpha0 alpha1
+
+
+sim_aa A0:P B0:P C0:P A1:P B1:P C1:P -> 
+  <- not_collinear A0 B0 C0
+  ra <- dist_ratio B0 C0 B1 C1
+  rb <- dist_ratio C0 A0 C1 A1
+  rc <- dist_ratio A0 B0 A1 B1
+  <- eq_angle C0 A0 B0 C1 A1 B1
+  <- eq_angle A0 B0 C0 A1 B1 C1
+  THEN
+  <- == ra rb
+  <- == ra rc
+sim_aa_r A0:P B0:P C0:P A1:P B1:P C1:P -> 
+  <- not_collinear A0 B0 C0
+  ra <- dist_ratio B0 C0 B1 C1
+  rb <- dist_ratio C0 A0 C1 A1
+  rc <- dist_ratio A0 B0 A1 B1
+  <- eq_angle C0 A0 B0 B1 A1 C1
+  <- eq_angle A0 B0 C0 C1 B1 A1
+  THEN
+  <- == ra rb
+  <- == ra rc
+
+isosceles_ss A:P B:P C:P -> 
+  <- not_eq B C
+  <- eq_dist A B A C
+  THEN
+  <- eq_angle A B C B C A
+
+midpoint A:P B:P -> M:P
+  l <- line A B
+  THEN
+  M <- prim__midpoint A B
+  <- lies_on M l
+  <- eq_dist A M M B
+  r <- dist_ratio A B A M
+  <- ratio_pred 1/2 r 1
+
+perpline l:L A:P -> p:L
+  dir <- direction_of l
+  dir_p <- angle_compute 1/2 dir 1
+  p <- line_with_direction A dir_p
+perp_bisector A:P B:P -> p:L
+  M <- midpoint A B
+  ab <- line A B
+  p <- perpline ab M
+point_on_perp_bisector X:P A:P B:P -> 
+  p <- perp_bisector A B
+  <- lies_on X p
+  THEN
+  <- eq_dist X A X B
+  a <- line A X
+  b <- line B X
+  <- eq_angle a p p b
+point_to_perp_bisector X:P A:P B:P -> 
+  <- eq_dist X A X B
+  p <- perp_bisector A B
+  THEN
+  <- lies_on X p
+  a <- line A X
+  b <- line B X
+  <- eq_angle a p p b
+
+half_direction A:P B:P -> dir:A
+  <- not_eq A B
+  THEN
+  dir <- prim__half_direction A B
+  dir2 <- direction_of A B
+  <- angle_pred 0 dir 2 dir2 -1
+
+double_direction A:P dir:A d:D -> B:P
+  THEN
+  B <- prim__double_direction A dir d
+  dir2 <- direction_of A B
+  <- angle_pred 0 dir 2 dir2 -1
+  d2 <- dist A B
+  <- == d d2

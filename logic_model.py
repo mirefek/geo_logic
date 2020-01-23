@@ -3,7 +3,7 @@ from geo_object import Angle, Ratio
 from sparse_elim import SparseRow, EquationIndex, ElimMatrix, AngleChasing, equality_sr
 from uf_dict import UnionFindDict
 from fractions import Fraction
-from relstr import TriggerEnv, RelStrEnv
+from triggers import TriggerEnv, RelStrEnv
 
 def prime_decomposition(n):
     assert(n > 0)
@@ -33,8 +33,8 @@ class LogicModel():
         self.angles = AngleChasing()
         self.ufd = UnionFindDict()
 
-        if triggers is None: triggers = TriggerEnv()
-        self.relstr = RelStrEnv(triggers)
+        if triggers is None: self.triggers = RelStrEnv(self)
+        self.triggers = TriggerEnv(triggers, self)
 
     def add_obj(self, num_obj):
         index = len(self.num_model)
@@ -63,9 +63,9 @@ class LogicModel():
         if self.check_equal(obj1, obj2): return
         self._glue_reaction([(obj1, obj2)])
     def add_constr(self, identifier, args, vals):
-        self.ufd.add(identifier, args, vals)
-        self.relstr.add(identifier, args+vals)
-        self.relstr.run_triggers()
+        args, vals = self.ufd.add(identifier, args, vals)
+        self.triggers.add(identifier, args+vals)
+        self.triggers.run()
     def add_angle_equation(self, equation : SparseRow, frac_const : Fraction):
         to_glue_dict = list(self.angles.postulate(equation, frac_const))
         self._glue_reaction(to_glue_dict)
@@ -104,11 +104,11 @@ class LogicModel():
                     )
             else: break
 
-        self.relstr.glue_nodes(dict(
+        self.triggers.glue_nodes(dict(
             (x, self.ufd.obj_to_root(x))
             for x in dnodes_moved
         ))
-        self.relstr.run_triggers()
+        self.triggers.run()
 
     def _make_ratio_equation(self, equation, frac_const = 1, new_const = True):
         if frac_const == 1: return SparseRow(equation)

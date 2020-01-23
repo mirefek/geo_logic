@@ -11,19 +11,159 @@ from logic_model import LogicModel
 from collections import defaultdict
 from tool_step import ToolStep, ToolStepEnv, proof_checker
 from file_chooser import select_file_open, select_file_save
-from relstr import TriggerEnv, RelStr
 from stop_watch import print_times
+from triggers import Triggers
+from num_duplicities import find_duplicities
 
 def corners_to_rectangle(corners):
     size = corners[1] - corners[0]
     return list(corners[0])+list(size)
+
+class GraphicalEnv:
+    def __init__(self, triggers, scale = 1):
+        self.steps = []
+        self.obj_to_step = []
+        self.obj_to_priority = []
+        self.triggers = triggers
+        self.scale = scale
+        self.refresh_steps()
+
+    def refresh_steps(self):
+        proof_checker.reset()
+        self.model = LogicModel(self.triggers)
+        self.step_env = ToolStepEnv(self.model)
+        self.step_env.run_steps(self.steps, 1, catch_errors = True)
+        self.refresh_visible()
+
+    def refresh_visible(self):
+        used = set()
+        max_i = len(self.step_env.local_to_global)-1
+        visible_candidates = []
+        for rev_i, li in enumerate(reversed(self.step_env.local_to_global)):
+            gi = max_i - rev_i
+            if li is None: continue
+            li = self.model.ufd.obj_to_root(li)
+            num = self.li_to_num(li)
+            if not issubclass(self.model.obj_types[li], (Point, PointSet)): continue
+            if li in used: continue
+            used.add(li)
+            visible_candidates.append((gi, num))
+        self.num_glued = tuple(find_duplicities(visible_candidates))
+
+        self.visible_points = []
+        self.visible_curves = []
+        visible_points_li = set()
+        visible_curves_li = set()
+
+        for group in self.num_glued:
+            group.sort()
+            gi = max(group, key = lambda gi: (self.obj_to_priority[gi], gi))
+            li = self.gi_to_li(gi)
+            num = self.li_to_num(li)
+            if isinstance(num, Point):
+                self.visible_points.append((gi, num))
+                visible_points_li.add(li)
+            else:
+                self.visible_curves.append((gi, num))
+                visible_curves_li.add(li)
+
+        lies_on_labels = self.triggers.lies_on_l, self.triggers.lies_on_c
+        self.lies_on_data = []
+        for (label, args), _ in self.model.ufd.data.items():
+            if label in lies_on_labels:
+                p,ps = args
+                if p in visible_points_li and ps in visible_curves_li:
+                    self.lies_on_data.append(args)
+
+    def swap_priorities(self, gi, direction):
+        for group in self.num_glued:
+            if gi in group: break
+        else: raise Exception("swap_priorities: object {} not found".format(gi))
+
+        i = group.index(gi)
+        if len(group) == 1:
+            print("Unambiguous object")
+            return
+
+        i2 = (i + direction) % len(group)
+        for obj in group[i2+1:i+1]:
+            self.obj_to_priority[obj] = 1
+        self.obj_to_priority[group[i2]] = 2
+
+        print("{} -> {}".format(i, i2))
+        print([(x, self.obj_to_priority[x]) for x in group])
+        self.refresh_visible()
+
+    def gi_to_li(self, gi): # graphical index to logic index
+        li = self.step_env.local_to_global[gi]
+        if li is None: return None
+        return self.model.ufd.obj_to_root(li)
+
+    def li_to_num(self, li): # logic index to numerical object
+        return self.model.num_model[li]
+
+    def gi_to_num(self, gi): # graphical index to numerical object
+        li = self.step_env.local_to_global[gi]
+        if li is None: return None
+        return self.li_to_num(self.model.ufd.obj_to_root(li))
+
+    def select_obj(self, coor, point_radius = 20, ps_radius = 20):
+        try:
+            d,p = min((
+                (num.dist_from(coor), gi)
+                for gi, num in self.visible_points
+            ), key = lambda x: x[0])
+            if d * self.scale < point_radius: return p
+            d,ps = min((
+                (num.dist_from(coor), gi)
+                for gi, num in self.visible_curves
+            ), key = lambda x: x[0])
+            if d * self.scale < point_radius: return ps
+        except ValueError:
+            pass
+        return None
+
+    def set_steps(self, steps):
+        self.steps = steps
+        self.obj_to_step = []
+        for i,step in enumerate(steps):
+            self.obj_to_step += [i]*len(step.tool.out_types)
+        self.obj_to_priority = [2]*len(self.obj_to_step)
+        self.refresh_steps()
+
+    def add_step(self, step):
+        try:
+            self.step_env.run_steps((step,), 1)
+            self.obj_to_step += [len(self.steps)]*len(step.tool.out_types)
+            self.obj_to_priority += [2]*len(step.tool.out_types)
+            self.steps.append(step)
+            self.refresh_visible()
+            return True
+        except ToolError as e:
+            if isinstance(e, ToolErrorException): raise e.e
+            print("Tool failed: {}".format(e))
+            self.refresh_steps()
+            return False
+
+    def pop_step(self):
+        print("BACK")
+        if not self.steps:
+            print("No more steps to undo")
+            return
+        step = self.steps.pop()
+        if len(step.tool.out_types) > 0:
+            del self.obj_to_step[-len(step.tool.out_types):]
+            del self.obj_to_priority[-len(step.tool.out_types):]
+        self.refresh_steps()
 
 class Drawing(Gtk.Window):
 
     def make_toolbox(self, max_height = 45):
         self.tool_buttons = dict()
         self.parser = Parser()
-        self.parser.parse_file("tools.gl")
+        self.parser.parse_file("basic.gl")
+        self.triggers = Triggers(self.parser.tool_dict)
+        self.parser.parse_file("macros.gl", axioms = False, triggers = self.triggers)
         self.tool_dict = self.parser.tool_dict
         self.tool_dict['line', (Point, Point)].add_symmetry((1,0))
         self.tool_dict['midpoint', (Point, Point)].add_symmetry((1,0))
@@ -92,37 +232,38 @@ class Drawing(Gtk.Window):
         self.shift = np.array([0,0])
         self.scale = 1
         self.mb_grasp = None
-        self.steps = []
-        self.obj_to_step = []
         self.key_to_tool = {
             'p': "perp_bisector",
             '2': "midpoint",
             'f': "free_point",
+            #'l': "p_line",
             'l': "line",
+            #'c': "p_circum",
             'c': "circle",
             'C': "compass",
-            'x': "intersection0",
             '9': "circle9",
             'i': "incircle",
             'e': "excircle",
-            'o': "circumcenter",
+            'o': "circumcircle",
+            #'x': "p_intersect",
+            #'X': "p_intersect_rem",
+            'x': "intersection",
             'X': "intersection_remoter",
             'd': "point_on",
             'question': "lies_on",
-            'exclam': "line_uq",
-            '1': "radius_dist",
-            '2': "on_circle_by_dist",
+            #'exclam': "fake_lies_on",
+            '1': "point_on_circle",
+            '2': "point_to_circle",
             '3': "cong_sss",
             '4': "collinear_by_angle",
-            't': "circumcircle_uq",
+            't': "test",
         }
         self.default_fname = None
 
         hbox = Gtk.HPaned()
         hbox.add(self.make_toolbox())
 
-        self.triggers = self.make_triggers()
-        self.steps_refresh()
+        self.env = GraphicalEnv(self.triggers, scale = self.scale)
 
         self.darea = Gtk.DrawingArea()
         self.darea.connect("draw", self.on_draw)
@@ -169,11 +310,7 @@ class Drawing(Gtk.Window):
         self.parser.parse_file(fname)
         loaded_tool = self.tool_dict['_', ()]
         del self.tool_dict['_', ()]
-        self.steps = loaded_tool.assumptions
-        self.obj_to_step = []
-        for i,step in enumerate(self.steps):
-            self.obj_to_step += [i]*len(step.tool.out_types)
-        self.steps_refresh()
+        self.env.set_steps(loaded_tool.assumptions)
 
     def save_file(self, fname):
         if fname is None: return
@@ -181,7 +318,7 @@ class Drawing(Gtk.Window):
         with open(fname, 'w') as f:
             f.write('_ ->\n')
             i = 0
-            for step in self.steps:
+            for step in self.env.steps:
                 i2 = i+len(step.tool.out_types)
                 tokens = ['x{}'.format(x) for x in range(i,i2)]
                 tokens.append('<-')
@@ -191,88 +328,17 @@ class Drawing(Gtk.Window):
                 f.write('  '+' '.join(tokens)+'\n')
                 i = i2
 
-    def make_triggers(self):
-        triggers = TriggerEnv()
-        lies_on_l = self.tool_dict['lies_on', (Point, Line)]
-        lies_on_c = self.tool_dict['lies_on', (Point, Circle)]
-        radius_of = self.tool_dict['radius_of', (Circle,)]
-        direction_of = self.tool_dict['direction_of', (Line,)]
-        center_of = self.tool_dict['center_of', (Circle,)]
-        dist_pp = self.tool_dict['dist', (Point, Point)]
-        radius_dist = self.tool_dict['radius_dist', (Point, Circle)]
-
-        p2l2 = RelStr()
-        p2l2.add_rel(lies_on_l, ('A','l'))
-        p2l2.add_rel(lies_on_l, ('A','m'))
-        p2l2.add_rel(lies_on_l, ('B','l'))
-        p2l2.add_rel(lies_on_l, ('B','m'))
-        def p2l2_trig(d):
-            A, B, l, m = d['A'], d['B'], d['l'], d['m']
-            if A == B or l == m: return
-            #print("p2l2_trig", A, B, l, m)
-            if not self.model.num_model[A].identical_to(self.model.num_model[B]):
-                #print("glue lines")
-                self.model.glue(l, m)
-            elif not self.model.num_model[l].identical_to(self.model.num_model[m]):
-                #print("glue points")
-                self.model.glue(A, B)
-        triggers.add(p2l2, p2l2_trig)
-
-        p3c2 = RelStr()
-        p3c2.add_rel(lies_on_c, ('A','b'))
-        p3c2.add_rel(lies_on_c, ('A','c'))
-        p3c2.add_rel(lies_on_c, ('B','b'))
-        p3c2.add_rel(lies_on_c, ('B','c'))
-        p3c2.add_rel(lies_on_c, ('C','b'))
-        p3c2.add_rel(lies_on_c, ('C','c'))
-        def p3c2_trig(d):
-            A, B, C, b, c = d['A'], d['B'], d['l'], d['m']
-            if A == B or B == C or C == A or l == m: return
-            #print("p2l2_trig", A, B, l, m)
-            nA, nB, nC = (self.model.num_model[x] for x in (A, B, C))
-            if not (A.identical_to(B) or A.identical_to(C) or B.identical_to(C)):
-                self.model.glue(b, c)
-        triggers.add(p3c2, p3c2_trig)
-
-        pal2 = RelStr()
-        pal2.add_rel(lies_on_l, ('A','l'))
-        pal2.add_rel(lies_on_l, ('A','m'))
-        pal2.add_rel(direction_of, ('l','d'))
-        pal2.add_rel(direction_of, ('m','d'))
-        def pal2_trig(d):
-            l, m = d['l'], d['m']
-            if l != m: self.model.glue(l, m)
-        triggers.add(pal2, pal2_trig)
-
-        on_circ = RelStr()
-        on_circ.add_rel(lies_on_c, ('A','c'))
-        on_circ.add_rel(radius_of, ('c','r'))
-        on_circ.add_rel(center_of, ('c','C'))
-        def on_circ_trig(d):
-            A, c = d['A'], d['c']
-            #print("on_circ_trig", A, c)
-            radius_dist.run((), (A, c), self.model, 1)
-        triggers.add(on_circ, on_circ_trig)
-
-        rad_dist = RelStr()
-        rad_dist.add_rel(radius_of, ('c','r'))
-        rad_dist.add_rel(center_of, ('c','C'))
-        rad_dist.add_rel(dist_pp, ('C','A','r'))
-        def rad_dist_trig(d):
-            c, r, C, A = d['c'], d['r'], d['C'], d['A']
-            #print("rad_dist_trig", c, r, C, A)
-            lies_on_c.run((), (A, c), self.model, 0)
-        triggers.add(rad_dist, rad_dist_trig)
-
-        return triggers
-
     def get_coor(self, e):
         return np.array([e.x, e.y])/self.scale - self.shift
 
     def on_scroll(self,w,e):
         coor = self.get_coor(e)
-        if e.direction == Gdk.ScrollDirection.DOWN: self.scale *= 0.9
-        elif e.direction == Gdk.ScrollDirection.UP: self.scale /= 0.9
+        if e.direction == Gdk.ScrollDirection.DOWN:
+            self.scale *= 0.9
+            self.env.scale = self.scale
+        elif e.direction == Gdk.ScrollDirection.UP:
+            self.scale /= 0.9
+            self.env.scale = self.scale
         print("zoom {}".format(self.scale))
         self.shift = np.array([e.x, e.y])/self.scale - coor
         self.darea.queue_draw()
@@ -282,18 +348,12 @@ class Drawing(Gtk.Window):
             if self.tool == self.move_tool and self.tool_data is not None:
                 step = self.tool_data
                 step.meta_args = tuple(self.get_coor(e))
-                self.steps_refresh()
+                self.env.refresh_steps()
                 self.darea.queue_draw()
         if e.state & Gdk.ModifierType.BUTTON2_MASK:
             if self.mb_grasp is None: return
             self.shift = np.array([e.x, e.y])/self.scale - self.mb_grasp
             self.darea.queue_draw()
-
-    def steps_refresh(self):
-        proof_checker.reset()
-        self.model = LogicModel(self.triggers)
-        self.step_env = ToolStepEnv(self.model)
-        self.step_env.run_steps(self.steps, 1, catch_errors = True)
 
     def on_draw(self, wid, cr):
 
@@ -307,10 +367,25 @@ class Drawing(Gtk.Window):
         cr.set_source_rgb(1, 1, 1)
         cr.fill()
 
-        for ti,li,obj in self.point_sets():
+        for _,obj in self.env.visible_curves:
             obj.draw(cr, corners, self.scale)
-        for ti,li,obj in self.points():
-            obj.draw(cr, corners, self.scale)
+
+        cr.set_source_rgb(1,1,1)
+        for _,p in self.env.visible_points:
+            p.add_shadow_curve(cr, corners, self.scale)
+            cr.fill()
+
+        for _,p in self.env.visible_points:
+            p.draw(cr, corners, self.scale)
+
+        for p_li, ps_li in self.env.lies_on_data:
+            p = self.env.li_to_num(p_li)
+            ps = self.env.li_to_num(ps_li)
+            cr.save()
+            p.add_shadow_curve(cr, corners, self.scale)
+            cr.clip()
+            ps.draw(cr, corners, self.scale)
+            cr.restore()
 
     def on_key_press(self,w,e):
 
@@ -328,14 +403,7 @@ class Drawing(Gtk.Window):
             print("Hide tool")
             self.tool_data = None
         elif keyval_name == 'BackSpace':
-            print("BACK")
-            if not self.steps:
-                print("No more steps to undo")
-                return
-            step = self.steps.pop()
-            if len(step.tool.out_types) > 0:
-                del self.obj_to_step[-len(step.tool.out_types):]
-            self.steps_refresh()
+            self.env.pop_step()
             self.darea.queue_draw()
         elif keyval_name == "Escape":
             print_times()
@@ -346,7 +414,7 @@ class Drawing(Gtk.Window):
             self.darea.queue_draw()
         elif ctrl and keyval_name == 'S':
             fname = select_file_save(self)
-            self.open_file(fname)
+            self.save_file(fname)
         elif ctrl and keyval_name == 's':
             fname = self.default_fname
             if fname is None: fname = select_file_save(self)
@@ -361,7 +429,19 @@ class Drawing(Gtk.Window):
 
     def on_button_press(self, w, e):
 
+        if e.get_click_count()[1] != 1: return
+
         coor = self.get_coor(e)
+
+        shift = (e.state & Gdk.ModifierType.SHIFT_MASK)
+        if shift and e.button in (1,3):
+            obj = self.env.select_obj(coor)
+            if obj is not None:
+                direction = {1:-1, 3:1}[e.button]
+                self.env.swap_priorities(obj, direction)
+                self.darea.queue_draw()
+            return
+
         if e.button == 1 and self.tool is not None:
             if e.type != Gdk.EventType.BUTTON_PRESS: return
             self.tool(coor)
@@ -370,12 +450,12 @@ class Drawing(Gtk.Window):
             self.mb_grasp = coor
 
     def scripted_tool(self, coor):
-        obj = self.select_obj(coor)
+        obj = self.env.select_obj(coor)
         if obj is None: self.tool_data = []
         else: self.tool_data.append(obj)
 
         type_list = tuple(
-            self.model.obj_types[self.step_env.local_to_global[x]]
+            type(self.env.gi_to_num(x))
             for x in self.tool_data
         )
         tool = self.tool_dict.get((self.tool_name, type_list), None)
@@ -393,15 +473,7 @@ class Drawing(Gtk.Window):
             else: meta_args = ()
             step = ToolStep(tool, meta_args, self.tool_data)
 
-            try:
-                self.step_env.run_steps((step,), 1)
-                self.obj_to_step += [len(self.steps)]*len(step.tool.out_types)
-                self.steps.append(step)
-                print("correct")
-            except ToolError as e:
-                if isinstance(e, ToolErrorException): raise e.e
-                print("Construction failed: {}".format(e))
-                self.steps_refresh()
+            self.env.add_step(step)
 
             self.tool_data = []
             type_list = []
@@ -415,13 +487,13 @@ class Drawing(Gtk.Window):
         print("tool_data: {}".format(' '.join(type_to_c[x] for x in type_list)))
 
     def move_tool(self, coor):
-        _,p = self.closest_point(coor)
+        p = self.env.select_obj(coor)
         if p is None:
             tool_data = None
             print("No point under cursor")
             return
-        step_i = self.obj_to_step[p]
-        step = self.steps[step_i]
+        step_i = self.env.obj_to_step[p]
+        step = self.env.steps[step_i]
         if isinstance(step.tool, MovableTool): self.tool_data = step
         else:
             self.tool_data = None
@@ -433,43 +505,6 @@ class Drawing(Gtk.Window):
         if obj is None: return
         self.constr.hide(obj)
         self.darea.queue_draw()
-
-    def objs_of_type(self, obj_type):
-        used = set()
-        for top_level_i, logic_i in enumerate(self.step_env.local_to_global):
-            if logic_i is None: continue
-            if not issubclass(self.model.obj_types[logic_i], obj_type): continue
-            logic_i = self.model.ufd.obj_to_root(logic_i)
-            if logic_i in used: continue
-            used.add(logic_i)
-            yield top_level_i, logic_i, self.model.num_model[logic_i]
-
-    def points(self):
-        return self.objs_of_type(Point)
-    def point_sets(self):
-        return self.objs_of_type(PointSet)
-
-    def closest_obj_of_type(self, coor, obj_type):
-
-        obj_dist = [
-            (obj.dist_from(coor), ti)
-            for (ti,li,obj) in self.objs_of_type(obj_type)
-        ]
-        if len(obj_dist) == 0: return 0, None
-        return min(obj_dist, key = lambda x: x[0])
-
-    def closest_point(self, coor):
-        return self.closest_obj_of_type(coor, Point)
-
-    def closest_set(self, coor):
-        return self.closest_obj_of_type(coor, PointSet)
-
-    def select_obj(self, coor, point_radius = 20, ps_radius = 20):
-        d,p = self.closest_point(coor)
-        if d*self.scale < point_radius: return p
-        d,ps = self.closest_set(coor)
-        if d*self.scale < ps_radius: return ps
-        return None
 
 if __name__ == "__main__":
     win = Drawing()

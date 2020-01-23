@@ -42,6 +42,7 @@ class UnionFindDict:
         #print('add', label, args, vals)
         args, vals = map(self.tup_to_root, (args, vals))
         self._data_add(label, args, vals)
+        return args, vals
 
     def is_equal(self, n1, n2):
         n1, n2 = map(self.obj_to_root, (n1, n2))

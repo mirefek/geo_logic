@@ -13,32 +13,23 @@ _ ->
   x16 <- isosceles_trapezoid x10 x9 x13
   x17 <- line x10 x16
   x18 <- midpoint x15 x10
-  x19 x20 x21 <- trisides x0 x1 x2
-  <- line_uq x15 x6 x19
+  x19 x20 x21 <- tri_sides x0 x1 x2
   x22 <- altitude x6 x4 x3
-  <- perpline_uq x12 x9 x22
   <- lies_on x10 x22
-  <- line_uq x6 x10 x22
   <- perpendicular x15 x6 x6 x10
-  <- thales_rev x15 x10 x6
-  <- circumcenter_uq x10 x15 x6 x18
-  <- circumcircle_uq x10 x15 x6 x11
+  <- point_to_diacircle x6 x15 x10
   x23 <- foot x15 x17
-  <- line_uq x23 x10 x17
-  <- thales_rev x15 x10 x23
-  <- on_circle_by_dist x23 x11
+  <- point_to_diacircle x23 x15 x10
+  <- point_to_circle x23 x11
   x24 <- diacircle x15 x16
-  <- line_uq x23 x16 x17
-  <- thales_rev x15 x16 x23
-  <- on_circle_by_dist x23 x24
+  <- point_to_diacircle x23 x15 x16
+  <- point_to_circle x23 x24
   x25 <- line x16 x13
   x26 <- intersection x25 x19
-  <- line_uq x16 x26 x25
   <- parallel x19 x12
-  <- line_uq x15 x26 x19
   <- perpendicular x15 x26 x26 x16
-  <- thales_rev x15 x16 x26
-  <- on_circle_by_dist x26 x24
+  <- point_to_diacircle x26 x15 x16
+  <- point_to_circle x26 x24
   x27 <- foot x13 x21
   x28 <- foot x13 x20
   x29 <- circumcircle x26 x27 x28

@@ -5,7 +5,6 @@ import primitive_constr
 import primitive_pred
 from itertools import product
 
-#def angle_const(x): return float(x%1)
 def angle_num_comp(obj_sum, frac_const):
     return (float(frac_const%1) + obj_sum)%1
 def angle_num_check(obj_sum, frac_const):
@@ -13,7 +12,6 @@ def angle_num_check(obj_sum, frac_const):
 def angle_postulate(model, *args): model.add_angle_equation(*args)
 def angle_check(model, *args): return model.check_angle_equation(*args)
 
-#def ratio_const(x): return np.array((np.log(float(x)), 0), dtype = float)
 def ratio_num_comp(obj_sum, frac_const):
     return np.array((np.log(float(frac_const)), 0),
                     dtype = float) + obj_sum
@@ -62,6 +60,7 @@ def make_primitive_tool_dict():
                 tool = MovableTool(f, in_types[2:], out_types, name = name)
                 if fname == "point_on":
                     tool.add_effect(d["lies_on", out_types+in_types[2:]])
+                    pass
             else:
                 name = "prim__"+fname
                 tool = PrimitiveConstr(f, in_types, out_types, name = name)
