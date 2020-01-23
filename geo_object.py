@@ -15,10 +15,12 @@ def eps_bigger(x1, x2):
 def vector_perp_rot(vec):
     return np.array((vec[1], -vec[0]))
 
-def line_passing_points(point1, point2):
-    normal_vector = vector_perp_rot(point1.a - point2.a)
-    c = np.dot(normal_vector, point1.a)
+def line_passing_np_points(point1, point2):
+    normal_vector = vector_perp_rot(point1 - point2)
+    c = np.dot(normal_vector, point1)
     return Line(normal_vector, c)
+def line_passing_points(point1, point2):
+    return line_passing_np_points(point1.a, point2.a)
 
 class GeoObject:
     def identical_to(self, x):

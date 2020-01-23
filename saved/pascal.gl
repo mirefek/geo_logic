@@ -1,0 +1,35 @@
+_ ->
+  x0 <- free_point 314.5894775390625 220.98193359375
+  x1 <- free_point 196.866943359375 203.2420654296875
+  x2 <- free_point 144.09750733032226 254.82616586303703
+  x3 <- circumcircle x0 x1 x2
+  x4 <- point_on 178.98046875 383.65069580078125 x3
+  x5 <- point_on 300.676549206543 402.42836296386713 x3
+  x6 <- point_on 346.424560546875 333.53515625 x3
+  x7 <- line x2 x5
+  x8 <- line x5 x0
+  x9 <- line x0 x4
+  x10 <- line x4 x1
+  x11 <- line x1 x6
+  x12 <- line x6 x2
+  x13 <- intersection x10 x7
+  x14 <- intersection x12 x9
+  x15 <- intersection x11 x8
+  <- concyclic_to_angles x4 x6 x2 x0
+  <- concyclic_to_angles x2 x0 x4 x6
+  x16 <- copy_triangle_r x0 x6 x15 x2 x4
+  <- concyclic_to_angles x5 x6 x2 x0
+  <- concyclic_to_angles x2 x1 x4 x6
+  x17 <- line x16 x4
+  x18 <- line x16 x2
+  x19 <- line x2 x4
+  <- eq_angle x19 x18 x7 x12
+  <- eq_angle x19 x10 x17 x9
+  x20 <- conjugate x16 x4 x2 x14
+  <- eq_angle x2 x14 x20 x16 x14 x4
+  <- sim_aa_r x2 x4 x14 x0 x6 x14
+  <- sim_sas_r x14 x4 x16 x14 x6 x15
+  x21 <- line x15 x14
+  <- lies_on x20 x21
+  <- lies_on x14 x21
+  <- lies_on x15 x21

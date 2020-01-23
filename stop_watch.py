@@ -63,6 +63,8 @@ def seconds_to_readable(secs):
     return ", ".join(result)
 
 def print_times():
+    if not _l: return
+
     scopes = {() : []}
     for scope in _l:
         scopes[scope[:-1]].append(scope[-1])

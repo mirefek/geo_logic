@@ -40,6 +40,7 @@ class Triggers:
         self.radius_of = tool_dict['radius_of', (Circle,)]
         self.center_of = tool_dict['center_of', (Circle,)]
         self.circle = tool_dict['circle', (Point, Ratio)]
+        self.dist = tool_dict['dist', (Point, Point)]
 
 class TriggerEnv(RelStrEnv):
     # intersection_uq_ll

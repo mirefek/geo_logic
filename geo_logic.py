@@ -14,10 +14,49 @@ from file_chooser import select_file_open, select_file_save
 from stop_watch import print_times
 from triggers import Triggers
 from num_duplicities import find_duplicities
+from itertools import islice
 
 def corners_to_rectangle(corners):
     size = corners[1] - corners[0]
     return list(corners[0])+list(size)
+
+def color_gen():
+    hsv = Gtk.HSV()
+    denom = 3
+    start = 0
+    jump = 1
+    while True:
+        for numer in range(start, denom, jump):
+            hue = numer / denom
+            yield hsv.to_rgb(hue, 1, 1)
+        denom *= 2
+        start = 1
+        jump = 2
+
+def distribute_segments(segments):
+    segments.sort(key = lambda x: (x[0], -x[1]))
+    occupied = []
+    for a,b,info in segments:
+        for lev,b_ori in enumerate(occupied):
+            if not eps_bigger(b_ori, a):
+                occupied[lev] = b
+                break
+        else:
+            lev = len(occupied)
+            occupied.append(b)
+        yield info,lev
+
+def draw_dist(cr, a,b,lev,scale):
+    if lev % 2 == 0: lev = -lev//2
+    else: lev = (lev+1) // 2
+    ab_v = (b-a) / np.linalg.norm(b-a)
+    ab_n = vector_perp_rot(ab_v)
+    a = a+(5*ab_v + 5*lev*ab_n)/scale
+    b = b+(-5*ab_v + 5*lev*ab_n)/scale
+    cr.move_to(*a)
+    cr.line_to(*b)
+    cr.set_line_width(1/scale)
+    cr.stroke()
 
 class GraphicalEnv:
     def __init__(self, triggers, scale = 1):
@@ -68,12 +107,63 @@ class GraphicalEnv:
                 visible_curves_li.add(li)
 
         lies_on_labels = self.triggers.lies_on_l, self.triggers.lies_on_c
+        dist_label = self.triggers.dist
+        dist_to_points = defaultdict(list)
         self.lies_on_data = []
-        for (label, args), _ in self.model.ufd.data.items():
+        for (label, args), out in self.model.ufd.data.items():
             if label in lies_on_labels:
                 p,ps = args
                 if p in visible_points_li and ps in visible_curves_li:
                     self.lies_on_data.append(args)
+            elif label is dist_label:
+                a,b = args
+                if a >= b: continue
+                if a not in visible_points_li or b not in visible_points_li:
+                    continue
+                d, = out
+                dist_to_points[d].append((a,b))
+
+        dist_col_data = []
+        self.dist_color_num = 0
+        for d, l in sorted(dist_to_points.items(), key = lambda x: x[0]):
+            if len(l) <= 1: continue
+            col = self.dist_color_num
+            self.dist_color_num += 1
+            dist_col_data.extend(
+                (self.li_to_num(a).a, self.li_to_num(b).a ,col)
+                for (a,b) in l
+            )
+
+        lines = [
+            (i, line_passing_np_points(a,b))
+            for i,(a,b,_) in enumerate(dist_col_data)
+        ]
+        lines.extend(
+            (-1-gi, num)
+            for (gi,num) in self.visible_curves
+            if type(num) == Line
+        )
+        line_groups = tuple(find_duplicities(lines))
+
+        self.dist_col_lev = []
+        for group in line_groups:
+            dist_indices = [i for i in group if i >= 0]
+            if len(dist_indices) == 0: continue
+            offset = int(len(dist_indices) < len(group))
+            dir_vec = lines[dist_indices[0]][1].v
+            segments = []
+            for i in dist_indices:
+                a,b,col = dist_col_data[i]
+                pos_a = np.dot(dir_vec, a)
+                pos_b = np.dot(dir_vec, b)
+                if pos_b < pos_a:
+                    a,b = b,a
+                    pos_a, pos_b = pos_b, pos_a
+                segments.append((pos_a,pos_b,(a,b,col)))
+            self.dist_col_lev.extend(
+                (a,b,col,lev+offset)
+                for (a,b,col),lev in distribute_segments(segments)
+            )
 
     def swap_priorities(self, gi, direction):
         for group in self.num_glued:
@@ -102,10 +192,18 @@ class GraphicalEnv:
     def li_to_num(self, li): # logic index to numerical object
         return self.model.num_model[li]
 
+    def li_to_type(self, li): # logic index to type
+        return self.model.obj_types[li]
+
     def gi_to_num(self, gi): # graphical index to numerical object
         li = self.step_env.local_to_global[gi]
         if li is None: return None
         return self.li_to_num(self.model.ufd.obj_to_root(li))
+
+    def gi_to_type(self, gi): # graphical index to numerical object
+        li = self.step_env.local_to_global[gi]
+        if li is None: return None
+        return self.li_to_type(self.model.ufd.obj_to_root(li))
 
     def select_obj(self, coor, point_radius = 20, ps_radius = 20):
         try:
@@ -251,6 +349,7 @@ class Drawing(Gtk.Window):
             'X': "intersection_remoter",
             'd': "point_on",
             'question': "lies_on",
+            'slash': "midpoint",
             #'exclam': "fake_lies_on",
             '1': "point_on_circle",
             '2': "point_to_circle",
@@ -367,17 +466,17 @@ class Drawing(Gtk.Window):
         cr.set_source_rgb(1, 1, 1)
         cr.fill()
 
+        # draw circles and lines
         for _,obj in self.env.visible_curves:
             obj.draw(cr, corners, self.scale)
 
+        # draw points shadows
         cr.set_source_rgb(1,1,1)
         for _,p in self.env.visible_points:
             p.add_shadow_curve(cr, corners, self.scale)
             cr.fill()
 
-        for _,p in self.env.visible_points:
-            p.draw(cr, corners, self.scale)
-
+        # draw lies_on
         for p_li, ps_li in self.env.lies_on_data:
             p = self.env.li_to_num(p_li)
             ps = self.env.li_to_num(ps_li)
@@ -386,6 +485,17 @@ class Drawing(Gtk.Window):
             cr.clip()
             ps.draw(cr, corners, self.scale)
             cr.restore()
+
+        # draw distances
+        colors = tuple(islice(color_gen(), self.env.dist_color_num))
+        for a,b,col,lev in self.env.dist_col_lev:
+            cr.set_source_rgb(*colors[col])
+            draw_dist(cr, a,b,lev,self.scale)
+
+        # draw points
+        for _,p in self.env.visible_points:
+            p.draw(cr, corners, self.scale)
+
 
     def on_key_press(self,w,e):
 
@@ -455,7 +565,7 @@ class Drawing(Gtk.Window):
         else: self.tool_data.append(obj)
 
         type_list = tuple(
-            type(self.env.gi_to_num(x))
+            self.env.gi_to_type(x)
             for x in self.tool_data
         )
         tool = self.tool_dict.get((self.tool_name, type_list), None)
