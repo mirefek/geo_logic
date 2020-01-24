@@ -1,0 +1,50 @@
+_ ->
+  x0 <- free_point 160.8099365234375 274.48236083984375
+  x1 <- free_point 463.36445312499995 267.1825775756835
+  x2 <- line x0 x1
+  x3 <- point_on 375.778076171875 277.32891845703125 x2
+  x4 <- perpline x2 x3
+  x5 <- point_on 374.776123046875 365.8312072753906 x4
+  x6 <- circumcircle x0 x1 x5
+  x7 <- intersection_remoter x4 x6 x5
+  x8 <- center_of x6
+  x9 <- diacircle x0 x8
+  x10 <- diacircle x1 x8
+  x11 <- diacircle x5 x8
+  x12 <- diacircle x7 x8
+  x13 <- intersection_remoter x12 x9 x8
+  x14 <- intersection_remoter x10 x12 x8
+  x15 <- intersection_remoter x11 x10 x8
+  x16 <- intersection_remoter x9 x11 x8
+  x17 <- line x0 x7
+  x18 <- line x7 x1
+  x19 <- midpoint x0 x7
+  x20 <- midpoint x7 x1
+  <- point_on_circle x0 x6
+  <- point_on_circle x0 x6
+  <- point_on_circle x7 x6
+  <- point_on_circle x1 x6
+  <- point_on_circle x5 x6
+  <- point_to_perp_bisector x8 x0 x7
+  <- point_to_perp_bisector x8 x1 x7
+  <- point_to_perp_bisector x8 x5 x1
+  <- point_to_perp_bisector x8 x0 x5
+  <- point_to_diacircle x20 x8 x1
+  <- point_to_diacircle x20 x8 x7
+  <- point_to_diacircle x19 x8 x0
+  <- point_to_diacircle x19 x8 x7
+  x21 <- midpoint x0 x5
+  x22 <- midpoint x5 x1
+  <- point_to_diacircle x21 x0 x8
+  <- point_to_diacircle x21 x8 x5
+  <- point_to_diacircle x22 x5 x8
+  <- point_to_diacircle x22 x1 x8
+  x23 x24 <- midsegment x7 x0 x1
+  <- parallel x23 x24 x2
+  x25 x26 <- midsegment x5 x0 x1
+  x27 x28 <- midsegment x1 x5 x7
+  x29 x30 <- midsegment x0 x5 x7
+  <- perpendicular x29 x30 x30 x28
+  <- perpendicular x30 x28 x28 x27
+  <- perpendicular x28 x27 x27 x29
+  <- perpendicular x27 x29 x29 x30

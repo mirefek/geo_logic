@@ -1,0 +1,18 @@
+_ ->
+  x0 <- free_point 202.7908935546875 365.7325439453125
+  x1 <- free_point 390.4876708984375 275.13775634765625
+  x2 <- line x0 x1
+  x3 <- perpline x2 x1
+  x4 <- point_on 442.5037841796875 360.71282958984375 x3
+  x5 <- circle x4 x1
+  x6 <- circle x0 x1
+  x7 <- intersection_remoter x5 x6 x1
+  x8 <- line x0 x4
+  x9 <- intersection_remoter x6 x8 x1
+  x10 <- line x9 x1
+  x11 <- intersection_remoter x10 x5 x1
+  <- point_on_circle x11 x5
+  <- point_on_circle x9 x6
+  <- isosceles_ss x0 x9 x1
+  <- isosceles_ss x4 x1 x11
+  <- perpendicular x11 x4 x8

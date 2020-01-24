@@ -1,0 +1,28 @@
+_ ->
+  x0 <- free_point 134.1607666015625 334.6248779296875
+  x1 <- free_point 56.90478515625 445.7452697753906
+  x2 <- free_point 490.1844482421875 334.3470153808594
+  x3 <- line x2 x0
+  x4 <- paraline x3 x1
+  x5 <- line x0 x1
+  x6 <- paraline x5 x2
+  x7 <- intersection x4 x6
+  <- parallelogram_aa x0 x2 x7 x1
+  x8 <- midpoint x0 x2
+  x9 <- line x1 x8
+  x10 <- circumcircle x1 x0 x2
+  x11 <- intersection_remoter x9 x10 x1
+  x12 <- foot x2 x5
+  x13 <- circumcircle x7 x1 x12
+  x14 <- foot x0 x6
+  <- point_to_diacircle x12 x0 x2
+  <- point_to_diacircle x14 x0 x2
+  <- isosceles_ss x8 x0 x12
+  <- isosceles_ss x8 x14 x2
+  x15 <- line x12 x8
+  <- angles_to_concyclic x1 x14 x12 x7
+  <- midpoint_uq x8 x12 x14
+  <- concyclic_to_eq_power x8 x0 x2 x11 x1
+  x16 <- intersection_remoter x9 x13 x1
+  <- concyclic_to_eq_power x8 x12 x14 x16 x1
+  <- double_direction_uq x8 x16 x11

@@ -347,13 +347,29 @@ copy_vector A:P B:P C:P -> D:P
   dir <- half_direction A B
   D <- double_direction C dir d
 
+double_direction_uq A:P B:P B':P ->
+  dir <- half_direction A B
+  d <- dist A B
+  dir' <- half_direction A B'
+  d' <- dist A B'
+  <- == dir dir'
+  <- == d d'
+  THEN
+  <- == B B'
+  PROOF
+  w <- circle A B
+  <- point_to_circle B' w
+
 reflect A:P M:P -> B:P
   B <- copy_vector A M M
+  A' <- copy_vector B M M
   M' <- midpoint A B
   THEN
   <- == M M'
+  <- == A A'
   PROOF
   <- midpoint_uq M A B
+  <- double_direction_uq M A A'
 reflect A:P l:L -> B:P
   M <- foot A l
   B <- reflect A M
@@ -666,6 +682,10 @@ tangent_remoter A:P w:C P:P -> l:L X:P
 concyclic A:P B:P C:P D:P ->
   w <- circumcircle A B C
   <- lies_on D w
+
+collinear A:P B:P C:P ->
+  l <- line A B
+  <- lies_on C l
 
 concyclic_to_angles X:P Y:P A:P B:P ->
   <- concyclic X Y A B
@@ -1014,3 +1034,22 @@ miquel A:P B:P C:P D:P -> M:P
   <- concyclic_to_angles M B P C
   <- concyclic_to_angles M A P D
   <- angles_to_concyclic Q M D C
+
+concyclic_to_eq_power X:P A:P B:P C:P D:P ->
+  <- collinear X A B
+  <- collinear X C D
+  <- not_eq A B
+  <- not_eq C D
+  <- concyclic A B C D
+  da <- dist X A
+  db <- dist X B
+  dc <- dist X C
+  dd <- dist X D
+  pow_ab <- ratio_compute 1 da 1 db 1
+  pow_cd <- ratio_compute 1 dc 1 dd 1
+  THEN
+  <- == pow_ab pow_cd
+  PROOF
+  <- concyclic_to_angles A C B D
+  <- concyclic_to_angles B D A C
+  <- sim_aa_r X A D X C B

@@ -413,6 +413,7 @@ class Drawing(Gtk.Window):
 
     def save_file(self, fname):
         if fname is None: return
+        print("saving to '{}'".format(fname))
         self.default_fname = fname
         with open(fname, 'w') as f:
             f.write('_ ->\n')

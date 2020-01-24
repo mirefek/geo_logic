@@ -1,0 +1,23 @@
+_ ->
+  x0 <- free_point 160.799560546875 367.14813232421875
+  x1 <- free_point 374.941162109375 359.59942626953125
+  x2 <- line x1 x0
+  x3 <- point_on 246.0545654296875 359.255126953125 x2
+  x4 <- circle x0 x3
+  x5 <- circle x1 x3
+  x6 <- point_on 327.6007080078125 245.87158203125 x5
+  x7 <- tangent_at x6 x5
+  x8 x9 <- intersections x7 x4
+  x10 <- line x6 x3
+  x11 <- intersection_remoter x4 x10 x3
+  x12 <- line x1 x6
+  x13 <- paraline x12 x0
+  x14 <- intersection_closer x13 x4 x11
+  <- point_on_circle x14 x4
+  <- point_on_circle x6 x5
+  <- sim_sas x6 x1 x3 x14 x0 x3
+  x15 <- perp_bisector x9 x8
+  <- point_on_circle x9 x4
+  <- point_on_circle x8 x4
+  <- point_to_perp_bisector x0 x9 x8
+  <- point_on_perp_bisector x14 x9 x8
