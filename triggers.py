@@ -1,4 +1,5 @@
 from relstr import RelStr
+from stop_watch import StopWatch
 from geo_object import *
 
 class RelStrEnv:

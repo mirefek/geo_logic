@@ -42,6 +42,8 @@ def make_primitive_tool_dict():
         if not callable(f) or name.startswith('_') or name in geo_object.__dict__:
             continue
         for in_types in intypes_iter(f):
+            if name == "intersecting" and in_types[:2] == (Line, Line):
+                continue
             if name == "lies_on": willingness = 0
             else: willingness = 1
             d[name, in_types] = PrimitivePred(f, in_types, name = name, willingness = willingness)

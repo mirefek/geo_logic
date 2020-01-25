@@ -11,7 +11,7 @@ from logic_model import LogicModel
 from collections import defaultdict
 from tool_step import ToolStep, ToolStepEnv, proof_checker
 from file_chooser import select_file_open, select_file_save
-from stop_watch import print_times
+from stop_watch import print_times, StopWatch
 from triggers import Triggers
 from num_duplicities import find_duplicities
 from itertools import islice
@@ -332,7 +332,6 @@ class Drawing(Gtk.Window):
         self.mb_grasp = None
         self.key_to_tool = {
             'p': "perp_bisector",
-            '2': "midpoint",
             'f': "free_point",
             #'l': "p_line",
             'l': "line",
@@ -354,7 +353,6 @@ class Drawing(Gtk.Window):
             '1': "point_on_circle",
             '2': "point_to_circle",
             '3': "cong_sss",
-            '4': "collinear_by_angle",
             't': "test",
         }
         self.default_fname = None

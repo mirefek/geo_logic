@@ -51,8 +51,7 @@ class UnionFindDict:
     def glue(self, n1, n2):
         #print('glue', n1, n2)
         result = self.multi_glue((n1, n2))
-        #n = self.obj_to_root(n1)
-        #print('ROOT:', n, self.obj_to_children[n])
+
         return result
 
     def multi_glue(self, *pairs):

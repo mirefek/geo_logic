@@ -1,5 +1,6 @@
 from fractions import Fraction
 from sparse_elim import SparseRow
+from stop_watch import StopWatch
 
 class ToolError(Exception):
     def __init__(self, *args, **kwargs):
@@ -175,6 +176,7 @@ class DimCompute(Tool):
         equation[new_obj] = Fraction(-1)
         assert(all(isinstance(x, Fraction) for x in equation.values()))
         self.postulate(model, equation, frac_const)
+
         return (new_obj,)
 
 class DimPred(Tool):

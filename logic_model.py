@@ -4,6 +4,7 @@ from sparse_elim import SparseRow, EquationIndex, ElimMatrix, AngleChasing, equa
 from uf_dict import UnionFindDict
 from fractions import Fraction
 from triggers import TriggerEnv, RelStrEnv
+from stop_watch import StopWatch
 
 def prime_decomposition(n):
     assert(n > 0)

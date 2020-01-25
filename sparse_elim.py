@@ -27,6 +27,18 @@ class SparseRow(dict):
             for k,x in self.items():
                 self[k] = x*n
         return self
+
+    def iadd_coef(self, coef, other):
+        if coef == 0: return
+        other = other.items()
+        for k,x in other:
+            if x == 0: continue
+            x *= coef
+            x2 = self.get(k, 0)+x
+            if x2 == 0: del self[k]
+            else: self[k] = x2
+        return self
+        
     def __iadd__(self, other):
         if isinstance(other, dict): other = other.items()
         for k,x in other:
@@ -100,7 +112,7 @@ class ElimMatrix:
             if self.value_to_var[value] == ri:
                 del self.value_to_var[value]
 
-            row += coef*new_r # the essential command
+            row.iadd_coef(coef, new_r) # the essential command
 
             self._row_updated_value(row, ri, glued)
             for col, ci in cols_to_update:
@@ -127,7 +139,7 @@ class ElimMatrix:
             update = self.rows.get(var)
             if update is not None: updates.append((coef, update))
         for coef, update in updates:
-            row += coef*update
+            row.iadd_coef(coef, update)
 
     def _least_denom(self, row): # common denominator of the equation indices
         res = 1
@@ -220,8 +232,9 @@ class AngleChasing:
         #print("    angles.postulate(SparseRow({}), Fraction({}))".format(
         #    equation, frac_offset
         #))
-        assert(self.num_check(equation, frac_offset))
-        equation = equation * frac_offset.denominator
+        #assert(self.num_check(equation, frac_offset))
+        denom = frac_offset.denominator
+        if denom > 1: equation *= denom
         changed, to_glue = self.elim.add(equation)
         to_glue_out = []
         for x,y,denom in to_glue:
