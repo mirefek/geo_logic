@@ -22,7 +22,7 @@ Tool for euclidean geometry aware of logic
 + '3' -- if two triangles are equally oriented and has equally long sides, they have equal angles
 + Backspace -- Go one step backwards in the construction
 + Change in the left panel of radio-buttons -- Use a scripted tool (their code is mostly in macros.gl)
-+ Shift+Click -- chenge ambiguous object
++ Shift+Click -- change ambiguous object
 + Ctrl+O -- open file
 + Ctrl+S -- save
 + Ctrl+Shift+S -- save as
