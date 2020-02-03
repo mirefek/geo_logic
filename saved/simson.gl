@@ -1,0 +1,19 @@
+_ ->
+  x0 <- free_point 124.70672607421875 251.71112060546875
+  x1 <- free_point 67.35205078125 390.749755859375
+  x2 <- free_point 257.2576904296875 396.00787353515625
+  x3 x4 x5 <- tri_sides x0 x1 x2
+  x6 <- circumcircle x0 x1 x2
+  x7 <- point_on 152.07733154296875 406.33013916015625 x6
+  x8 <- foot x7 x3
+  x9 <- foot x7 x4
+  x10 <- foot x7 x5
+  x11 <- line x10 x8
+  x12 <- line x8 x9
+  <- point_to_diacircle x10 x1 x7
+  <- point_to_diacircle x8 x1 x7
+  <- point_to_diacircle x8 x7 x2
+  <- point_to_diacircle x9 x7 x2
+  <- concyclic_to_angles x1 x10 x8 x7
+  <- concyclic_to_angles x0 x7 x1 x2
+  <- concyclic_to_angles x2 x9 x8 x7

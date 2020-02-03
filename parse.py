@@ -152,16 +152,16 @@ class Parser:
             out_types = tuple(out_types)
             self.add_tool(name, CompositeTool(
                 assump, impl, result, proof, arg_types, out_types, name,
-                triggers = self.triggers,
+                basic_tools = self.basic_tools,
             ))
 
         except Exception:
             print("l{}: Tool: {}".format(header_line, header))
             raise
 
-    def parse_file(self, fname, axioms = True, triggers = None):
+    def parse_file(self, fname, axioms = True, basic_tools = None):
         self.allow_axioms = axioms
-        self.triggers = triggers
+        self.basic_tools = basic_tools
 
         try:
             with open(fname) as f:

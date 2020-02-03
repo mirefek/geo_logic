@@ -14,6 +14,11 @@ def eps_bigger(x1, x2):
 
 def vector_perp_rot(vec):
     return np.array((vec[1], -vec[0]))
+def vector_direction(vec):
+    return np.arctan2(vec[1], vec[0]) / np.pi
+def vector_of_direction(direction, logsize = 0):
+    cplx = np.exp(logsize + np.pi*direction*1j)
+    return np.array((cplx.real, cplx.imag))
 
 def line_passing_np_points(point1, point2):
     normal_vector = vector_perp_rot(point1 - point2)
@@ -31,12 +36,13 @@ class GeoObject:
 
     def dist_from(self, np_point):
         raise Exception("Not implemented")
-    def draw(self, cr, corners, scale):
-        raise Exception("Not implemented")
+    #def draw(self, cr, corners, scale):
+    #    raise Exception("Not implemented")
 
 class NumObject(GeoObject):
-    def draw(self, *args):
-        pass
+    pass
+    #def draw(self, *args):
+    #    pass
 
 class Angle(NumObject):
     def __init__(self, data):
@@ -65,10 +71,9 @@ class Point(GeoObject):
     def dist_from(self, np_point):
         return np.linalg.norm(self.a - np_point)
 
-    def draw(self, cr, corners, scale):
-        cr.arc(self.a[0], self.a[1], 3/scale, 0, 2*np.pi)
-        cr.set_source_rgb(0,0,0)
-        cr.fill()
+    #def draw(self, cr, corners, scale):
+    #    cr.arc(self.a[0], self.a[1], 3/scale, 0, 2*np.pi)
+    #    cr.fill()
 
     def add_shadow_curve(self, cr, corners, scale):
         cr.arc(self.a[0], self.a[1], 10/scale, 0, 2*np.pi)
@@ -101,11 +106,10 @@ class Circle(PointSet):
         vec *= self.r/np.linalg.norm(vec)
         return self.c + vec
 
-    def draw(self, cr, corners, scale):
-        cr.arc(self.c[0], self.c[1], self.r, 0, 2*np.pi)
-        cr.set_source_rgb(0,0,0)
-        cr.set_line_width(1/scale)
-        cr.stroke()
+    #def draw(self, cr, corners, scale):
+    #    cr.arc(self.c[0], self.c[1], self.r, 0, 2*np.pi)
+    #    cr.set_line_width(1/scale)
+    #    cr.stroke()
 
 
 class Line(PointSet):
@@ -124,30 +128,30 @@ class Line(PointSet):
     def __repr__(self):
         return "Line(normal_vector = {}, c = {})".format(self.n, self.c)
 
-    def get_endpoints(self, corners):
-
-        result = [None, None]
-        boundaries = list(zip(*corners))
-        if np.prod(self.n) > 0:
-            #print('swap')
-            boundaries[1] = boundaries[1][1], boundaries[1][0]
-
-        for coor in (0,1):
-            if self.n[1-coor] == 0: continue
-            for i, bound in enumerate(boundaries[coor]):
-                p = np.zeros([2])
-                p[coor] = bound
-                p[1-coor] = (self.c - bound*self.n[coor])/self.n[1-coor]
-                #print(p)
-                #print("({} - {}) * ({} - {} = {})".format(
-                #    p[1-coor], boundaries[1-coor][0], p[1-coor], boundaries[1-coor][1],
-                #    (p[1-coor] - boundaries[1-coor][0]) * (p[1-coor] - boundaries[1-coor][1]),
-                #))
-                if (p[1-coor] - boundaries[1-coor][0]) * (p[1-coor] - boundaries[1-coor][1]) <= 0:
-                    result[i] = p
-
-        if result[0] is None or result[1] is None: return None
-        else: return result
+    #def get_endpoints(self, corners):
+    #
+    #    result = [None, None]
+    #    boundaries = list(zip(*corners))
+    #    if np.prod(self.n) > 0:
+    #        #print('swap')
+    #        boundaries[1] = boundaries[1][1], boundaries[1][0]
+    #
+    #    for coor in (0,1):
+    #        if self.n[1-coor] == 0: continue
+    #        for i, bound in enumerate(boundaries[coor]):
+    #            p = np.zeros([2])
+    #            p[coor] = bound
+    #            p[1-coor] = (self.c - bound*self.n[coor])/self.n[1-coor]
+    #            #print(p)
+    #            #print("({} - {}) * ({} - {} = {})".format(
+    #            #    p[1-coor], boundaries[1-coor][0], p[1-coor], boundaries[1-coor][1],
+    #            #    (p[1-coor] - boundaries[1-coor][0]) * (p[1-coor] - boundaries[1-coor][1]),
+    #            #))
+    #            if (p[1-coor] - boundaries[1-coor][0]) * (p[1-coor] - boundaries[1-coor][1]) <= 0:
+    #                result[i] = p
+    #
+    #    if result[0] is None or result[1] is None: return None
+    #    else: return result
 
     def dist_from(self, np_point):
         c2 = np.dot(self.n, np_point)
@@ -156,6 +160,9 @@ class Line(PointSet):
     def contains(self, np_point):
         return abs(np.dot(np_point, self.n)-self.c) < epsilon
 
+    def point_by_c(self, vc):
+        return self.c * self.n + vc*self.v
+    
     def closest_on(self, np_point):
         c2 = np.dot(self.n, np_point)
         return np_point - (c2-self.c)*self.n
@@ -166,16 +173,15 @@ class Line(PointSet):
         if eps_identical(x.data, -self.data): return True
         return False
 
-    def draw(self, cr, corners, scale):
-        endpoints = self.get_endpoints(corners)
-        if endpoints is None: return
-
-        cr.move_to(*endpoints[0])
-        cr.line_to(*endpoints[1])
-
-        cr.set_source_rgb(0,0,0)
-        cr.set_line_width(1/scale)
-        cr.stroke()
+    #def draw(self, cr, corners, scale):
+    #    endpoints = self.get_endpoints(corners)
+    #    if endpoints is None: return
+    #
+    #    cr.move_to(*endpoints[0])
+    #    cr.line_to(*endpoints[1])
+    #
+    #    cr.set_line_width(1/scale)
+    #    cr.stroke()
 
 
 def intersection_ll(line1, line2):

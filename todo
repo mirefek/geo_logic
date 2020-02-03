@@ -1,15 +1,15 @@
+Now
+* dist can be a part of a line
+* movable objects
+  * show in move_tool
+* don't add step if cached
+* active segments
+* collinear, concyclic
+* angles
 
 vymazlení GUI
-* výběr nejednoznačného objektu
 * prohlížení rovnic o úhlech a poměrech
 * skrývání objektů
-* visualisation of some facts
-  * lies_on
-  * equal angles
-    * right angle (perpendicular)
-    * parallel
-  * equal distances
-* zobrazovat slabě objekty na pozadí
 * logické setřidění nástrojů, nastavitelné klávesové zkratky
 
 dohledná doba

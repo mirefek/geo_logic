@@ -25,4 +25,5 @@ _ ->
   <- concyclic_to_eq_power x8 x0 x2 x11 x1
   x16 <- intersection_remoter x9 x13 x1
   <- concyclic_to_eq_power x8 x12 x14 x16 x1
-  <- double_direction_uq x8 x16 x11
+  x17 x18 <- double_direction_inv x8 x16
+  x19 x20 <- double_direction_inv x8 x11

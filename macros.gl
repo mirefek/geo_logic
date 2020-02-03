@@ -342,34 +342,28 @@ eq_dist A0:P l0:L A1:P l1:L ->
   d1 <- dist A1 l1
   <- == d0 d1
 
-copy_vector A:P B:P C:P -> D:P
+double_direction_inv A:P B:P -> dir:A d:D
   d <- dist A B
   dir <- half_direction A B
-  D <- double_direction C dir d
-
-double_direction_uq A:P B:P B':P ->
-  dir <- half_direction A B
-  d <- dist A B
-  dir' <- half_direction A B'
-  d' <- dist A B'
-  <- == dir dir'
-  <- == d d'
+  B' <- double_direction A dir d
   THEN
   <- == B B'
   PROOF
   w <- circle A B
   <- point_to_circle B' w
+  
+copy_vector A:P B:P C:P -> D:P
+  dir d <- double_direction_inv A B
+  D <- double_direction C dir d
 
 reflect A:P M:P -> B:P
   B <- copy_vector A M M
-  A' <- copy_vector B M M
   M' <- midpoint A B
+  _ _ <- double_direction_inv M A
   THEN
   <- == M M'
-  <- == A A'
   PROOF
   <- midpoint_uq M A B
-  <- double_direction_uq M A A'
 reflect A:P l:L -> B:P
   M <- foot A l
   B <- reflect A M
@@ -789,6 +783,24 @@ midpoint_arc A:P B:P C:P -> M:P
   _ <- secant_direction B M w
   _ <- secant_direction B C w
   <- eq_arcs_to_eq_dist B M M C w
+midpoint_arc A:P B:P w:C -> M:P
+  <- lies_on A w
+  <- lies_on B w
+  dir <- half_direction A B
+  r <- radius_of w
+  O <- center_of w
+  dir2 <- angle_compute 1/4 dir 1
+  M <- double_direction O dir2 r
+  THEN
+  <- lies_on M w
+  <- eq_dist A M M B
+  <- eq_arcs A M M B w
+  PROOF
+  <- point_on_circle A w
+  <- point_on_circle B w
+  <- point_to_circle M w
+  _ <- secant_direction A B w
+  <- cong_sas A O M M O B
 
 incenter A:P B:P C:P -> I:P
   <- not_collinear A B C
@@ -1001,13 +1013,13 @@ conjugate X:P A:P B:P C:P -> Y:P
   ib <- isogonal_by_refl X B C A
   ic <- isogonal_by_refl X C A B
 
-inverse A:P c:C -> A':P
-  r <- radius_of c
-  C <- center_of c
-  dir <- half_direction C A
-  d <- dist A C
+inverse A:P w:C -> A':P
+  r <- radius_of w
+  O <- center_of w
+  dir d <- double_direction_inv O A
   d' <- ratio_compute 1 r 2 d -1
-  A' <- double_direction C dir d'
+  A' <- double_direction O dir d'
+  A'' <- double_direction O dir d
 
 quadrilateral_PQ A:P B:P C:P D:P -> P:P Q:P
   ab <- line A B
@@ -1053,3 +1065,12 @@ concyclic_to_eq_power X:P A:P B:P C:P D:P ->
   <- concyclic_to_angles A C B D
   <- concyclic_to_angles B D A C
   <- sim_aa_r X A D X C B
+
+polar A:P w:C -> a:L
+  A' <- inverse A w
+  O <- center_of w
+  a <- perpline O A' A'
+pole a:L w:C -> A:P
+  O <- center_of w
+  A' <- foot O a
+  A <- inverse A' w

@@ -26,7 +26,7 @@ def prime_decomposition(n):
     return result
 
 class LogicModel():
-    def __init__(self, triggers = None):
+    def __init__(self, basic_tools = None):
         self.obj_types = []
         self.num_model = []
         self.ratios = ElimMatrix()
@@ -34,8 +34,11 @@ class LogicModel():
         self.angles = AngleChasing()
         self.ufd = UnionFindDict()
 
-        if triggers is None: self.triggers = RelStrEnv(self)
-        self.triggers = TriggerEnv(triggers, self)
+        if basic_tools is None: self.triggers = RelStrEnv(self)
+        self.triggers = TriggerEnv(basic_tools, self)
+
+        self.exact_angle = self.add_obj(Angle(0))
+        self.angles.postulate(SparseRow({self.exact_angle : 1}), Fraction(0))
 
     def add_obj(self, num_obj):
         index = len(self.num_model)

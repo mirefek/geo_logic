@@ -198,7 +198,7 @@ class ElimMatrix:
 class AngleChasing:
     def __init__(self):
         self.elim = ElimMatrix()
-        self.equal_to = dict() # var -> root
+        self.equal_to = dict() # var -> root, denominator
         self.root_to_vars = dict() # root -> size, dict( frac_diff -> var_list )
         self.value = dict() # var -> value
 
@@ -227,6 +227,9 @@ class AngleChasing:
         num_val += float(frac_offset)
         num_val = (num_val+0.5) % 1 - 0.5
         return eps_identical(num_val, 0)
+
+    def has_exact_difference(self, a, b):
+        return self.equal_to[a][0] == self.equal_to[b][0]
 
     def postulate(self, equation, frac_offset):
         #print("    angles.postulate(SparseRow({}), Fraction({}))".format(

@@ -9,9 +9,7 @@ def dist(a : Point, b : Point) -> Ratio:
     assert((a.a != b.a).any())
     return Ratio((np.log(np.linalg.norm(a.a - b.a)), 1))
 def direction_of(l : Line) -> Angle:
-    ang = np.angle(complex(*l.n))/np.pi
-    #print("direction_of: {} -> {}".format(l.n, ang))
-    return Angle(ang)
+    return Angle(vector_direction(l.v))
 
 def intersection(l1 : Line, l2 : Line) -> Point:
     assert(isinstance(l1, Line) and isinstance(l2, Line))
@@ -42,23 +40,16 @@ def circle(center : Point, radius : Ratio) -> Circle:
 def line_with_direction(p : Point, d : Angle) -> Line:
     assert(isinstance(d, Angle))
     assert(isinstance(p, Point))
-    cplx = np.exp(d.data*np.pi*1j)
-    normal_vector = np.array((cplx.real, cplx.imag))
+    normal_vector = vector_of_direction(d.data+0.5)
     c = np.dot(normal_vector, p.a)
     return Line(normal_vector, c)
 
 def midpoint(A : Point, B : Point) -> Point:
     return Point((A.a + B.a)/2)
 def half_direction(A : Point, B : Point) -> Angle:
-    vec = vector_perp_rot(A.a - B.a)
-    ang = np.angle(complex(*vec))/(2*np.pi)
-    #print("half direction: {} -> {}".format(vec, ang))
-    return Angle(ang)
+    return Angle(vector_direction(B.a - A.a)/2)
 def double_direction(A : Point, ang : Angle, d : Ratio) -> Point:
-    cplx = -1j*np.exp(d.x + 2*np.pi*ang.data*1j)
-    vector = np.array((cplx.real, cplx.imag))
-    #print("double direction: {} -> {}".format(ang.data, vector))
-    return Point(A.a + vector)
+    return Point(A.a + vector_of_direction(2*ang.data, d.x))
 
 def circumcircle(A : Point, B : Point, C : Point) -> Circle:
     A,B,C = A.a, B.a, C.a
