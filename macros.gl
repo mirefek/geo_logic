@@ -789,12 +789,12 @@ midpoint_arc A:P B:P w:C -> M:P
   dir <- half_direction A B
   r <- radius_of w
   O <- center_of w
-  dir2 <- angle_compute 1/4 dir 1
+  dir2 <- angle_compute -1/4 dir 1
   M <- double_direction O dir2 r
   THEN
   <- lies_on M w
-  <- eq_dist A M M B
   <- eq_arcs A M M B w
+  <- eq_dist A M M B
   PROOF
   <- point_on_circle A w
   <- point_on_circle B w

@@ -12,8 +12,8 @@ from file_chooser import select_file_open, select_file_save
 from stop_watch import print_times, StopWatch
 from triggers import ImportedTools
 from itertools import islice
-from view_port_ori import ViewPort
-from graphical_env import GraphicalEnv
+from view_port import ViewPort
+from graphical_env2 import GraphicalEnv
 from tools import MovableTool
 
 class Drawing(Gtk.Window):

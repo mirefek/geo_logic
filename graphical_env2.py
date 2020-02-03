@@ -6,13 +6,18 @@ import itertools
 from collections import defaultdict
 from tools import ToolError, ToolErrorException, MovableTool
 
-def distribute_segments(segments):
+def distribute_segments(segments, lev_zero_points = ()):
     segments.sort(key = lambda x: (x[0], -x[1]))
-    occupied = []
+    lev_zero_points = sorted(lev_zero_points, reverse = True)
+    occupied = [None]
     for a,b,start,info in segments:
+        while lev_zero_points and not eps_smaller(a, lev_zero_points[-1]):
+            lev_zero_points.pop()
+        if lev_zero_points and eps_smaller(lev_zero_points[-1], b) and start == 0:
+            start = 1
         for lev,b_ori in enumerate(occupied):
             if lev < start: continue
-            if not eps_smaller(a, b_ori):
+            if b_ori is None or not eps_smaller(a, b_ori):
                 occupied[lev] = b
                 break
         else:
@@ -21,13 +26,20 @@ def distribute_segments(segments):
         yield info,lev
 
 # (a,b,info), a in (0,2), b in (0,4), cyc mod 2
-def distribute_segments_cyc(segments):
+def distribute_segments_cyc(segments, lev_zero_points = ()):
     segments.sort(key = lambda x: (x[0], -x[1]))
-    occupied = []
+    lev_zero_points = list(lev_zero_points) + [x+2 for x in lev_zero_points]
+    lev_zero_points.sort(reverse = True)
+    occupied = [(None,None)]
     for a,b,start,info in segments:
+        while lev_zero_points and not eps_smaller(a, lev_zero_points[-1]):
+            lev_zero_points.pop()
+        if lev_zero_points and eps_smaller(lev_zero_points[-1], b) and start == 0:
+            start = 1
         for lev,(a_ori,b_ori) in enumerate(occupied):
             if lev < start: continue
-            if not eps_smaller(a, b_ori) and not eps_smaller(a_ori, b-2):
+            if a_ori is None or (not eps_smaller(a, b_ori) and not eps_smaller(a_ori, b-2)):
+                if a_ori is None: a_ori = a
                 occupied[lev] = a_ori,b
                 break
         else:
@@ -80,7 +92,7 @@ class NumLineData:
 
         segments = []
         for la,lb,na,nb,col in self.dists:
-            if points is None:
+            if self.visible is None:
                 start = 0
             elif la in points and lb in points:
                 start = 0
@@ -90,10 +102,11 @@ class NumLineData:
             if pos_a < pos_b: segments.append((pos_a, pos_b, start, (na,nb,pos_a,pos_b,col)))
             else: segments.append((pos_b, pos_a, start, (nb,na,pos_b,pos_a,col)))
 
-        dists_lev = tuple(distribute_segments(segments))
+        point_pos = [np.dot(self.line.v, self.env.li_to_num(p).a) for p in points]
+        dists_lev = tuple(distribute_segments(segments, point_pos))
         if len(points) <= 1:
             self.colorization = None
-            return (
+            self.env.visible_dists.extend(
                 (a,b,col,lev)
                 for (a,b,_,_,col),lev in dists_lev
             )
@@ -106,7 +119,6 @@ class NumLineData:
                 start_pos = min(active_positions)
                 end_pos = max(active_positions)
 
-            extra_dists = []
             self.colorization = []
             cur_pos = None
             for (a,b,pos_a,pos_b,col),lev in dists_lev:
@@ -120,7 +132,7 @@ class NumLineData:
                         self.colorization.append((cur_pos, pos_a, -2))
                     self.colorization.append((pos_a,pos_b, col))
                     cur_pos = pos_b
-                else: extra_dists.append((a,b,col,lev))
+                else: self.env.visible_dists.append((a,b,col,lev))
             if cur_pos is None:
                 if self.is_active:
                     self.colorization = [
@@ -135,8 +147,6 @@ class NumLineData:
                         self.colorization.append((cur_pos,end_pos, -1))
                     self.colorization.append((end_pos,None, -2))
                 else: self.colorization.append((cur_pos,None, -2))
-
-            return extra_dists
 
 class NumCircleData:
     def __init__(self, env, circle):
@@ -160,11 +170,11 @@ class NumCircleData:
         return self.visible
 
     def distribute_arcs(self):
-        if self.visible is None: return ()
+        if self.visible is None: return
         points = self.env.circle_to_points[self.visible]
         if len(points) <= 1:
             self.colorization = None
-            return ()
+            return
 
         arcs = self.env.circle_to_arcs[self.visible]
         point_to_pos = dict(
@@ -172,21 +182,17 @@ class NumCircleData:
                                   - self.circle.c)%2)
             for li in points
         )
-        print(point_to_pos)
         segments = []
         for a,b,col in arcs:
             pos_a = point_to_pos.get(a, None)
             if a is None: continue
             pos_b = point_to_pos.get(b, None)
             if b is None: continue
-            print("{}:{} -> {}:{} COLOR {}".format(a,pos_a, b,pos_b, col))
             if pos_b < pos_a: pos_b += 2
             start = 0
             segments.append((pos_a, pos_b, start, (pos_a,pos_b,col)))
-        print(segments)
-        arc_lev = tuple(distribute_segments_cyc(segments))
+        arc_lev = tuple(distribute_segments_cyc(segments, point_to_pos.values()))
 
-        extra_arcs = []
         positions = sorted(point_to_pos.values())
 
         out_start = None
@@ -195,7 +201,7 @@ class NumCircleData:
             circ_color = -1
             if eps_bigger(positions[0]+1, positions[-1]):
                 out_start = positions[-1]
-                out_end = positions[0]+2
+                out_end = positions[0]
             else:
                 for pos_a, pos_b in zip(positions, positions[1:]):
                     if eps_bigger(pos_b, pos_a+1):
@@ -204,38 +210,43 @@ class NumCircleData:
                         break
         else: circ_color = -2
 
+        def arc_tuple(a, b, *args):
+            if a <= b: return (a,b,*args)
+            else: return (a,b+2,*args)
+
         self.colorization = []
-        print("  distribute arcs")
-        def add_outside_arc(a, b):
-            print("    OUTSIDE ARC", a, b)
-            if a >= b: return
-            if out_start is not None and out_start >= a and out_end <= b:
-                if a < out_start: self.colorization.append((a, out_start, -1))
-                self.colorization.append((out_start, out_end, -2))
-                if out_end < b: self.colorization.append((out_end, b, -1))
+        def add_black_arc(pos_a, pos_b):
+            if eps_identical(pos_a, pos_b): return
+            #print("ADD_BLACK", pos_a, pos_b)
+            #print("OUTSIDE", out_start, out_end)
+            if out_start is not None and eps_bigger((pos_b-pos_a)%2, 1):
+                #print("  outside")
+                if not eps_identical(pos_a, out_start): self.colorization.append(arc_tuple(pos_a, out_start, -1))
+                self.colorization.append(arc_tuple(out_start, out_end, -2))
+                if not eps_identical(out_end, pos_b): self.colorization.append(arc_tuple(out_end, pos_b, -1))
             else:
-                self.colorization.append((pos_a, pos_b, circ_color))
-            
+                #print("  inside")
+                self.colorization.append(arc_tuple(pos_a, pos_b, circ_color))
+
         cur_pos = None
         for (pos_a, pos_b, col), lev in arc_lev:
             if lev == 0:
                 if cur_pos is not None:
-                    add_outside_arc(cur_pos, pos_a)
+                    add_black_arc(cur_pos, pos_a)
                 else: first_pos = pos_a
                 cur_pos = pos_b
-                print("    COLOR ARC", pos_a, pos_b, col)
-                self.colorization.append((pos_a, pos_b, col))
-            else: extra_arcs.append((pos_a, pos_b, col, lev))
+                self.colorization.append(arc_tuple(pos_a, pos_b, col))
+            else: self.env.visible_arcs.append(
+                    arc_tuple(pos_a, pos_b, self.circle, col, lev)
+            )
 
         if cur_pos is None:
             if out_start is None: self.colorization = None
             else: self.colorization = [
-                (out_start, out_end, -2),
-                (out_end, out_start+2, -1),
+                arc_tuple(out_start, out_end, -2),
+                arc_tuple(out_end, out_start, -1),
             ]
-        else: add_outside_arc(cur_pos, first_pos+2)
-
-        return extra_arcs
+        else: add_black_arc(cur_pos, first_pos)
 
 class GraphicalEnv:
 
@@ -387,12 +398,11 @@ class GraphicalEnv:
             if res is not None: return res
         value = constructor(self, obj)
         l.append(value)
-
         for key in keys: d[key] = value
         return value
 
     def get_num_point(self, point):
-        x0,y0 = map(int, np.floor(point.a))
+        x0,y0 = map(int, np.floor(point.a / epsilon))
         keys = tuple(
             (x,y) for x in (x0,x0+1) for y in (y0,y0+1)
         )
@@ -401,7 +411,7 @@ class GraphicalEnv:
             NumPointData, point, keys
         )
     def get_num_line(self, line):
-        x0,y0,c0 = map(int, np.floor(line.data))
+        x0,y0,c0 = map(int, np.floor(line.data / epsilon))
         keys = tuple(
             (x*s,y*s,c*s)
             for x in (x0,x0+1) for y in (y0,y0+1)
@@ -412,8 +422,7 @@ class GraphicalEnv:
             NumLineData, line, keys,
         )
     def get_num_circle(self, circle):
-        print("get_num_circle")
-        x0,y0,r0 = map(int, np.floor(circle.data))
+        x0,y0,r0 = map(int, np.floor(circle.data / epsilon))
         keys = tuple(
             (x,y,r)
             for x in (x0,x0+1) for y in (y0,y0+1)
@@ -455,7 +464,7 @@ class GraphicalEnv:
         for li, gi in self.li_to_gi_last.items():
             num_data = self.li_to_num_data[li]
             priority = self.gi_to_priority[gi]
-            num_data.add_active_candidate(li, priority)
+            num_data.add_active_candidate(li, (priority,gi))
 
     def select_visible_objs(self, objs):
         visible_objs = set()
@@ -548,11 +557,11 @@ class GraphicalEnv:
     def distribute_dists(self):
         self.visible_dists = []
         for line_data in self.num_lines:
-            self.visible_dists.extend(line_data.distribute_dists())
+            line_data.distribute_dists()
     def distribute_arcs(self):
         self.visible_arcs = []
         for circle_data in self.num_circles:
-            self.visible_arcs.extend(circle_data.distribute_arcs())
+            circle_data.distribute_arcs()
 
     def visible_export(self):
         self.visible_points_numer = [
@@ -626,20 +635,24 @@ class GraphicalEnv:
         self.distribute_arcs()
         self.visible_export()
 
-    def swap_priorities(self, li, direction):
+    def swap_priorities(self, gi, direction):
+        li = self.gi_to_li(gi)
         candidates = self.li_to_num_data[li].active_candidates
         if len(candidates) <= 1:
             print("Unambiguous object")
             return
 
         candidates = sorted(
-            self.li_to_gi_last[cand] for
-            _, cand in candidates
+            ( cand for _, cand in candidates ),
+            key = lambda cand: self.li_to_gi_last[cand],
         )
+        #print(li, candidates)
         i = candidates.index(li)
-        i2 = (i + direction) % len(group)
-        for obj in candidates[i2+1:i+1]:
-            self.gi_to_priority[obj] = 1
-        self.gi_to_priority[group[i2]] = 2
+        i2 = (i + direction) % len(candidates)
+        #print("{} -> {}".format(i, i2))
+        for li in candidates[i2+1:i+1]:
+            self.gi_to_priority[self.li_to_gi_last[li]] = 1
+        self.gi_to_priority[self.li_to_gi_last[candidates[i2]]] = 2
+        #print([self.gi_to_priority[self.li_to_gi_last[x]] for x in candidates])
 
         self.refresh_visible()
