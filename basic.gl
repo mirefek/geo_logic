@@ -177,19 +177,18 @@ angle l0:L l1:L -> alpha:A
   d1 <- direction_of l1
   alpha <- angle_compute 0 d0 -1 d1 1
 angle l0:L A1:P B1:P -> alpha:A
-  d0 <- direction_of l0
-  d1 <- direction_of A1 B1
-  alpha <- angle_compute 0 d0 -1 d1 1
+  l1 <- line A1 B1
+  alpha <- angle l0 l1
 angle A0:P B0:P l1:L -> alpha:A
   d0 <- direction_of A0 B0
   d1 <- direction_of l1
   alpha <- angle_compute 0 d0 -1 d1 1
 angle A0:P B0:P A1:P B1:P -> alpha:A
-  d0 <- direction_of A0 B0
-  d1 <- direction_of A1 B1
-  alpha <- angle_compute 0 d0 -1 d1 1
+  l1 <- line A1 B1
+  alpha <- angle A0 B0 l1
 angle A:P B:P C:P -> alpha:A
-  alpha <- angle B A B C
+  l1 <- line B C
+  alpha <- angle B A l1
 
 eq_angle a0:L b0:L a1:L b1:L -> 
   alpha0 <- angle a0 b0

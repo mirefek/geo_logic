@@ -13,7 +13,7 @@ from stop_watch import print_times, StopWatch
 from triggers import ImportedTools
 from itertools import islice
 from view_port import ViewPort
-from graphical_env2 import GraphicalEnv
+from graphical_env import GraphicalEnv
 from tools import MovableTool
 
 class Drawing(Gtk.Window):
@@ -230,7 +230,6 @@ class Drawing(Gtk.Window):
             print("Move tool")
             self.tool_data = None
         elif keyval_name == 'h':
-            TODO
             self.tool = self.hide_tool
             print("Hide tool")
             self.tool_data = None
@@ -332,10 +331,9 @@ class Drawing(Gtk.Window):
             print("Internal bug: Object is not movable")
 
     def hide_tool(self, coor):
-        TODO_later
-        obj = self.select_obj(coor, self.view_port.scale)
+        obj = self.env.select_obj(coor, self.view_port.scale)
         if obj is None: return
-        self.constr.hide(obj)
+        self.env.hide(obj)
         self.darea.queue_draw()
 
 if __name__ == "__main__":

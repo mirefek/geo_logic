@@ -41,8 +41,12 @@ class ImportedTools:
         self.radius_of = tool_dict['radius_of', (Circle,)]
         self.center_of = tool_dict['center_of', (Circle,)]
         self.circle = tool_dict['circle', (Point, Ratio)]
-        self.dist = tool_dict['dist', (Point, Point)]
+
+        self.dist = tool_dict.get(('dist', (Point, Point)), None)
         self.arc_length = tool_dict.get(('arc_length', (Point, Point, Circle)), None)
+        self.angle_ll = tool_dict.get(('angle', (Line, Line)), None)
+        self.angle_ppl = tool_dict.get(('angle', (Point, Point, Line)), None)
+        self.line = tool_dict.get(('line', (Point, Point)), None)
 
 class TriggerEnv(RelStrEnv):
     # intersection_uq_ll
@@ -55,7 +59,7 @@ class TriggerEnv(RelStrEnv):
     def __init__(self, rel_names, model):
 
         RelStrEnv.__init__(self, model)
-        
+
         self.lies_on_l = rel_names.lies_on_l
         self.lies_on_c = rel_names.lies_on_c
         self.direction_of = rel_names.direction_of
