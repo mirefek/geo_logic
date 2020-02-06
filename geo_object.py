@@ -188,7 +188,7 @@ def intersection_ll(line1, line2):
 
     matrix = np.stack((line1.n, line2.n))
     b = np.array((line1.c, line2.c))
-    if abs(np.linalg.det(matrix)) < epsilon: return []
+    if abs(np.linalg.det(matrix)) < epsilon: return None
     return np.linalg.solve(matrix, b)
 
 def intersection_lc(line, circle):

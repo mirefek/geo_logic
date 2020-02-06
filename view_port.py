@@ -153,7 +153,7 @@ class ViewPort:
         print("zoom {}".format(self.scale))
 
     def set_corners(self, width, height):
-        self.corners = corners = np.array([
+        self.corners = np.array([
             [0, 0],
             [width, height],
         ])/self.scale - self.shift
