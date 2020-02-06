@@ -1,25 +1,3 @@
-fpoint @ -> A:P
-  THEN
-  <- mprim__fpoint @
-movcol__point_on l:L A:P ->
-  <- lies_on A l
-movcol__point_on c:C A:P ->
-  <- lies_on A c
-movcol__fline A:P l:L ->
-  <- lies_on A l
-movcol__fcirc_p A:P c:C ->
-  <- lies_on A c
-movcol__fcirc_pp A:P B:P c:C ->
-  <- lies_on A c
-  <- lies_on B c
-movcol__fcirc_c A:P c:C ->
-  A' <- center_of c
-  <- == A A'
-movcol__fcompass r:D c:C ->
-  r' <- radius_of c
-  <- == r r'
-
-
 line A:P B:P -> p:L
   <- not_eq A B
   THEN
