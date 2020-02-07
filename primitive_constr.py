@@ -24,11 +24,11 @@ def intersection0(cl1 : PointSet, cl2 : PointSet) -> Point:
     assert(len(intersections) == 2)
     intersections.sort(key = lambda p: np.dot(p.a, [1.2, 3.4]))
     return intersections[0]
-def free_point(x : float, y : float) -> Point:
-    return Point(np.array((x,y)))
-def point_on(x : float, y : float, cl : PointSet) -> Point:
-    true_coor = cl.closest_on(np.array((x,y)))
-    return Point(true_coor)
+#def free_point(x : float, y : float) -> Point:
+#    return Point(np.array((x,y)))
+#def point_on(x : float, y : float, cl : PointSet) -> Point:
+#    true_coor = cl.closest_on(np.array((x,y)))
+#    return Point(true_coor)
 def line(p1 : Point, p2 : Point) -> Line:
     assert(isinstance(p1, Point))
     assert(isinstance(p2, Point))

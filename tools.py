@@ -49,27 +49,6 @@ class Tool:
     def run(self, meta_args, obj_args, model, strictness):
         raise Exception("Not implemented")
 
-class MovableTool(Tool):
-    def __init__(self, num_eval, arg_types, out_types, name):
-        Tool.__init__(self, (float, float), arg_types, out_types, name)
-        self.num_eval = num_eval
-        self.effects = []
-
-    def add_effect(self, tool):
-        # after tool is aplied, effects will be postulated on
-        # (output, input1, input2, ...)
-        self.effects.append(tool)
-        
-    def run(self, meta_args, obj_args, model, strictness):
-        num_args = tuple(model.num_model[arg] for arg in obj_args)
-        num_outs = self.num_eval(*(meta_args+num_args))
-        if len(self.out_types) == 1 and not isinstance(num_outs, (list, tuple)):
-            num_outs = num_outs,
-        assert(len(num_outs) == len(self.out_types))
-        out = model.add_objs(num_outs)
-        for effect in self.effects: effect.run((), out + obj_args, model, 0)
-        return out
-
 class EqualObjects(Tool):
     def __init__(self, willingness = 0, name = "=="):
         self.willingness = willingness
@@ -89,7 +68,7 @@ class EqualObjects(Tool):
                 print('not provably equal', a, b)
                 raise ToolErrorLog()
 
-class CachedTool:
+class CachedTool(Tool):
     def __init__(self, arg_types, out_types, name):
         Tool.__init__(self, (), arg_types, out_types, name)
         self.symmetries = []
@@ -158,7 +137,7 @@ class DimCompute(Tool):
         self.obj_type = obj_type
         self.num_comp = num_comp
         self.postulate = postulate
-        if d is not None: d[name] = self
+        if d is not None: d[name, None] = self
     def run(self, meta_args, args, model, strictness):
         coefs = meta_args[1:]
         assert(len(coefs) == len(args))
@@ -188,7 +167,7 @@ class DimPred(Tool):
         self.check = check
         self.willingness = willingness
         Tool.__init__(self, None, None, (), name)
-        if d is not None: d[name] = self
+        if d is not None: d[name, None] = self
     def run(self, meta_args, args, model, strictness):
         coefs = meta_args[1:]
         assert(len(coefs) == len(args))

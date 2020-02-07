@@ -8,21 +8,19 @@ Tool for euclidean geometry aware of logic
 
 ## Controls
 (the GUI is highly provisional so far)
-+ 'f' -- Draw point
-+ 'd' -- Draw dependent point (on a line or on a circle)
-+ 'm' -- Move point
-+ 'l' -- line
-+ 'c' -- circle
-+ 'C' -- compass
-+ 'x' -- intersection of two lines
-+ 'X' -- the intersection of two clines further from a third point
-+ '/' -- midpoint
++ 'x' -- Point (free point / intersection / midpoint / midpoint_arc / center / foot)
++ 'l' -- Line (line / free line / parallel line)
++ 't' -- Perpline (perpendicular bisector / perpendicular line)
++ 'c' -- Circle (circle / compass / free circle)
++ 'o' -- Circumcircle (free circle passing, diacircle, circumcircle)
 + '1' -- a point on circle has the radius distnce from its center
 + '2' -- if a point has a radius distance from a center of a circle, it lies on it
 + '3' -- if two triangles are equally oriented and has equally long sides, they have equal angles
 + Backspace -- Go one step backwards in the construction
 + Change in the left panel of radio-buttons -- Use a scripted tool (their code is mostly in macros.gl)
 + Shift+Click -- change ambiguous object
++ 'm' -- Move
++ 'h' -- Move
 + Ctrl+O -- open file
 + Ctrl+S -- save
 + Ctrl+Shift+S -- save as

@@ -18,8 +18,9 @@ type_to_c = dict(
 )
 
 class Parser:
-    def __init__(self):
-        self.tool_dict = make_primitive_tool_dict()
+    def __init__(self, tool_dict = None):
+        if tool_dict is None: self.tool_dict = make_primitive_tool_dict()
+        else: self.tool_dict = dict(tool_dict)
         self.variables = None # dict: name -> index, type
 
     def add_var(self, name, t):
@@ -79,7 +80,7 @@ class Parser:
             in_types = tuple(in_types)
             tool = self.tool_dict.get((tool_name, in_types), None)
             if tool is None:
-                tool = self.tool_dict.get(tool_name, None)
+                tool = self.tool_dict.get((tool_name, None), None)
                 if tool is None:
                     raise Exception(
                         "Unknown tool: {} : {}".format(
@@ -219,7 +220,5 @@ if __name__ == "__main__":
     parser.tool_dict['midpoint', (Point, Point)].add_symmetry((1,0))
     parser.tool_dict['dist', (Point, Point)].add_symmetry((1,0))
     parser.tool_dict['intersection', (Line, Line)].add_symmetry((1,0))
-    parser.tool_dict['intersection0', (Circle, Circle)].add_symmetry((1,0))
-    parser.tool_dict['intersection_remoter', (Circle, Circle, Point)].add_symmetry((1,0,2))
 
     parser.tool_dict['_', ()].run((), (), model, 1)

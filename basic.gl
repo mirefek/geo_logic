@@ -12,6 +12,12 @@ direction_of A:P B:P -> dir:A
   <- not_eq A B
   l <- line A B
   dir <- direction_of l
+perp_direction l:L -> dir_p:A
+  dir <- direction_of l
+  dir_p <- angle_compute 1/2 dir 1
+perp_direction A:P B:P -> dir_p:A
+  dir <- direction_of A B
+  dir_p <- angle_compute 1/2 dir 1
 
 line_with_direction A:P d:A -> p:L
   THEN
@@ -245,9 +251,8 @@ midpoint A:P B:P -> M:P
   <- ratio_pred 1/2 r 1
 
 perpline l:L A:P -> p:L
-  dir <- direction_of l
-  dir_p <- angle_compute 1/2 dir 1
-  p <- line_with_direction A dir_p
+  dir <- perp_direction l
+  p <- line_with_direction A dir
 perpline X0:P X1:P A:P -> p:L
   l <- line X0 X1
   p <- perpline l A

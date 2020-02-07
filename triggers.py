@@ -33,21 +33,6 @@ class RelStrEnv:
         for t,data in disc_edges:
             self.add(t, tuple(glue_dict.get(x, x) for x in data))
 
-class ImportedTools:
-    def __init__(self, tool_dict):
-        self.lies_on_l = tool_dict['lies_on', (Point, Line)]
-        self.lies_on_c = tool_dict['lies_on', (Point, Circle)]
-        self.direction_of = tool_dict['direction_of', (Line,)]
-        self.radius_of = tool_dict['radius_of', (Circle,)]
-        self.center_of = tool_dict['center_of', (Circle,)]
-        self.circle = tool_dict['circle', (Point, Ratio)]
-
-        self.dist = tool_dict.get(('dist', (Point, Point)), None)
-        self.arc_length = tool_dict.get(('arc_length', (Point, Point, Circle)), None)
-        self.angle_ll = tool_dict.get(('angle', (Line, Line)), None)
-        self.angle_ppl = tool_dict.get(('angle', (Point, Point, Line)), None)
-        self.line = tool_dict.get(('line', (Point, Point)), None)
-
 class TriggerEnv(RelStrEnv):
     # intersection_uq_ll
     # intersection_uq_lc, not tangent

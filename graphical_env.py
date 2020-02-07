@@ -4,7 +4,8 @@ import geo_object
 from geo_object import *
 import itertools
 from collections import defaultdict
-from tools import ToolError, ToolErrorException, MovableTool
+from tools import ToolError, ToolErrorException
+from movable_tools import MovableTool
 
 def distribute_segments(segments, lev_zero_points = ()):
     segments.sort(key = lambda x: (x[0], -x[1]))
@@ -109,7 +110,6 @@ class NumPointData:
         for d, lines in self.exact_lines.items():
             lines &= self.env.visible_lines
             if len(lines) < 1: continue
-            print("DISTRIBUTE")
             line_pos = sorted(
                 (vector_direction(self.env.li_to_num(l).v)%1, l)
                 for l in lines
@@ -429,11 +429,12 @@ class GraphicalEnv:
         #self.extra_lines_numer, self.extra_circles_numer = (), ()
         #self.visible_arcs, self.visible_dists = (), ()
         #self.selectable_points = []
-        #self.selectable_clines = []
+        #self.selectable_lines = []
+        #self.selectable_circles = []
 
         # long-term stored data
         self.steps = []
-        self.gi_to_step = []
+        self.gi_to_step_i = []
         self.gi_to_priority = []
         self.gi_to_hidden = []
 
@@ -456,6 +457,8 @@ class GraphicalEnv:
         #self.visible_lines = set()
         #self.visible_circles = set()
 
+        self.hl_proposals = ()
+        self.hl_helpers = ()
         self.refresh_steps()
 
     def li_root(self, li):
@@ -481,25 +484,6 @@ class GraphicalEnv:
         if li is None: return None
         return self.li_to_type(self.li_root(li))
 
-    def select_obj(self, coor, scale, point_radius = 20, ps_radius = 20):
-        try:
-            d,p = min((
-                (num.dist_from(coor), gi)
-                for gi, num in self.selectable_points
-            ), key = lambda x: x[0])
-            if d * scale < point_radius: return p
-        except ValueError:
-            pass
-        try:
-            d,ps = min((
-                (num.dist_from(coor), gi)
-                for gi, num in self.selectable_clines
-            ), key = lambda x: x[0])
-            if d * scale < point_radius: return ps
-        except ValueError:
-            pass
-        return None
-
     def update_movable_objects(self):
         self.movable_objects = []
         gi = 0
@@ -519,30 +503,37 @@ class GraphicalEnv:
             if d * scale < radius: return p
         return None
 
+    def gi_to_step(self, gi):
+        i = self.gi_to_step_i[gi]
+        return self.steps[i]
+
     def set_steps(self, steps):
         self.steps = steps
-        self.gi_to_step = []
+        self.gi_to_step_i = []
         for i,step in enumerate(steps):
-            self.gi_to_step += [i]*len(step.tool.out_types)
-        self.gi_to_priority = [2]*len(self.gi_to_step)
-        self.gi_to_hidden = [False]*len(self.gi_to_step)
-        self.refresh_steps()
+            self.gi_to_step_i += [i]*len(step.tool.out_types)
+        self.gi_to_priority = [2]*len(self.gi_to_step_i)
+        self.gi_to_hidden = [False]*len(self.gi_to_step_i)
+        self.refresh_steps(False)
 
-    def add_step(self, step):
+    def add_step(self, step, update = True):
         try:
+            ori_len = len(self.step_env.local_to_global)
             self.step_env.run_steps((step,), 1)
-            self.gi_to_step += [len(self.steps)]*len(step.tool.out_types)
+            new_len = len(self.step_env.local_to_global)
+            self.gi_to_step_i += [len(self.steps)]*len(step.tool.out_types)
             self.gi_to_priority += [2]*len(step.tool.out_types)
             self.gi_to_hidden += [False]*len(step.tool.out_types)
             self.steps.append(step)
-            self.refresh_visible()
-            self.update_movable_objects()
-            return True
+            if update:
+                self.refresh_visible()
+                self.update_movable_objects()
+            return tuple(range(ori_len, new_len))
         except ToolError as e:
             if isinstance(e, ToolErrorException): raise e.e
             print("Tool failed: {}".format(e))
             self.refresh_steps()
-            return False
+            return None
 
     def pop_step(self):
         print("BACK")
@@ -551,16 +542,16 @@ class GraphicalEnv:
             return
         step = self.steps.pop()
         if len(step.tool.out_types) > 0:
-            del self.gi_to_step[-len(step.tool.out_types):]
+            del self.gi_to_step_i[-len(step.tool.out_types):]
             del self.gi_to_priority[-len(step.tool.out_types):]
             del self.gi_to_hidden[-len(step.tool.out_types):]
         self.refresh_steps()
 
-    def refresh_steps(self):
+    def refresh_steps(self, catch_errors = True):
         proof_checker.reset()
         self.model = LogicModel(basic_tools = self.tools)
         self.step_env = ToolStepEnv(self.model)
-        self.step_env.run_steps(self.steps, 1, catch_errors = True)
+        self.step_env.run_steps(self.steps, 1, catch_errors = catch_errors)
         self.update_movable_objects()
         self.refresh_visible()
 
@@ -688,7 +679,7 @@ class GraphicalEnv:
                     continue
                 d, = out
                 dist_to_points[d].append((p1,p2))
-            elif label is self.tools.direction_of: #### exact angles, TODOO
+            elif label is self.tools.direction_of: #### exact angles
                 l, = args
                 if l not in self.li_to_gi_first: continue
                 d, = out
@@ -832,16 +823,33 @@ class GraphicalEnv:
             point_data.distribute_angles()
             point_data.distribute_exact_angles()
 
+    def update_hl(self, proposals, selected, helpers):
+        self.hl_proposals = proposals
+        self.hl_helpers = helpers
+        self.obj_is_selected = dict()
+        for obj in selected:
+            if isinstance(obj, tuple):
+                data = obj[1:]
+                obj = obj[0]
+            else: data = True
+            if obj >= len(self.step_env.local_to_global): continue
+            li = self.gi_to_li(obj)
+            if li is None: continue
+            self.obj_is_selected[li] = data
+        self.visible_export()
+
     def visible_export(self):
         self.visible_points_numer = [
-            self.li_to_num(point)
+            (self.li_to_num(point),
+             self.obj_is_selected.get(point, None))
             for point in self.visible_points
         ]
         self.active_lines_numer = []
         self.extra_lines_numer = []
         self.active_circles_numer = []
         self.extra_circles_numer = []
-        self.selectable_clines = []
+        self.selectable_lines = []
+        self.selectable_circles = []
 
         for line_data in self.num_lines:
             if line_data.visible is None: continue
@@ -851,11 +859,12 @@ class GraphicalEnv:
                 [
                     self.li_to_num(point)
                     for point in self.line_to_points[line_data.visible]
-                ]
+                ],
+                self.obj_is_selected.get(line_data.visible, None),
             ]
             if line_data.is_active:
                 self.active_lines_numer.append(exported)
-                self.selectable_clines.append((
+                self.selectable_lines.append((
                     self.li_to_gi_first[line_data.visible],
                     line_data.line
                 ))
@@ -868,11 +877,12 @@ class GraphicalEnv:
                 [
                     self.li_to_num(point)
                     for point in self.circle_to_points[circle_data.visible]
-                ]
+                ],
+                self.obj_is_selected.get(circle_data.visible, None),
             ]
             if circle_data.is_active:
                 self.active_circles_numer.append(exported)
-                self.selectable_clines.append((
+                self.selectable_circles.append((
                     self.li_to_gi_first[circle_data.visible],
                     circle_data.circle
                 ))
@@ -928,7 +938,7 @@ class GraphicalEnv:
     def hide(self, gi):
         li = self.gi_to_li(gi)
         gi_first = self.li_to_gi_first[li]
-        gi_last = self.li_to_gi_first[li]
+        gi_last = self.li_to_gi_last[li]
         print("hide li {} in range {} -- {}".format(li, gi_first, gi_last))
         for gi in range(gi_first, gi_last+1):
             if self.gi_to_li(gi) == li:

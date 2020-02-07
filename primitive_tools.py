@@ -57,15 +57,15 @@ def make_primitive_tool_dict():
             if fname in ("intersection_remoter", "intersection0") and in_types[:2] == (Line, Line):
                 continue
             out_types = (out_type,)
-            if in_types[:2] == (float, float):
-                name = fname
-                tool = MovableTool(f, in_types[2:], out_types, name = name)
-                if fname == "point_on":
-                    tool.add_effect(d["lies_on", out_types+in_types[2:]])
-                    pass
-            else:
-                name = "prim__"+fname
-                tool = PrimitiveConstr(f, in_types, out_types, name = name)
+            #if in_types[:2] == (float, float):
+            #    name = fname
+            #    tool = MovableTool(f, in_types[2:], out_types, name = name)
+            #    if fname == "point_on":
+            #        tool.add_effect(d["lies_on", out_types+in_types[2:]])
+            #        pass
+            #else:
+            name = "prim__"+fname
+            tool = PrimitiveConstr(f, in_types, out_types, name = name)
 
             d[name, in_types] = tool
 

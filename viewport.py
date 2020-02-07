@@ -3,7 +3,7 @@ from itertools import islice
 from geo_object import Point, Line, Circle, vector_perp_rot, vector_of_direction
 from gi.repository import Gtk
 
-class ViewPort:
+class Viewport:
     def __init__(self, scale = 1, shift = (0,0)):
         self.scale = scale
         self.shift = np.array(shift)
@@ -14,8 +14,32 @@ class ViewPort:
         cr.fill()
     def point_shadow(self, cr, p):
         cr.arc(p.a[0], p.a[1], 10/self.scale, 0, 2*np.pi)
+    def draw_point_selection(self, cr, p):
+        cr.save()
+        cr.set_source_rgb(0.3, 1, 1)
+        cr.arc(p.a[0], p.a[1], 8/self.scale, 0, 2*np.pi)
+        cr.fill()
+        cr.restore()
+    def draw_point_proposal(self, cr, p):
+        cr.save()
+        cr.set_source_rgb(0, 0, 0)
+        cr.arc(p.a[0], p.a[1], 4, 0, 2*np.pi)
+        cr.fill()
+        cr.set_source_rgb(0.7, 0.9, 0.25)
+        cr.arc(p.a[0], p.a[1], 3, 0, 2*np.pi)
+        cr.fill()
+        cr.restore()
 
-    def draw_circle(self, cr, c, colorization = None):
+    def draw_circle(self, cr, c, colorization = None, selected = False):
+        if selected:
+            cr.save()
+            cr.set_source_rgb(0.3, 1, 1)
+            cr.set_line_width(3)
+            if isinstance(selected, tuple): a, b = selected
+            else: a, b = 0, 2
+            self.raw_arc(cr, c.c, c.r, a, b)
+            cr.stroke()
+            cr.restore()
         if colorization is not None:
             cr.save()
             #print("circle colorized")
@@ -64,11 +88,20 @@ class ViewPort:
             cr.stroke()
             center += shift
 
-    def draw_line(self, cr, l, colorization = None):
+    def draw_line(self, cr, l, colorization = None, selected = None):
 
         endpoints = self.get_line_endpoints(l)
         if endpoints is None: return
 
+        if selected:
+            #print("selected")
+            cr.save()
+            cr.set_source_rgb(0.3, 1, 1)
+            cr.set_line_width(3)
+            cr.move_to(*endpoints[0])
+            cr.line_to(*endpoints[1])
+            cr.stroke()
+            cr.restore()
         if colorization is not None:
             #print("line colorized")
             e1, e2 = endpoints
@@ -94,10 +127,23 @@ class ViewPort:
             cr.line_to(*endpoints[1])
             cr.stroke()
 
-    def draw_cline(self, cr, obj):
-        if isinstance(obj, Line): self.draw_line(cr, obj)
+    def draw_obj(self, cr, obj):
+        if isinstance(obj, Point): self.draw_point(cr, obj)
+        elif isinstance(obj, Line): self.draw_line(cr, obj)
         elif isinstance(obj, Circle): self.draw_circle(cr, obj)
         else: raise Exception("Unexpected type {}".format(type(obj)))
+
+    def draw_proposal(self, cr, obj):
+        if isinstance(obj, Point): self.draw_point_proposal(cr, obj)
+        else: self.draw_obj(cr, obj)
+
+    def draw_helper(self, cr, obj):
+        if isinstance(obj, tuple):
+            a,b = obj
+            cr.move_to(*a)
+            cr.line_to(*b)
+            cr.stroke()
+        else: self.draw_obj(cr, obj)
 
     def draw_dist(self, cr, a,b,lev):
         if lev % 2 == 0: lev = -lev//2
@@ -185,17 +231,17 @@ class ViewPort:
             self.color_dict[col_index] = color
             cr.set_source_rgb(*color)
 
-    def draw_lies_on_l(self, cr, point, line, colorization):
+    def draw_lies_on_l(self, cr, point, *line):
         cr.save()
         self.point_shadow(cr, point)
         cr.clip()
-        self.draw_line(cr, line, colorization)
+        self.draw_line(cr, *line)
         cr.restore()
-    def draw_lies_on_c(self, cr, point, circle, colorization):
+    def draw_lies_on_c(self, cr, point, *circle):
         cr.save()
         self.point_shadow(cr, point)
         cr.clip()
-        self.draw_circle(cr, circle, colorization)
+        self.draw_circle(cr, *circle)
         cr.restore()
             
     def draw(self, cr, env):
@@ -214,42 +260,43 @@ class ViewPort:
         # draw extra lines and circles
         cr.set_dash([3 / self.scale])
         self.select_color(cr, -2)
-        for line, colorization, points in env.extra_lines_numer:
-            self.draw_line(cr, line, colorization)
+        for line, colorization, points, selected in env.extra_lines_numer:
+            self.draw_line(cr, line, colorization, selected)
         for circle, colorization, points in env.extra_circles_numer:
-            self.draw_circle(cr, circle, colorization)
+            self.draw_circle(cr, circle, colorization, selected)
         cr.set_dash([])
 
         # draw active lines and circles
         self.select_color(cr, -1)
-        for line, colorization, points in env.active_lines_numer:
-            self.draw_line(cr, line, colorization)
-        for circle, colorization, points in env.active_circles_numer:
-            self.draw_circle(cr, circle, colorization)
+        for line, colorization, points, selected in env.active_lines_numer:
+            self.draw_line(cr, line, colorization, selected)
+        for circle, colorization, points, selected in env.active_circles_numer:
+            self.draw_circle(cr, circle, colorization, selected)
 
         # draw points shadows
         cr.set_source_rgb(1,1,1)
-        for p in env.visible_points_numer:
+        for p,selected in env.visible_points_numer:
             self.point_shadow(cr, p)
             cr.fill()
+            if selected: self.draw_point_selection(cr, p)
 
         # draw lies_on
         cr.set_dash([3 / self.scale])
         self.select_color(cr, -2)
-        for line, colorization, points in env.extra_lines_numer:
+        for line, colorization, points, selected in env.extra_lines_numer:
             for point in points:
-                self.draw_lies_on_l(cr, point, line, colorization)
-        for circle, colorization, points in env.extra_circles_numer:
+                self.draw_lies_on_l(cr, point, line, colorization, selected)
+        for circle, colorization, points, selected in env.extra_circles_numer:
             for point in points:
-                self.draw_lies_on_c(cr, point, circle, colorization)
+                self.draw_lies_on_c(cr, point, circle, colorization, selected)
         cr.set_dash([])
         self.select_color(cr, -1)
-        for line, colorization, points in env.active_lines_numer:
+        for line, colorization, points, selected in env.active_lines_numer:
             for point in points:
-                self.draw_lies_on_l(cr, point, line, colorization)
-        for circle, colorization, points in env.active_circles_numer:
+                self.draw_lies_on_l(cr, point, line, colorization, selected)
+        for circle, colorization, points, selected in env.active_circles_numer:
             for point in points:
-                self.draw_lies_on_c(cr, point, circle, colorization)
+                self.draw_lies_on_c(cr, point, circle, colorization, selected)
 
         # draw parallels
         for line, lev in env.visible_parallels:
@@ -273,7 +320,21 @@ class ViewPort:
         for coor, pos_a, pos_b in env.visible_exact_angles:
             self.draw_exact_angle(cr, coor, pos_a, pos_b)
 
+        # draw helpers
+        cr.save()
+        cr.set_line_width(2)
+        cr.set_dash([1])
+        cr.set_source_rgb(0.5, 0.5, 0.5)
+        for helper in env.hl_helpers:
+            self.draw_helper(cr, helper)
+        cr.restore()
+
         # draw points
         self.select_color(cr, -1)
-        for p in env.visible_points_numer:
+        for p,_ in env.visible_points_numer:
             self.draw_point(cr, p)
+
+        # draw proposals
+        cr.set_source_rgb(0.5, 0.65, 0.17)
+        for proposal in env.hl_proposals:
+            self.draw_proposal(cr, proposal)
