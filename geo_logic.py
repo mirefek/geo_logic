@@ -16,7 +16,7 @@ from graphical_env import GraphicalEnv
 from movable_tools import MovableTool
 from basic_tools import load_tools, ImportedTools
 from gtool_general import GToolDict
-from gtool import GToolMove, GToolHide
+from gtool import GTool, GToolMove, GToolHide
 from gtool_constr import ComboPoint, ComboLine, ComboPerpLine, ComboCircle, ComboCircumCircle
 
 class Drawing(Gtk.Window):
@@ -244,7 +244,8 @@ class Drawing(Gtk.Window):
         if e.button == 2:
             self.mb_grasp = coor
         elif shift and e.button in (1,3):
-            obj = self.env.select_obj(coor, self.viewport.scale)
+            gtool = GTool(self.env, self.viewport)
+            obj,_ = gtool.coor_to_pcl(coor)
             if obj is not None:
                 direction = {1:-1, 3:1}[e.button]
                 self.env.swap_priorities(obj, direction)
