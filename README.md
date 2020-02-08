@@ -8,11 +8,11 @@ Tool for euclidean geometry aware of logic
 
 ## Controls
 (the GUI is highly provisional so far)
-+ 'x' -- Point (free point / intersection / midpoint / midpoint_arc / center / foot)
-+ 'l' -- Line (line / free line / parallel line)
-+ 't' -- Perpline (perpendicular bisector / perpendicular line)
-+ 'c' -- Circle (circle / compass / free circle)
-+ 'o' -- Circumcircle (free circle passing, diacircle, circumcircle)
++ 'x' -- Combo Point
++ 'l' -- Combo Line
++ 't' -- Combo Perpline
++ 'c' -- Combo Circle
++ 'o' -- Combo Circumcircle
 + '1' -- a point on circle has the radius distnce from its center
 + '2' -- if a point has a radius distance from a center of a circle, it lies on it
 + '3' -- if two triangles are equally oriented and has equally long sides, they have equal angles
@@ -20,7 +20,8 @@ Tool for euclidean geometry aware of logic
 + Change in the left panel of radio-buttons -- Use a scripted tool (their code is mostly in macros.gl)
 + Shift+Click -- change ambiguous object
 + 'm' -- Move
-+ 'h' -- Move
-+ Ctrl+O -- open file
-+ Ctrl+S -- save
-+ Ctrl+Shift+S -- save as
++ 'h' -- Hide
++ Ctrl+O -- Open file
++ Ctrl+S -- Save
++ Ctrl+Shift+S -- Save as
++ Ctrl+N -- New construction (remove the current one)

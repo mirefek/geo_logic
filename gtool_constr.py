@@ -4,6 +4,28 @@ import itertools
 from primitive_constr import circumcircle
 from primitive_pred import not_collinear
 
+def angle_bisector_int(A, B, C):
+    v1 = A - B
+    v2 = C - B
+    v1 /= np.linalg.norm(v1)
+    v2 /= np.linalg.norm(v2)
+    if np.dot(v1, v2) > 0:
+        n = vector_perp_rot(v1+v2)
+    else:
+        n = v1-v2
+    return Line(n, np.dot(B, n))
+def angle_bisector_ext(A, B, C):
+    v1 = A - B
+    v2 = C - B
+    v1 /= np.linalg.norm(v1)
+    v2 /= np.linalg.norm(v2)
+    if np.dot(v1, v2) > 0:
+        n = v1+v2
+    else:
+        n = vector_perp_rot(v1-v2)
+    return Line(n, np.dot(B, n))
+
+
 class ComboPoint(GTool):
 
     def intersect(self, cln1, cln2):
@@ -236,8 +258,29 @@ class ComboLine(GTool):
         elif p2 != p1 and not pn2.identical_to(pn1):
             l = line_passing_points(pn1, pn2)
             self.confirm = self.run_tool, "line", p1, p2
+            self.drag = self.drag_angle_bisector, p1,pn1, p2,pn2
             self.hl_select(p2)
             self.hl_propose(l)
+
+    def drag_angle_bisector(self, coor, p,pn, p1,pn1):
+        self.hl_select(p,p1)
+
+        p2,pn2 = self.coor_to_point(coor)
+        if p2 is not None:
+            if p2 == p1:
+                self.confirm = self.run_tool, "line", p, p1
+                self.hl_propose(line_passing_points(pn,pn1))
+                return
+            coor = pn2.a
+            self.hl_select(p2)
+
+        self.hl_add_helper((pn.a,pn1.a))
+
+        if eps_identical(coor, pn.a): return
+        self.hl_add_helper((pn.a, coor))
+        self.hl_propose(angle_bisector_int(pn1.a, pn.a, coor))
+        if p2 is not None:
+            self.confirm = self.run_tool, "angle_bisector_int", p1,p,p2
 
     def drag_parallel(self, coor, p1, pn1):
         self.hl_select(p1)
@@ -296,8 +339,28 @@ class ComboPerpLine(GTool):
             self.hl_select(p2)
             l = self.perp_bisector(pn1.a, pn2.a)
             self.confirm = self.run_tool, "perp_bisector", p1, p2
+            self.drag = self.drag_angle_bisector, p1,pn1, p2,pn2
             self.hl_add_helper((pn1.a, pn2.a))
             self.hl_propose(l)
+
+    def drag_angle_bisector(self, coor, p,pn, p1,pn1):
+        self.hl_select(p,p1)
+        self.hl_add_helper((pn.a,pn1.a))
+
+        p2,pn2 = self.coor_to_point(coor)
+        if p2 is not None:
+            if p2 == p1:
+                self.confirm = self.run_tool, "perp_bisector", p, p1
+                self.hl_propose(self.perp_bisector(pn.a, pn1.a))
+                return
+            coor = pn2.a
+            self.hl_select(p2)
+
+        if eps_identical(coor, pn.a): return
+        self.hl_add_helper((pn.a, coor))
+        self.hl_propose(angle_bisector_ext(pn1.a, pn.a, coor))
+        if p2 is not None:
+            self.confirm = self.run_tool, "angle_bisector_ext", p1,p,p2
 
     def drag_perp(self, coor, p1, pn1):
         self.hl_select(p1)

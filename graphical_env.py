@@ -485,20 +485,29 @@ class GraphicalEnv:
         return self.li_to_type(self.li_root(li))
 
     def update_movable_objects(self):
-        self.movable_objects = []
+        self.movable_points = []
+        self.movable_clines = []
         gi = 0
         for step in self.steps:
             if isinstance(step.tool, MovableTool):
                 num = self.gi_to_num(gi)
                 if num is not None:
-                    self.movable_objects.append((gi, num))
+                    if isinstance(num, Point):
+                        self.movable_points.append((gi, num))
+                    else: self.movable_clines.append((gi, num))
             gi += len(step.tool.out_types)
 
     def select_movable_obj(self, coor, scale, radius = 20):
-        if self.movable_objects:
+        if self.movable_points:
             d,p = min(
                 (num.dist_from(coor), gi)
-                for gi, num in self.movable_objects
+                for gi, num in self.movable_points
+            )
+            if d * scale < radius: return p
+        if self.movable_clines:
+            d,p = min(
+                (num.dist_from(coor), gi)
+                for gi, num in self.movable_clines
             )
             if d * scale < radius: return p
         return None

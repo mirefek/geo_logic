@@ -136,6 +136,9 @@ class Drawing(Gtk.Window):
         parser.parse_file(fname, axioms = False)
         loaded_tool = parser.tool_dict['_', ()]
         self.env.set_steps(loaded_tool.assumptions)
+    def restart(self):
+        self.default_fname = None
+        self.env.set_steps(())
 
     def save_file(self, fname):
         if fname is None: return
@@ -172,15 +175,11 @@ class Drawing(Gtk.Window):
             pressed = bool(e.state & Gdk.ModifierType.BUTTON1_MASK)
             coor = self.viewport.mouse_coor(e)
             self.cur_tool.motion(coor, pressed)
-            self.env.update_hl(
-                self.cur_tool.hl_proposals,
-                self.cur_tool.hl_selected,
-                self.cur_tool.hl_helpers,
-            )
             self.darea.queue_draw()
 
     def on_draw(self, wid, cr):
 
+        self.env.view_changed = False
         self.viewport.set_corners(
             self.darea.get_allocated_width(),
             self.darea.get_allocated_height()
@@ -194,6 +193,7 @@ class Drawing(Gtk.Window):
         ctrl = (e.state & Gdk.ModifierType.CONTROL_MASK)
         if keyval_name == 'BackSpace':
             self.env.pop_step()
+            self.cur_tool.reset()
             self.darea.queue_draw()
         elif keyval_name == "Escape":
             print_times()
@@ -209,15 +209,13 @@ class Drawing(Gtk.Window):
             fname = self.default_fname
             if fname is None: fname = select_file_save(self)
             self.save_file(fname)
+        elif ctrl and keyval_name == 'n':
+            self.restart()
+            self.darea.queue_draw()
         elif not ctrl and keyval_name in self.key_to_gtool:
             gtool = self.key_to_gtool[keyval_name]
             print("change tool -> {}".format(gtool.__name__))
             self.cur_tool = gtool(self.env, self.viewport)
-            self.env.update_hl(
-                self.cur_tool.hl_proposals,
-                self.cur_tool.hl_selected,
-                self.cur_tool.hl_helpers,
-            )
         elif not ctrl and keyval_name in self.key_to_tool:
             tool_name = self.key_to_tool[keyval_name]
             self.tool_buttons[tool_name].set_active(True)
@@ -228,11 +226,6 @@ class Drawing(Gtk.Window):
     def on_button_release(self, w, e):
         coor = self.viewport.mouse_coor(e)
         self.cur_tool.button_release(coor)
-        self.env.update_hl(
-            self.cur_tool.hl_proposals,
-            self.cur_tool.hl_selected,
-            self.cur_tool.hl_helpers,
-        )
         self.darea.queue_draw()
 
     def on_button_press(self, w, e):
@@ -253,11 +246,6 @@ class Drawing(Gtk.Window):
         elif e.button in (1,3):
             if e.button == 1: self.cur_tool.button_press(coor)
             else: self.cur_tool.reset()
-            self.env.update_hl(
-                self.cur_tool.hl_proposals,
-                self.cur_tool.hl_selected,
-                self.cur_tool.hl_helpers,
-            )
             self.darea.queue_draw()
 
 if __name__ == "__main__":

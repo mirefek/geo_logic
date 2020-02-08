@@ -10,6 +10,7 @@ class GToolDict:
         self.name_to_prefixes = defaultdict(dict)
         for (name, arg_types), tool in tool_dict.items():
             if arg_types is None: continue
+            if name.startswith("prim__"): continue
             if not all(
                 issubclass(arg, (Point, Line, Circle))
                 for arg in arg_types

@@ -262,7 +262,7 @@ class Viewport:
         self.select_color(cr, -2)
         for line, colorization, points, selected in env.extra_lines_numer:
             self.draw_line(cr, line, colorization, selected)
-        for circle, colorization, points in env.extra_circles_numer:
+        for circle, colorization, points, selected in env.extra_circles_numer:
             self.draw_circle(cr, circle, colorization, selected)
         cr.set_dash([])
 

@@ -23,7 +23,16 @@ class GTool:
         self.click_coor = None
 
         self._pre_update()
+        self._update_env_hl()
         self.update = self.update_basic
+
+    def _update_env_hl(self):
+        self.env.update_hl(
+            self.hl_proposals,
+            self.hl_selected,
+            self.hl_helpers,
+        )
+
     def reset(self):
         self._basic_init()
         #print("==== reset")
@@ -54,6 +63,8 @@ class GTool:
         self.view_changed = self._check_hl_change(
             prev_proposals, prev_selected, prev_helpers
         )
+        self._update_env_hl()
+
     def _check_hl_change(self, prev_proposals, prev_selected, prev_helpers):
         if self.view_changed: return True
         if len(prev_proposals) != len(self.hl_proposals):
@@ -131,8 +142,8 @@ class GTool:
         tool = self.tools.m[name, arg_types, out_type]
         meta_args = tool.get_meta(res_obj, *num_args)
         step = ToolStep(tool, meta_args, args)
-        if name == "intersection":
-            print(arg_types, meta_args)
+        #if name == "intersection":
+        #    print(arg_types, meta_args)
         return self.env.add_step(step, update = update)
 
     def coor_to_obj(self, coor, lists, avoid = None):
