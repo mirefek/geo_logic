@@ -888,8 +888,7 @@ centroid A:P B:P C:P -> G:P
   <- sim_sas G C A G Mc Ma
 
 altitude A:P B:P C:P -> p:L
-  a <- line B C
-  p <- perpline a A
+  p <- perpline B C A
 orthocenter A:P B:P C:P -> H:P
   a <- altitude A B C
   b <- altitude B C A

@@ -18,7 +18,6 @@ class GTool:
         self.find_radius_pix = 20
         self._basic_init()
     def _basic_init(self):
-        self.view_changed = True
         self.dragged = False
         self.click_coor = None
 
@@ -27,11 +26,9 @@ class GTool:
         self.update = self.update_basic
 
     def _update_env_hl(self):
-        self.env.update_hl(
-            self.hl_proposals,
-            self.hl_selected,
-            self.hl_helpers,
-        )
+        self.env.update_hl_selected(self.hl_selected)
+        self.env.update_hl_proposals(self.hl_proposals)
+        self.env.update_hl_helpers(self.hl_helpers)
 
     def reset(self):
         self._basic_init()
@@ -60,9 +57,6 @@ class GTool:
         prev_helpers = self.hl_helpers
         self._pre_update()
         run_tuple(self.update, coor)
-        self.view_changed = self._check_hl_change(
-            prev_proposals, prev_selected, prev_helpers
-        )
         self._update_env_hl()
 
     def _check_hl_change(self, prev_proposals, prev_selected, prev_helpers):
@@ -91,7 +85,6 @@ class GTool:
     def _run_confirm(self):
         if self.confirm is not None:
             run_tuple(self.confirm)
-            self.view_changed = True
         self.update = self.confirm_next
     def button_press(self, coor):
         if self.click_coor is not None: self.reset()

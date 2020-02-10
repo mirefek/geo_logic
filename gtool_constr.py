@@ -4,28 +4,6 @@ import itertools
 from primitive_constr import circumcircle
 from primitive_pred import not_collinear
 
-def angle_bisector_int(A, B, C):
-    v1 = A - B
-    v2 = C - B
-    v1 /= np.linalg.norm(v1)
-    v2 /= np.linalg.norm(v2)
-    if np.dot(v1, v2) > 0:
-        n = vector_perp_rot(v1+v2)
-    else:
-        n = v1-v2
-    return Line(n, np.dot(B, n))
-def angle_bisector_ext(A, B, C):
-    v1 = A - B
-    v2 = C - B
-    v1 /= np.linalg.norm(v1)
-    v2 /= np.linalg.norm(v2)
-    if np.dot(v1, v2) > 0:
-        n = v1+v2
-    else:
-        n = vector_perp_rot(v1-v2)
-    return Line(n, np.dot(B, n))
-
-
 class ComboPoint(GTool):
 
     def intersect(self, cln1, cln2):
@@ -89,7 +67,11 @@ class ComboPoint(GTool):
     def update_midpoint(self, coor, p, pn):
 
         self.hl_select(p)
-        obj, objn = self.coor_to_pcl(coor)
+        obj, objn = self.coor_to_pcl(
+            coor,
+            avoid = lambda l,ln: isinstance(ln, Line) and ln.contains(pn.a)
+        )
+
         if obj is None:
             self.hl_propose(Point((pn.a+coor)/2))
             self.hl_add_helper((pn.a, coor))
@@ -103,7 +85,6 @@ class ComboPoint(GTool):
             self.confirm = self.run_tool, "midpoint", p, obj
             self.drag = self.drag_foot, p,pn, obj, objn
         elif isinstance(objn, Line):
-            if objn.contains(pn.a): return
             foot = objn.closest_on(pn.a)
             self.hl_propose(Point(foot))
             self.hl_add_helper((pn.a, foot))
@@ -250,18 +231,48 @@ class ComboLine(GTool):
 
     def update_point2(self, coor, p1, pn1):
         self.hl_select(p1)
-        p2,pn2 = self.coor_to_point(coor)
+        p2,pn2 = self.coor_to_pc(coor)
         if p2 is None:
             l = line_passing_np_points(pn1.a, coor)
             self.confirm = self.run_m_tool, "m_line", l, p1
             self.hl_propose(l)
-        elif p2 != p1 and not pn2.identical_to(pn1):
-            l = line_passing_points(pn1, pn2)
-            self.confirm = self.run_tool, "line", p1, p2
-            self.drag = self.drag_angle_bisector, p1,pn1, p2,pn2
+        else:
             self.hl_select(p2)
-            self.hl_propose(l)
+            if isinstance(pn2, Circle):
+                if self.lies_on(p1, p2):
+                    v = pn1.a - pn2.c
+                    self.confirm = self.run_tool, "tangent_at", p1, p2
+                    self.hl_propose(Line(v, np.dot(v, pn1.a)))
+                else:
+                    diacirc = Circle((pn1.a + pn2.c)/2, np.linalg.norm(pn1.a - pn2.c)/2)
+                    touchpoint_cand = intersection_cc(diacirc, pn2)
+                    if len(touchpoint_cand) < 2: return
+                    i,touchpoint = min(
+                        enumerate(touchpoint_cand),
+                        key = lambda x: np.linalg.norm(x[1]-coor)
+                    )
+                    tangent_name = "tangent{}".format(i)
+                    self.confirm = self.run_tool, tangent_name, p1, p2
+                    self.hl_propose(
+                        Point(touchpoint),
+                        line_passing_np_points(touchpoint, pn1.a),
+                    )
+            elif p2 != p1 and not pn2.identical_to(pn1):
+                l = line_passing_points(pn1, pn2)
+                self.confirm = self.run_tool, "line", p1, p2
+                self.drag = self.drag_angle_bisector, p1,pn1, p2,pn2
+                self.hl_propose(l)
 
+    def angle_bisector(self, A, B, C):
+        v1 = A - B
+        v2 = C - B
+        v1 /= np.linalg.norm(v1)
+        v2 /= np.linalg.norm(v2)
+        if np.dot(v1, v2) > 0:
+            n = vector_perp_rot(v1+v2)
+        else:
+            n = v1-v2
+        return Line(n, np.dot(B, n))
     def drag_angle_bisector(self, coor, p,pn, p1,pn1):
         self.hl_select(p,p1)
 
@@ -278,7 +289,7 @@ class ComboLine(GTool):
 
         if eps_identical(coor, pn.a): return
         self.hl_add_helper((pn.a, coor))
-        self.hl_propose(angle_bisector_int(pn1.a, pn.a, coor))
+        self.hl_propose(self.angle_bisector(pn1.a, pn.a, coor))
         if p2 is not None:
             self.confirm = self.run_tool, "angle_bisector_int", p1,p,p2
 
@@ -343,6 +354,17 @@ class ComboPerpLine(GTool):
             self.hl_add_helper((pn1.a, pn2.a))
             self.hl_propose(l)
 
+    def angle_bisector(self, A, B, C):
+        v1 = A - B
+        v2 = C - B
+        v1 /= np.linalg.norm(v1)
+        v2 /= np.linalg.norm(v2)
+        if np.dot(v1, v2) > 0:
+            n = v1+v2
+        else:
+            n = vector_perp_rot(v1-v2)
+        return Line(n, np.dot(B, n))
+
     def drag_angle_bisector(self, coor, p,pn, p1,pn1):
         self.hl_select(p,p1)
         self.hl_add_helper((pn.a,pn1.a))
@@ -358,7 +380,7 @@ class ComboPerpLine(GTool):
 
         if eps_identical(coor, pn.a): return
         self.hl_add_helper((pn.a, coor))
-        self.hl_propose(angle_bisector_ext(pn1.a, pn.a, coor))
+        self.hl_propose(self.angle_bisector(pn1.a, pn.a, coor))
         if p2 is not None:
             self.confirm = self.run_tool, "angle_bisector_ext", p1,p,p2
 

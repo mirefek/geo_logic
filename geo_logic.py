@@ -1,7 +1,6 @@
 import gi as gtk_import
 gtk_import.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk, GLib
-import cairo
 import numpy as np
 from geo_object import *
 from parse import Parser, type_to_c
@@ -135,7 +134,9 @@ class Drawing(Gtk.Window):
         parser = Parser(self.imported_tools.tool_dict)
         parser.parse_file(fname, axioms = False)
         loaded_tool = parser.tool_dict['_', ()]
-        self.env.set_steps(loaded_tool.assumptions)
+        visible = set(loaded_tool.result)
+        if not visible: visible = None
+        self.env.set_steps(loaded_tool.assumptions, visible = visible)
     def restart(self):
         self.default_fname = None
         self.env.set_steps(())
@@ -145,7 +146,12 @@ class Drawing(Gtk.Window):
         print("saving to '{}'".format(fname))
         self.default_fname = fname
         with open(fname, 'w') as f:
-            f.write('_ ->\n')
+            visible = [
+                "x{}:{}".format(gi, type_to_c[self.env.gi_to_type(gi)])
+                for gi,hidden in enumerate(self.env.gi_to_hidden)
+                if not hidden
+            ]
+            f.write('_ -> {}\n'.format(' '.join(sorted(visible))))
             i = 0
             for step in self.env.steps:
                 i2 = i+len(step.tool.out_types)
@@ -175,7 +181,7 @@ class Drawing(Gtk.Window):
             pressed = bool(e.state & Gdk.ModifierType.BUTTON1_MASK)
             coor = self.viewport.mouse_coor(e)
             self.cur_tool.motion(coor, pressed)
-            self.darea.queue_draw()
+            if self.env.view_changed: self.darea.queue_draw()
 
     def on_draw(self, wid, cr):
 
@@ -193,15 +199,14 @@ class Drawing(Gtk.Window):
         ctrl = (e.state & Gdk.ModifierType.CONTROL_MASK)
         if keyval_name == 'BackSpace':
             self.env.pop_step()
-            self.cur_tool.reset()
-            self.darea.queue_draw()
+        elif keyval_name == 'equal':
+            self.env.redo()
         elif keyval_name == "Escape":
             print_times()
             Gtk.main_quit()
         elif ctrl and keyval_name == 'o':
             fname = select_file_open(self)
             self.load_file(fname)
-            self.darea.queue_draw()
         elif ctrl and keyval_name == 'S':
             fname = select_file_save(self)
             self.save_file(fname)
@@ -211,7 +216,6 @@ class Drawing(Gtk.Window):
             self.save_file(fname)
         elif ctrl and keyval_name == 'n':
             self.restart()
-            self.darea.queue_draw()
         elif not ctrl and keyval_name in self.key_to_gtool:
             gtool = self.key_to_gtool[keyval_name]
             print("change tool -> {}".format(gtool.__name__))
@@ -223,10 +227,14 @@ class Drawing(Gtk.Window):
             #print(keyval_name)
             return False
 
+        if self.env.view_changed:
+            self.cur_tool.reset()
+            self.darea.queue_draw()
+
     def on_button_release(self, w, e):
         coor = self.viewport.mouse_coor(e)
         self.cur_tool.button_release(coor)
-        self.darea.queue_draw()
+        if self.env.view_changed: self.darea.queue_draw()
 
     def on_button_press(self, w, e):
         if e.type != Gdk.EventType.BUTTON_PRESS: return
@@ -246,7 +254,7 @@ class Drawing(Gtk.Window):
         elif e.button in (1,3):
             if e.button == 1: self.cur_tool.button_press(coor)
             else: self.cur_tool.reset()
-            self.darea.queue_draw()
+            if self.env.view_changed: self.darea.queue_draw()
 
 if __name__ == "__main__":
     win = Drawing()

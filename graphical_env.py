@@ -182,6 +182,7 @@ class NumLineData:
         self.visible = None
         self.is_active = False
         self.dists = []
+        self.extra_segments = []
 
     def add_active_candidate(self, li, priority):
         self.is_active = True
@@ -218,10 +219,10 @@ class NumLineData:
         dists_lev = tuple(distribute_segments(segments, point_pos))
         if len(points) <= 1:
             self.colorization = None
-            self.env.visible_dists.extend(
+            self.extra_segments = [
                 (a,b,col,lev)
                 for (a,b,_,_,col),lev in dists_lev
-            )
+            ]
         else:
             if self.is_active:
                 active_positions = tuple(
@@ -244,7 +245,7 @@ class NumLineData:
                         self.colorization.append((cur_pos, pos_a, -2))
                     self.colorization.append((pos_a,pos_b, col))
                     cur_pos = pos_b
-                else: self.env.visible_dists.append((a,b,col,lev))
+                else: self.extra_segments.append((a,b,col,lev))
             if cur_pos is None:
                 if self.is_active:
                     self.colorization = [
@@ -259,6 +260,18 @@ class NumLineData:
                         self.colorization.append((cur_pos,end_pos, -1))
                     self.colorization.append((end_pos,None, -2))
                 else: self.colorization.append((cur_pos,None, -2))
+
+        self.env.visible_dists.extend(self.extra_segments)
+
+    def find_available_level(self, pos_a, pos_b):
+        blocked = set()
+        if self.visible is not None: blocked.add(0)
+        for a,b,col,lev in self.extra_segments:
+            if eps_smaller(a, pos_b) and eps_smaller(pos_a, b):
+                blocked.add(lev)
+        lev = 0
+        while lev in blocked: lev += 1
+        return lev
 
 class NumCircleData:
     def __init__(self, env, circle):
@@ -421,6 +434,7 @@ class GraphicalEnv:
     def __init__(self, tools):
 
         self.tools = tools
+        self.redo_stack = []
 
         # for visualisation
         #self.movable_objects = ()
@@ -457,6 +471,7 @@ class GraphicalEnv:
         #self.visible_lines = set()
         #self.visible_circles = set()
 
+        #self.view_changed = False
         self.hl_proposals = ()
         self.hl_helpers = ()
         self.refresh_steps()
@@ -516,14 +531,21 @@ class GraphicalEnv:
         i = self.gi_to_step_i[gi]
         return self.steps[i]
 
-    def set_steps(self, steps):
+    def set_steps(self, steps, visible = None):
         self.steps = steps
         self.gi_to_step_i = []
         for i,step in enumerate(steps):
             self.gi_to_step_i += [i]*len(step.tool.out_types)
         self.gi_to_priority = [2]*len(self.gi_to_step_i)
-        self.gi_to_hidden = [False]*len(self.gi_to_step_i)
+        if visible is None:
+            self.gi_to_hidden = [False]*len(self.gi_to_step_i)
+        else:
+            self.gi_to_hidden = [
+                i not in visible
+                for i,_ in enumerate(self.gi_to_step_i)
+            ]
         self.refresh_steps(False)
+        self.redo_stack = []
 
     def add_step(self, step, update = True):
         try:
@@ -534,6 +556,7 @@ class GraphicalEnv:
             self.gi_to_priority += [2]*len(step.tool.out_types)
             self.gi_to_hidden += [False]*len(step.tool.out_types)
             self.steps.append(step)
+            self.redo_stack = []
             if update:
                 self.refresh_visible()
                 self.update_movable_objects()
@@ -545,16 +568,32 @@ class GraphicalEnv:
             return None
 
     def pop_step(self):
-        print("BACK")
         if not self.steps:
             print("No more steps to undo")
             return
         step = self.steps.pop()
+        print("Undo {}".format(step.tool.name))
+        self.redo_stack.append(step)
         if len(step.tool.out_types) > 0:
             del self.gi_to_step_i[-len(step.tool.out_types):]
             del self.gi_to_priority[-len(step.tool.out_types):]
             del self.gi_to_hidden[-len(step.tool.out_types):]
         self.refresh_steps()
+    def redo(self):
+        if not self.redo_stack:
+            print("Redo stack is empty")
+            return
+        step = self.redo_stack.pop()
+        print("Redo {}".format(step.tool.name))
+
+        self.gi_to_step_i += [len(self.steps)]*len(step.tool.out_types)
+        self.gi_to_priority += [2]*len(step.tool.out_types)
+        self.gi_to_hidden += [False]*len(step.tool.out_types)
+        self.steps.append(step)
+        self.step_env.run_steps((step,), 1, catch_errors = True)
+
+        self.refresh_visible()
+        self.update_movable_objects()
 
     def refresh_steps(self, catch_errors = True):
         proof_checker.reset()
@@ -722,7 +761,7 @@ class GraphicalEnv:
         for line, points in self.line_to_points.items():
             points = [p for p in points if p in self.visible_points]
             self.line_to_points[line] = points
-        for circle, points in self.line_to_points.items():
+        for circle, points in self.circle_to_points.items():
             points = [p for p in points if p in self.visible_points]
             self.circle_to_points[circle] = points
 
@@ -785,6 +824,8 @@ class GraphicalEnv:
             self.li_to_num_data[line] = num_data
             num_data.add_extra_candidate(line, (angle_number, points_number))
 
+        assert(all(self.li_to_type(c) == Circle for c in self.circle_to_points.keys()))
+        assert(all(self.li_to_type(c) == Circle for c in self.circle_to_arcs.keys()))
         circles = set(self.circle_to_points.keys()) | set(self.circle_to_arcs.keys())
         for circle in circles:
             if circle in self.li_to_gi_first: continue
@@ -832,10 +873,8 @@ class GraphicalEnv:
             point_data.distribute_angles()
             point_data.distribute_exact_angles()
 
-    def update_hl(self, proposals, selected, helpers):
-        self.hl_proposals = proposals
-        self.hl_helpers = helpers
-        self.obj_is_selected = dict()
+    def update_hl_selected(self, selected):
+        obj_is_selected = dict()
         for obj in selected:
             if isinstance(obj, tuple):
                 data = obj[1:]
@@ -844,10 +883,53 @@ class GraphicalEnv:
             if obj >= len(self.step_env.local_to_global): continue
             li = self.gi_to_li(obj)
             if li is None: continue
-            self.obj_is_selected[li] = data
+            obj_is_selected[li] = data
+
+        # check change
+        if not self.view_changed:
+            if self.obj_is_selected == obj_is_selected: return
+        self.obj_is_selected = obj_is_selected
         self.visible_export()
+    def update_hl_proposals(self, proposals):
+        if not self.view_changed and len(proposals) == len(self.hl_proposals):
+            if all(
+                prev_prop.identical_to(prop)
+                for prev_prop, prop in zip(self.hl_proposals, proposals)
+            ): return
+        self.view_changed = True
+        self.hl_proposals = proposals
+    def update_hl_helpers(self, helpers):
+        # push segments away from lines
+        hl_helpers = []
+        hl_helpers_ori = iter(self.hl_helpers)
+        def next_ori():
+            try:
+                return next(hl_helpers_ori)
+            except StopIteration:
+                return None
+        for helper in helpers:
+            if isinstance(helper, GeoObject):
+                if not helper.identical_to(next_ori()): self.view_changed = True
+                hl_helpers.append(helper)
+            else:
+                a,b = helper
+                if eps_identical(a,b): continue
+                hl_helper_ori = next_ori()
+                if not isinstance(hl_helper_ori, tuple): self.view_changed = True
+                else:
+                    ori_a,ori_b,ori_lev = hl_helper_ori
+                    if not eps_identical(ori_a, a) or not eps_identical(ori_b, b):
+                        self.view_changed = True
+                line_data = self.get_num_line(line_passing_np_points(a,b))
+                v = line_data.line.v
+                if np.dot(v,a) > np.dot(v,b): a,b = b,a
+                lev = line_data.find_available_level(a,b)
+                hl_helpers.append((a,b,lev))
+
+        if self.view_changed: self.hl_helpers = hl_helpers
 
     def visible_export(self):
+        self.view_changed = True
         self.visible_points_numer = [
             (self.li_to_num(point),
              self.obj_is_selected.get(point, None))

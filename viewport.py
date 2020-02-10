@@ -139,10 +139,7 @@ class Viewport:
 
     def draw_helper(self, cr, obj):
         if isinstance(obj, tuple):
-            a,b = obj
-            cr.move_to(*a)
-            cr.line_to(*b)
-            cr.stroke()
+            self.draw_dist(cr, *obj)
         else: self.draw_obj(cr, obj)
 
     def draw_dist(self, cr, a,b,lev):

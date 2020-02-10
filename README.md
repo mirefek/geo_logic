@@ -17,6 +17,7 @@ Tool for euclidean geometry aware of logic
 + '2' -- if a point has a radius distance from a center of a circle, it lies on it
 + '3' -- if two triangles are equally oriented and has equally long sides, they have equal angles
 + Backspace -- Go one step backwards in the construction
++ '=' -- Redo
 + Change in the left panel of radio-buttons -- Use a scripted tool (their code is mostly in macros.gl)
 + Shift+Click -- change ambiguous object
 + 'm' -- Move
@@ -24,4 +25,4 @@ Tool for euclidean geometry aware of logic
 + Ctrl+O -- Open file
 + Ctrl+S -- Save
 + Ctrl+Shift+S -- Save as
-+ Ctrl+N -- New construction (remove the current one)
++ Ctrl+N -- New construction (erase the current one)
