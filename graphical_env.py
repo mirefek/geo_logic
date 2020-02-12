@@ -48,23 +48,42 @@ def distribute_segments_cyc(segments, lev_zero_points = ()):
             occupied.append((a,b))
         yield info,lev
 
-class NumPointData:
-    def __init__(self, env, point):
+class NumData:
+    def __init__(self, env, num_obj):
         self.env = env
-        self.point = point
+        self.num_obj = num_obj
         self.active_candidates = []
+        self.extra_candidates = []
         self.visible = None
+        self.is_active = False
+
+    def add_active_candidate(self, li, priority):
+        self.is_active = True
+        self.active_candidates.append((priority, li))
+    def add_extra_candidate(self, li, priority):
+        self.extra_candidates.append((priority, li))
+    def select_visible(self):
+        if self.is_active:
+            if self.env.move_mode:
+                movables = [
+                    (priority, obj)
+                    for (priority, obj) in self.active_candidates
+                    if self.env.is_movable(obj)
+                ]
+                if movables: self.active_candidates = movables
+            _,self.visible = max(self.active_candidates)
+        elif self.extra_candidates:
+            _,self.visible = max(self.extra_candidates)
+        return self.visible
+
+class NumPointData(NumData):
+    def __init__(self, env, point):
+        NumData.__init__(self, env, point)
         self.angles_ppl = []
         self.angles_ll = []
         self.exact_lines = defaultdict(set)
         self.exact_angles = defaultdict(list)
 
-    def add_active_candidate(self, li, priority):
-        self.active_candidates.append((priority, li))
-    def select_visible(self):
-        if self.active_candidates:
-            _,self.visible = max(self.active_candidates)
-        return self.visible
     def add_angle(self, angle_data):
         if angle_data.color < 0:
             d, = self.env.model.get_constr(self.env.tools.direction_of, (angle_data.l1,))
@@ -171,30 +190,13 @@ class NumPointData:
                 if not i_used: continue
                 pos1 = line_pos[i]
                 pos2 = line_pos[(i+1)%full_circ]
-                self.env.visible_exact_angles.append((self.point.a, pos1, pos2))
+                self.env.visible_exact_angles.append((self.num_obj.a, pos1, pos2))
 
-class NumLineData:
+class NumLineData(NumData):
     def __init__(self, env, line):
-        self.env = env
-        self.line = line
-        self.active_candidates = []
-        self.extra_candidates = []
-        self.visible = None
-        self.is_active = False
+        NumData.__init__(self, env, line)
         self.dists = []
         self.extra_segments = []
-
-    def add_active_candidate(self, li, priority):
-        self.is_active = True
-        self.active_candidates.append((priority, li))
-    def add_extra_candidate(self, li, priority):
-        self.extra_candidates.append((priority, li))
-    def select_visible(self):
-        if self.is_active:
-            _,self.visible = max(self.active_candidates)
-        elif self.extra_candidates:
-            _,self.visible = max(self.extra_candidates)
-        return self.visible
 
     def add_dist(self, la,lb, na,nb, col):
         self.dists.append((la,lb,na,nb,col))
@@ -210,15 +212,16 @@ class NumLineData:
             elif la in points and lb in points:
                 start = 0
             else: start = 1
-            pos_a = np.dot(self.line.v, na)
-            pos_b = np.dot(self.line.v, nb)
+            pos_a = np.dot(self.num_obj.v, na)
+            pos_b = np.dot(self.num_obj.v, nb)
             if pos_a < pos_b: segments.append((pos_a, pos_b, start, (na,nb,pos_a,pos_b,col)))
             else: segments.append((pos_b, pos_a, start, (nb,na,pos_b,pos_a,col)))
 
-        point_pos = [np.dot(self.line.v, self.env.li_to_num(p).a) for p in points]
+        point_pos = [np.dot(self.num_obj.v, self.env.li_to_num(p).a) for p in points]
         dists_lev = tuple(distribute_segments(segments, point_pos))
         if len(points) <= 1:
-            self.colorization = None
+            if self.is_active: self.colorization = (None, None, -2),
+            else: self.colorization = (None, None, -1),
             self.extra_segments = [
                 (a,b,col,lev)
                 for (a,b,_,_,col),lev in dists_lev
@@ -226,7 +229,7 @@ class NumLineData:
         else:
             if self.is_active:
                 active_positions = tuple(
-                    np.dot(self.line.v, self.env.li_to_num(p).a)
+                    np.dot(self.num_obj.v, self.env.li_to_num(p).a)
                     for p in points
                 )
                 start_pos = min(active_positions)
@@ -253,7 +256,7 @@ class NumLineData:
                         (start_pos, end_pos, -1),
                         (end_pos, None, -2),
                     ]
-                else: self.colorization = None
+                else: self.colorization = (None, None, -2),
             else:
                 if self.is_active:
                     if cur_pos < end_pos:
@@ -273,38 +276,23 @@ class NumLineData:
         while lev in blocked: lev += 1
         return lev
 
-class NumCircleData:
-    def __init__(self, env, circle):
-        self.env = env
-        self.circle = circle
-        self.active_candidates = []
-        self.extra_candidates = []
-        self.is_active = False
-        self.visible = None
-
-    def add_active_candidate(self, li, priority):
-        self.is_active = True
-        self.active_candidates.append((priority, li))
-    def add_extra_candidate(self, li, priority):
-        self.extra_candidates.append((priority, li))
-    def select_visible(self):
-        if self.active_candidates:
-            _,self.visible = max(self.active_candidates)
-        elif self.extra_candidates:
-            _,self.visible = max(self.extra_candidates)
-        return self.visible
+class NumCircleData(NumData):
 
     def distribute_arcs(self):
         if self.visible is None: return
+
+        if self.is_active: circ_color = -1
+        else: circ_color = -2
+
         points = self.env.circle_to_points[self.visible]
         if len(points) <= 1:
-            self.colorization = None
+            self.colorization = (0,2,circ_color),
             return
 
         arcs = self.env.circle_to_arcs[self.visible]
         point_to_pos = dict(
             (li, vector_direction(self.env.li_to_num(li).a
-                                  - self.circle.c)%2)
+                                  - self.num_obj.c)%2)
             for li in points
         )
         segments = []
@@ -323,7 +311,6 @@ class NumCircleData:
         out_start = None
         out_end = None
         if self.is_active:
-            circ_color = -1
             if eps_bigger(positions[0]+1, positions[-1]):
                 out_start = positions[-1]
                 out_end = positions[0]
@@ -333,7 +320,6 @@ class NumCircleData:
                         out_start = pos_a
                         out_end = pos_b
                         break
-        else: circ_color = -2
 
         self.colorization = []
         def add_black_arc(pos_a, pos_b):
@@ -358,11 +344,11 @@ class NumCircleData:
                 cur_pos = pos_b
                 self.colorization.append((pos_a, pos_b, col))
             else: self.env.visible_arcs.append(
-                    (pos_a, pos_b, self.circle, col, lev)
+                    (pos_a, pos_b, self.num_obj, col, lev)
             )
 
         if cur_pos is None:
-            if out_start is None: self.colorization = None
+            if out_start is None: self.colorization = (0,2,circ_color),
             else: self.colorization = [
                 (out_start, out_end, -2),
                 (out_end, out_start, -1),
@@ -393,8 +379,8 @@ class AngleLLData:
             self.env.li_to_num(self.l1),
             self.env.li_to_num(self.l2),
         ))
-        self.l1_num = self.env.li_to_num_data[self.l1].line
-        self.l2_num = self.env.li_to_num_data[self.l2].line
+        self.l1_num = self.env.li_to_num_data[self.l1].num_obj
+        self.l2_num = self.env.li_to_num_data[self.l2].num_obj
         self.env.get_num_point(self.p).add_angle(self)
     def find_l1_dir(self):
         points = self.env.line_to_points[self.l1]
@@ -451,6 +437,8 @@ class GraphicalEnv:
         self.gi_to_step_i = []
         self.gi_to_priority = []
         self.gi_to_hidden = []
+        self.move_mode = False
+        self.ambi_select_mode = False
 
         # numerical representation
         #self.num_points_d = dict()
@@ -499,6 +487,7 @@ class GraphicalEnv:
         if li is None: return None
         return self.li_to_type(self.li_root(li))
 
+    """
     def update_movable_objects(self):
         self.movable_points = []
         self.movable_clines = []
@@ -511,7 +500,6 @@ class GraphicalEnv:
                         self.movable_points.append((gi, num))
                     else: self.movable_clines.append((gi, num))
             gi += len(step.tool.out_types)
-
     def select_movable_obj(self, coor, scale, radius = 20):
         if self.movable_points:
             d,p = min(
@@ -526,13 +514,14 @@ class GraphicalEnv:
             )
             if d * scale < radius: return p
         return None
+    """
 
     def gi_to_step(self, gi):
         i = self.gi_to_step_i[gi]
         return self.steps[i]
 
     def set_steps(self, steps, visible = None):
-        self.steps = steps
+        self.steps = list(steps)
         self.gi_to_step_i = []
         for i,step in enumerate(steps):
             self.gi_to_step_i += [i]*len(step.tool.out_types)
@@ -559,7 +548,7 @@ class GraphicalEnv:
             self.redo_stack = []
             if update:
                 self.refresh_visible()
-                self.update_movable_objects()
+                #self.update_movable_objects()
             return tuple(range(ori_len, new_len))
         except ToolError as e:
             if isinstance(e, ToolErrorException): raise e.e
@@ -593,14 +582,14 @@ class GraphicalEnv:
         self.step_env.run_steps((step,), 1, catch_errors = True)
 
         self.refresh_visible()
-        self.update_movable_objects()
+        #self.update_movable_objects()
 
     def refresh_steps(self, catch_errors = True):
         proof_checker.reset()
         self.model = LogicModel(basic_tools = self.tools)
         self.step_env = ToolStepEnv(self.model)
         self.step_env.run_steps(self.steps, 1, catch_errors = catch_errors)
-        self.update_movable_objects()
+        #self.update_movable_objects()
         self.refresh_visible()
 
     def _get_num_obj(self, d, l, constructor, obj, keys):
@@ -650,6 +639,7 @@ class GraphicalEnv:
         else: raise Exception("Unexpected type {}".format(type(obj)))
 
     def update_rev_links(self):
+        self.li_to_gi_movable = dict()
         self.li_to_gi_first = dict()
         self.li_to_gi_last = dict()
         self.li_to_num_data = dict()
@@ -672,6 +662,9 @@ class GraphicalEnv:
                 num = self.li_to_num(li)
                 num_data = self.get_num_data(num)
                 self.li_to_num_data[li] = num_data
+            step = self.gi_to_step(gi)
+            if isinstance(step.tool, MovableTool):
+                self.li_to_gi_movable.setdefault(li, gi)
 
         for li, gi in self.li_to_gi_last.items():
             num_data = self.li_to_num_data[li]
@@ -921,18 +914,38 @@ class GraphicalEnv:
                     if not eps_identical(ori_a, a) or not eps_identical(ori_b, b):
                         self.view_changed = True
                 line_data = self.get_num_line(line_passing_np_points(a,b))
-                v = line_data.line.v
+                v = line_data.num_obj.v
                 if np.dot(v,a) > np.dot(v,b): a,b = b,a
                 lev = line_data.find_available_level(a,b)
                 hl_helpers.append((a,b,lev))
 
         if self.view_changed: self.hl_helpers = hl_helpers
 
+    def is_ambiguous(self, li):
+        num_data = self.li_to_num_data[li]
+        if len(num_data.active_candidates) > 1: return True
+        else: return False
+    def is_movable(self, li):
+        return li in self.li_to_gi_movable
+    def is_move_mode(self):
+        return self.move_mode and not self.ambi_select_mode
+    def obj_color(self, li):
+        if self.ambi_select_mode and self.is_ambiguous(li): return 1
+        elif self.move_mode and self.is_movable(li): return 2
+        else: return 0
+    def is_selectable(self, li):
+        if self.ambi_select_mode: return self.is_ambiguous(li)
+        elif self.is_move_mode(): return self.is_movable(li)
+        else: return True
+
     def visible_export(self):
         self.view_changed = True
         self.visible_points_numer = [
-            (self.li_to_num(point),
-             self.obj_is_selected.get(point, None))
+            (
+                self.li_to_num(point),
+                self.obj_color(point),
+                self.obj_is_selected.get(point, None),
+            )
             for point in self.visible_points
         ]
         self.active_lines_numer = []
@@ -942,47 +955,50 @@ class GraphicalEnv:
         self.selectable_lines = []
         self.selectable_circles = []
 
-        for line_data in self.num_lines:
-            if line_data.visible is None: continue
-            exported = [
-                line_data.line,
-                line_data.colorization,
-                [
-                    self.li_to_num(point)
-                    for point in self.line_to_points[line_data.visible]
-                ],
-                self.obj_is_selected.get(line_data.visible, None),
-            ]
-            if line_data.is_active:
-                self.active_lines_numer.append(exported)
-                self.selectable_lines.append((
-                    self.li_to_gi_first[line_data.visible],
-                    line_data.line
-                ))
-            else: self.extra_lines_numer.append(exported)
-        for circle_data in self.num_circles:
-            if circle_data.visible is None: continue
-            exported = [
-                circle_data.circle,
-                circle_data.colorization,
-                [
-                    self.li_to_num(point)
-                    for point in self.circle_to_points[circle_data.visible]
-                ],
-                self.obj_is_selected.get(circle_data.visible, None),
-            ]
-            if circle_data.is_active:
-                self.active_circles_numer.append(exported)
-                self.selectable_circles.append((
-                    self.li_to_gi_first[circle_data.visible],
-                    circle_data.circle
-                ))
-            else: self.extra_circles_numer.append(exported)
+        if self.is_move_mode():
+            li_to_select = self.li_to_gi_movable
+        else: li_to_select = self.li_to_gi_first
 
         self.selectable_points = [
-            (self.li_to_gi_first[li], self.li_to_num(li))
+            (li_to_select[li], self.li_to_num(li))
             for li in self.visible_points
+            if self.is_selectable(li)
         ]
+
+        def export_numer(data_list, to_points, ):
+            active = []
+            extra = []
+            selectable = []
+            for num_data in data_list:
+                obj = num_data.visible
+                if obj is None: continue
+                colorization = (
+                    num_data.colorization,
+                    self.obj_is_selected.get(obj, None),
+                    self.obj_color(obj),
+                )
+                points = [
+                    self.li_to_num(point)
+                    for point in to_points[obj]
+                ]
+                exported = (num_data.num_obj, colorization), points
+                if num_data.is_active:
+                    active.append(exported)
+                    if self.is_selectable(obj):
+                        selectable.append((
+                            li_to_select[obj],
+                            num_data.num_obj
+                        ))
+                else: extra.append(exported)
+
+            return active, extra, selectable
+
+        
+        self.active_lines_numer, self.extra_lines_numer, self.selectable_lines\
+        = export_numer(self.num_lines, self.line_to_points)
+
+        self.active_circles_numer, self.extra_circles_numer, self.selectable_circles\
+        = export_numer(self.num_circles, self.circle_to_points)
 
     def refresh_visible(self):
 

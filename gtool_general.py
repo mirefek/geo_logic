@@ -23,15 +23,33 @@ class GToolDict:
                 type_set = prefix_d.setdefault(prefix, set())
                 if isinstance(type_set, set): type_set.add(t)
 
-    def make_tool(self, name, env, viewport):
-        return GToolGeneral(self.name_to_prefixes[name], env, viewport)
+    def make_tool(self, name):
+        return GToolGeneral(self.name_to_prefixes[name])
 
 class GToolGeneral(GTool):
 
-    def __init__(self, prefix_d, env, viewport):
-        GTool.__init__(self, env, viewport)
-        self.prefix_d = prefix_d
+    def __init__(self, prefix_d):
+        GTool.__init__(self)
+        types_to_selector = {
+            frozenset((Point, Line, Circle)): self.select_pcl,
+            frozenset((Point, Line)):   self.select_pl,
+            frozenset((Point, Circle)): self.select_pc,
+            frozenset((Line, Circle)):  self.select_pc,
+            frozenset((Point,)):  self.select_point,
+            frozenset((Line,)):   self.select_line,
+            frozenset((Circle,)): self.select_circle,
+        }
+        self.prefix_d = dict()
+        for prefix,tool_or_types in prefix_d.items():
+            if isinstance(tool_or_types, Tool):
+                self.prefix_d[prefix] = tool_or_types
+            else:
+                types = frozenset(tool_or_types)
+                selector = types_to_selector[types]
+                self.prefix_d[prefix] = selector
 
+    def enter(self, viewport):
+        GTool.enter(self, viewport)
         # print self
         name = None
         ttypes = []
@@ -45,14 +63,9 @@ class GToolGeneral(GTool):
         print("Tool: {} : {}".format(name, ', or '.join(ttypes)))
 
     def update_basic(self, coor, args = (), types = ()):
-        type_to_objlist = {
-            Point : self.env.selectable_points,
-            Line : self.env.selectable_lines,
-            Circle : self.env.selectable_circles,
-        }
 
-        obj_lists = [type_to_objlist[t] for t in self.prefix_d[types]]
-        obj,objn = self.coor_to_obj(coor, obj_lists)
+        selector = self.prefix_d[types]
+        obj,objn = selector(coor)
         if obj is not None:
             args = args+(obj,)
             types = types+(type(objn),)
@@ -60,8 +73,6 @@ class GToolGeneral(GTool):
             if isinstance(tool, Tool):
                 self.confirm = self.run_tool, tool, args
             else: self.confirm_next = self.update_basic, args, types
-
-        self.hl_select(*args)
 
     def run_tool(self, tool, args):
         step = ToolStep(tool, (), args)

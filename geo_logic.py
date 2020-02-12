@@ -15,7 +15,7 @@ from graphical_env import GraphicalEnv
 from movable_tools import MovableTool
 from basic_tools import load_tools, ImportedTools
 from gtool_general import GToolDict
-from gtool import GTool, GToolMove, GToolHide
+from gtool import ObjSelector, GTool, GToolMove, GToolHide
 from gtool_constr import ComboPoint, ComboLine, ComboPerpLine, ComboCircle, ComboCircumCircle
 
 class Drawing(Gtk.Window):
@@ -29,9 +29,7 @@ class Drawing(Gtk.Window):
 
         def change_tool(button, name):
             if button.get_active():
-                self.cur_tool = self.general_tools.make_tool(
-                    name, self.env, self.viewport
-                )
+                self.viewport.set_tool(self.general_tools.make_tool(name))
 
         num_names = len(tool_names)
         num_columns = (num_names-1) // max_height + 1
@@ -60,7 +58,6 @@ class Drawing(Gtk.Window):
 
     def __init__(self):
         super(Drawing, self).__init__()
-        self.viewport = Viewport()
         self.mb_grasp = None
         self.key_to_tool = {
             #'l': "p_line",
@@ -77,41 +74,36 @@ class Drawing(Gtk.Window):
             '3': "cong_sss",
         }
         self.key_to_gtool = {
-            'x' : ComboPoint,
-            'l' : ComboLine,
-            't' : ComboPerpLine,
-            'c' : ComboCircle,
-            'o' : ComboCircumCircle,
-            'm' : GToolMove,
-            'h' : GToolHide,
+            'x' : (ComboPoint, "point"),
+            'l' : (ComboLine, "line"),
+            't' : (ComboPerpLine, "perpline"),
+            'c' : (ComboCircle, "circle"),
+            'o' : (ComboCircumCircle, "circumcircle"),
+            'm' : (GToolMove, "grab"),
+            'h' : (GToolHide, "hide"),
         }
         self.default_fname = None
+
+        self.set_events(Gdk.EventMask.KEY_PRESS_MASK |
+                        Gdk.EventMask.KEY_RELEASE_MASK)
+
 
         hbox = Gtk.HPaned()
         hbox.add(self.make_toolbox())
 
         self.env = GraphicalEnv(self.imported_tools)
-        self.cur_tool = ComboPoint(self.env, self.viewport)
+        self.viewport = Viewport(self.env)
+        self.viewport.set_tool(ComboPoint(), "point")
 
-        self.darea = Gtk.DrawingArea()
-        self.darea.connect("draw", self.on_draw)
-        self.darea.set_events(Gdk.EventMask.BUTTON_PRESS_MASK |
-                              Gdk.EventMask.BUTTON_RELEASE_MASK |
-                              Gdk.EventMask.KEY_PRESS_MASK |
-                              Gdk.EventMask.SCROLL_MASK |
-                              Gdk.EventMask.POINTER_MOTION_MASK )
         self.darea_vbox = Gtk.VBox()
-        self.darea_vbox.add(self.darea)
+        self.darea_vbox.add(self.viewport.darea)
         self.progress_bar = Gtk.ProgressBar(show_text=False)
         self.darea_vbox.pack_end(self.progress_bar, False, False, 0)
         hbox.add(self.darea_vbox)
         self.add(hbox)
 
-        self.darea.connect("button-press-event", self.on_button_press)
-        self.darea.connect("button-release-event", self.on_button_release)
-        self.darea.connect("scroll-event", self.on_scroll)
-        self.darea.connect("motion-notify-event", self.on_motion)
         self.connect("key-press-event", self.on_key_press)
+        self.connect("key-release-event", self.on_key_release)
 
         self.set_title("Drawing")
         self.resize(1200, 400)
@@ -163,34 +155,6 @@ class Drawing(Gtk.Window):
                 f.write('  '+' '.join(tokens)+'\n')
                 i = i2
 
-    def on_scroll(self,w,e):
-        if e.direction == Gdk.ScrollDirection.DOWN:
-            direction = 0.9
-        elif e.direction == Gdk.ScrollDirection.UP:
-            direction = 1/0.9
-        else: return
-        self.viewport.zoom(direction, e)
-        self.darea.queue_draw()
-
-    def on_motion(self,w,e):
-        if e.state & Gdk.ModifierType.BUTTON2_MASK:
-            if self.mb_grasp is None: return
-            self.viewport.shift_to_mouse(self.mb_grasp, e)
-            self.darea.queue_draw()
-        else:
-            pressed = bool(e.state & Gdk.ModifierType.BUTTON1_MASK)
-            coor = self.viewport.mouse_coor(e)
-            self.cur_tool.motion(coor, pressed)
-            if self.env.view_changed: self.darea.queue_draw()
-
-    def on_draw(self, wid, cr):
-
-        self.env.view_changed = False
-        self.viewport.set_corners(
-            self.darea.get_allocated_width(),
-            self.darea.get_allocated_height()
-        )
-        self.viewport.draw(cr, self.env)
 
     def on_key_press(self,w,e):
 
@@ -217,44 +181,31 @@ class Drawing(Gtk.Window):
         elif ctrl and keyval_name == 'n':
             self.restart()
         elif not ctrl and keyval_name in self.key_to_gtool:
-            gtool = self.key_to_gtool[keyval_name]
+            gtool, name = self.key_to_gtool[keyval_name]
             print("change tool -> {}".format(gtool.__name__))
-            self.cur_tool = gtool(self.env, self.viewport)
+            self.viewport.set_tool(gtool(), name)
         elif not ctrl and keyval_name in self.key_to_tool:
             tool_name = self.key_to_tool[keyval_name]
             self.tool_buttons[tool_name].set_active(True)
+        elif keyval_name.startswith("Shift"):
+            self.viewport.update_shift_pressed(True)
+            self.viewport.darea.queue_draw()
+            return False
         else:
             #print(keyval_name)
             return False
 
         if self.env.view_changed:
-            self.cur_tool.reset()
-            self.darea.queue_draw()
+            self.viewport.update_shift_pressed(e)
+            self.viewport.gtool.reset()
+            self.viewport.darea.queue_draw()
+        return True
 
-    def on_button_release(self, w, e):
-        coor = self.viewport.mouse_coor(e)
-        self.cur_tool.button_release(coor)
-        if self.env.view_changed: self.darea.queue_draw()
-
-    def on_button_press(self, w, e):
-        if e.type != Gdk.EventType.BUTTON_PRESS: return
-
-        coor = self.viewport.mouse_coor(e)
-        shift = (e.state & Gdk.ModifierType.SHIFT_MASK)
-
-        if e.button == 2:
-            self.mb_grasp = coor
-        elif shift and e.button in (1,3):
-            gtool = GTool(self.env, self.viewport)
-            obj,_ = gtool.coor_to_pcl(coor)
-            if obj is not None:
-                direction = {1:-1, 3:1}[e.button]
-                self.env.swap_priorities(obj, direction)
-                self.darea.queue_draw()
-        elif e.button in (1,3):
-            if e.button == 1: self.cur_tool.button_press(coor)
-            else: self.cur_tool.reset()
-            if self.env.view_changed: self.darea.queue_draw()
+    def on_key_release(self,w,e):
+        keyval_name = Gdk.keyval_name(e.keyval)
+        if keyval_name.startswith("Shift"):
+            self.viewport.update_shift_pressed(False)
+            self.viewport.darea.queue_draw()
 
 if __name__ == "__main__":
     win = Drawing()

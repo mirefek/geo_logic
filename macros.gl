@@ -1,3 +1,59 @@
+intersection0 a:C b:C -> X:P
+  <- intersecting a b
+  X <- intersection 0 a b
+intersection0 a:L b:C -> X:P
+  <- intersecting a b
+  X <- intersection 0 a b
+intersection0 a:C b:L -> X:P
+  <- intersecting a b
+  X <- intersection 0 b a
+intersection1 a:C b:C -> X:P
+  <- intersecting a b
+  X <- intersection 1 a b
+intersection1 a:L b:C -> X:P
+  <- intersecting a b
+  X <- intersection 1 a b
+intersection1 a:C b:L -> X:P
+  <- intersecting a b
+  X <- intersection 1 b a
+intersection_closer a:C b:C A:P -> X:P
+  <- intersecting a b
+  X <- intersection 0 a b A
+intersection_closer a:L b:C A:P -> X:P
+  <- intersecting a b
+  X <- intersection 0 a b A
+intersection_closer a:C b:L A:P -> X:P
+  <- intersecting a b
+  X <- intersection 0 b a A
+intersection_remoter a:C b:C A:P -> X:P
+  <- intersecting a b
+  X <- intersection 1 a b A
+intersection_remoter a:L b:C A:P -> X:P
+  <- intersecting a b
+  X <- intersection 1 a b A
+intersection_remoter a:C b:L A:P -> X:P
+  <- intersecting a b
+  X <- intersection 1 b a A
+intersections a:C b:C -> X0:P X1:P
+  <- intersecting a b
+  X0 <- intersection 0 a b
+  X1 <- intersection 1 a b
+intersections a:L b:C -> X0:P X1:P
+  <- intersecting a b
+  X0 <- intersection 0 a b
+  X1 <- intersection 1 a b
+intersections a:C b:L -> X0:P X1:P
+  <- intersecting a b
+  X0 <- intersection 0 b a
+  X1 <- intersection 1 b a
+
+compass A:P B:P C:P -> c:C
+  d <- dist A B
+  c <- circle C d
+compass w:C X:P -> c:C
+  r <- radius_of w
+  c <- circle X r
+
 circle C:P A:P -> w:C
   w <- compass A C C
   <- point_to_circle A w

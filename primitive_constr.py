@@ -14,16 +14,17 @@ def direction_of(l : Line) -> Angle:
 def intersection(l1 : Line, l2 : Line) -> Point:
     assert(isinstance(l1, Line) and isinstance(l2, Line))
     return Point(intersection_ll(l1, l2))
-def intersection_remoter(cl1 : PointSet, cl2 : PointSet, p : Point) -> Point:
-    intersections = [Point(x) for x in intersection_univ(cl1, cl2)]
-    assert(len(intersections) == 2)
-    intersections.sort(key = lambda p: np.dot(p.a, [1.2, 3.4]))
-    return max(intersections, key = lambda x: x.dist_from(p.a))
-def intersection0(cl1 : PointSet, cl2 : PointSet) -> Point:
-    intersections = [Point(x) for x in intersection_univ(cl1, cl2)]
-    assert(len(intersections) == 2)
-    intersections.sort(key = lambda p: np.dot(p.a, [1.2, 3.4]))
-    return intersections[0]
+
+#def intersection_remoter(cl1 : PointSet, cl2 : PointSet, p : Point) -> Point:
+#    intersections = [Point(x) for x in intersection_univ(cl1, cl2)]
+#    assert(len(intersections) == 2)
+#    intersections.sort(key = lambda p: np.dot(p.a, [1.2, 3.4]))
+#    return max(intersections, key = lambda x: x.dist_from(p.a))
+#def intersection0(cl1 : PointSet, cl2 : PointSet) -> Point:
+#    intersections = [Point(x) for x in intersection_univ(cl1, cl2)]
+#    assert(len(intersections) == 2)
+#    intersections.sort(key = lambda p: np.dot(p.a, [1.2, 3.4]))
+#    return intersections[0]
 #def free_point(x : float, y : float) -> Point:
 #    return Point(np.array((x,y)))
 #def point_on(x : float, y : float, cl : PointSet) -> Point:

@@ -85,10 +85,6 @@ point_to_circle X:P c:C ->
   THEN
   <- lies_on X c
 
-compass A:P B:P C:P -> c:C
-  d <- dist A B
-  c <- circle C d
-
 not_parallel l0:L l1:L -> 
   x <- direction_of l0
   y <- direction_of l1
@@ -100,83 +96,6 @@ intersection a:L b:L -> X:P
   X <- prim__intersection a b
   <- lies_on X a
   <- lies_on X b
-
-intersection0 a:C b:C -> X:P
-  <- intersecting a b
-  THEN
-  X <- prim__intersection0 a b
-  <- lies_on X a
-  <- lies_on X b
-intersection0 a:L b:C -> X:P
-  <- intersecting a b
-  THEN
-  X <- prim__intersection0 a b
-  <- lies_on X a
-  <- lies_on X b
-intersection0 a:C b:L -> X:P
-  <- intersecting a b
-  THEN
-  X <- prim__intersection0 a b
-  <- lies_on X a
-  <- lies_on X b
-
-intersection_remoter a:C b:C A:P -> X:P
-  <- intersecting a b
-  THEN
-  X <- prim__intersection_remoter a b A
-  <- lies_on X a
-  <- lies_on X b
-intersection_remoter a:C b:L A:P -> X:P
-  <- intersecting a b
-  THEN
-  X <- prim__intersection_remoter a b A
-  <- lies_on X a
-  <- lies_on X b
-intersection_remoter a:L b:C A:P -> X:P
-  <- intersecting a b
-  THEN
-  X <- prim__intersection_remoter a b A
-  <- lies_on X a
-  <- lies_on X b
-
-intersection1 a:C b:C -> X:P
-  <- intersecting a b
-  X0 <- intersection0 a b
-  X <- intersection_remoter a b X0
-intersection1 a:L b:C -> X:P
-  <- intersecting a b
-  X0 <- intersection0 a b
-  X <- intersection_remoter a b X0
-intersection1 a:C b:L -> X:P
-  <- intersecting a b
-  X0 <- intersection0 a b
-  X <- intersection_remoter a b X0
-
-intersection_closer a:C b:C Y:P -> X:P
-  <- intersecting a b
-  X0 <- intersection_remoter a b Y
-  X <- intersection_remoter a b X0
-intersection_closer a:L b:C Y:P -> X:P
-  <- intersecting a b
-  X0 <- intersection_remoter a b Y
-  X <- intersection_remoter a b X0
-intersection_closer a:C b:L Y:P -> X:P
-  <- intersecting a b
-  X0 <- intersection_remoter a b Y
-  X <- intersection_remoter a b X0
-
-intersections a:C b:C -> X0:P X1:P
-  <- intersecting a b
-  X0 <- intersection0 a b
-  X1 <- intersection_remoter a b X0
-intersections a:C b:L -> X0:P X1:P
-  <- intersecting a b
-  X0 <- intersection0 a b
-  X1 <- intersection_remoter a b X0
-intersections a:L b:C -> X0:P X1:P
-  <- intersecting a b
-  X0 <- intersection0 a b
-  X1 <- intersection_remoter a b X0
 
 angle l0:L l1:L -> alpha:A
   d0 <- direction_of l0
