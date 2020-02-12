@@ -142,26 +142,30 @@ class Viewport:
         self.darea.queue_draw()
         return True
 
+    def point_dot(self, cr, p, pix_radius, fill = True):
+        cr.arc(p.a[0], p.a[1], pix_radius / self.scale, 0, 2*np.pi)
+        if fill: cr.fill()
     def draw_point(self, cr, p):
-        cr.arc(p.a[0], p.a[1], 3 / self.scale, 0, 2*np.pi)
-        cr.fill()
-    def point_shadow(self, cr, p):
-        cr.arc(p.a[0], p.a[1], 10 / self.scale, 0, 2*np.pi)
+        self.point_dot(cr, p, 3)
+    def point_shadow(self, cr, p, fill = True):
+        self.point_dot(cr, p, 10, fill = fill)
     def draw_point_selection(self, cr, p):
         cr.save()
         self.set_select_color(cr)
-        cr.arc(p.a[0], p.a[1], 8 / self.scale, 0, 2*np.pi)
-        cr.fill()
+        self.point_dot(cr, p, 8)
         cr.restore()
     def draw_point_proposal(self, cr, p):
         cr.save()
         cr.set_source_rgb(0, 0, 0)
-        cr.arc(p.a[0], p.a[1], 4 / self.scale, 0, 2*np.pi)
-        cr.fill()
+        self.point_dot(cr, p, 4)
         cr.set_source_rgb(0.7, 0.9, 0.25)
-        cr.arc(p.a[0], p.a[1], 3 / self.scale, 0, 2*np.pi)
-        cr.fill()
+        self.point_dot(cr, p, 3)
         cr.restore()
+
+    def set_stroke(self, cr, pix_width, dashes = None):
+        cr.set_line_width(pix_width / self.scale)
+        if dashes is not None:
+            cr.set_dash([d / self.scale for d in dashes])
 
     def draw_circle(self, cr, c, colorization = None):
         if colorization is None:
@@ -173,7 +177,7 @@ class Viewport:
         if selected:
             cr.save()
             self.set_select_color(cr)
-            cr.set_line_width(3 / self.scale)
+            self.set_stroke(cr, 3)
             if isinstance(selected, tuple): a, b = selected
             else: a, b = 0, 2
             self.raw_arc(cr, c.c, c.r, a, b)
@@ -239,7 +243,7 @@ class Viewport:
             #print("selected")
             cr.save()
             self.set_select_color(cr)
-            cr.set_line_width(3 / self.scale)
+            self.set_stroke(cr, 3)
             cr.move_to(*endpoints[0])
             cr.line_to(*endpoints[1])
             cr.stroke()
@@ -365,13 +369,13 @@ class Viewport:
 
     def draw_lies_on_l(self, cr, point, line):
         cr.save()
-        self.point_shadow(cr, point)
+        self.point_shadow(cr, point, fill = False)
         cr.clip()
         self.draw_line(cr, *line)
         cr.restore()
     def draw_lies_on_c(self, cr, point, circle):
         cr.save()
-        self.point_shadow(cr, point)
+        self.point_shadow(cr, point, fill = False)
         cr.clip()
         self.draw_circle(cr, *circle)
         cr.restore()
@@ -393,17 +397,15 @@ class Viewport:
         cr.set_source_rgb(1,1,1)
         cr.fill()
 
-        cr.set_line_width(1/self.scale)
-
         # draw extra lines and circles
-        cr.set_dash([3 / self.scale])
+        self.set_stroke(cr, 1, [3])
         for line, points in env.extra_lines_numer:
             self.draw_line(cr, *line)
         for circle, points in env.extra_circles_numer:
             self.draw_circle(cr, *circle)
-        cr.set_dash([])
 
         # draw active lines and circles
+        self.set_stroke(cr, 1, [])
         for line, points in env.active_lines_numer:
             self.draw_line(cr, *line)
         for circle, points in env.active_circles_numer:
@@ -413,18 +415,17 @@ class Viewport:
         cr.set_source_rgb(1,1,1)
         for p,color,selected in env.visible_points_numer:
             self.point_shadow(cr, p)
-            cr.fill()
             if selected: self.draw_point_selection(cr, p)
 
         # draw lies_on
-        cr.set_dash([3 / self.scale])
+        self.set_stroke(cr, 1, [3])
         for line, points in env.extra_lines_numer:
             for point in points:
                 self.draw_lies_on_l(cr, point, line)
         for circle, points in env.extra_circles_numer:
             for point in points:
                 self.draw_lies_on_c(cr, point, circle)
-        cr.set_dash([])
+        self.set_stroke(cr, 1, [])
         for line, points in env.active_lines_numer:
             for point in points:
                 self.draw_lies_on_l(cr, point, line)
@@ -433,11 +434,12 @@ class Viewport:
                 self.draw_lies_on_c(cr, point, circle)
 
         # draw parallels
+        self.set_color(cr, -1)
         for line, lev in env.visible_parallels:
             self.draw_parallel(cr, line, lev)
 
         # draw distances
-        cr.set_dash([3 / self.scale])
+        self.set_stroke(cr, 1, [3])
         for a,b,col,lev in env.visible_dists:
             self.set_color(cr, col)
             self.draw_dist(cr, a,b,lev)
@@ -445,7 +447,7 @@ class Viewport:
         for a,b,circ,col,lev in env.visible_arcs:
             self.set_color(cr, col)
             self.draw_arc(cr, a,b,circ,lev)
-        cr.set_dash([])
+        self.set_stroke(cr, 1, [])
         # draw angles
         for coor, pos_a, pos_b, col, lev in env.visible_angles:
             self.set_color(cr, col)
@@ -456,8 +458,7 @@ class Viewport:
 
         # draw helpers
         cr.save()
-        cr.set_line_width(2 / self.scale)
-        cr.set_dash([1])
+        self.set_stroke(cr, 2, [2])
         cr.set_source_rgb(0.5, 0.5, 0.5)
         for helper in env.hl_helpers:
             self.draw_helper(cr, helper)
