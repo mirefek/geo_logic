@@ -192,9 +192,6 @@ point_to_perp_bisector X:P A:P B:P ->
   p <- perp_bisector A B
   THEN
   <- lies_on X p
-  a <- line A X
-  b <- line B X
-  <- eq_angle a p p b
 
 half_direction A:P B:P -> dir:A
   <- not_eq A B

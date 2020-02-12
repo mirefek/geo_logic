@@ -266,11 +266,15 @@ class NumLineData(NumData):
 
         self.env.visible_dists.extend(self.extra_segments)
 
-    def find_available_level(self, pos_a, pos_b):
+    def find_available_level(self, a, b):
+        pos_a = np.dot(self.num_obj.v, a)
+        pos_b = np.dot(self.num_obj.v, b)
         blocked = set()
         if self.visible is not None: blocked.add(0)
-        for a,b,col,lev in self.extra_segments:
-            if eps_smaller(a, pos_b) and eps_smaller(pos_a, b):
+        for x,y,col,lev in self.extra_segments:
+            pos_x = np.dot(self.num_obj.v, x)
+            pos_y = np.dot(self.num_obj.v, y)
+            if eps_smaller(pos_x, pos_b) and eps_smaller(pos_a, pos_y):
                 blocked.add(lev)
         lev = 0
         while lev in blocked: lev += 1

@@ -43,7 +43,9 @@ class GToolConstr(GTool):
                 if dist_x >= self.find_radius: continue
                 candidates.append((dist_x, dist_cl, x, cl2, cln2))
 
-        if not candidates: return None, None
+        if not candidates:
+            if point_on is None: self.hl_selected.pop()
+            return None, None
 
         min_dist_x = min(dist_x for dist_x,_,_,_,_ in candidates)
         _,x,cl2,cln2 = min((
@@ -246,7 +248,11 @@ class ComboLine(GToolConstr):
                 self.drag = self.drag_angle_bisector, p1,pn1, p2,pn2
                 self.hl_propose(l, permanent = False)
             return
-        c,cn = self.select_circle(coor)
+        c,cn = self.select_circle(
+            coor,
+            filter_f = (lambda c,cn: self.lies_on(p1,c) or
+                        eps_smaller(cn.r, np.linalg.norm(cn.c - pn1.a)))
+        )
         if c is not None:
             if isinstance(cn, Circle):
                 if self.lies_on(p1, c):
@@ -254,7 +260,9 @@ class ComboLine(GToolConstr):
                     self.confirm = self.run_tool, "tangent_at", p1, c
                     self.hl_propose(Line(v, np.dot(v, pn1.a)))
                 else:
-                    diacirc = Circle((pn1.a + cn.c)/2, np.linalg.norm(pn1.a - cn.c)/2)
+                    dia_rad = np.linalg.norm(pn1.a - cn.c)/2
+                    if eps_zero(dia_rad): return
+                    diacirc = Circle((pn1.a + cn.c)/2, dia_rad)
                     touchpoint_cand = intersection_cc(cn, diacirc)
                     if len(touchpoint_cand) < 2: return
                     i,touchpoint = min(

@@ -40,7 +40,7 @@ class Viewport:
             "basic", "point",
             "line", "perpline",
             "circle", "circumcircle",
-            "derive", "hide",
+            "reason", "hide",
         ]
         names_gtk = [
             "grab", "grabbing"
@@ -54,7 +54,6 @@ class Viewport:
                 display, pixbuf, 0, 0,
             )
         for name in names_gtk:
-            print(name)
             self.cursors[name] = Gdk.Cursor.new_from_name(display, name)
         self.cursor = self.cursors["basic"]
         self.tool_cursor = self.cursor
@@ -63,7 +62,7 @@ class Viewport:
         self.darea.connect("realize", realize_cursor)
 
     def set_cursor(self, name):
-        print("cursor:", name)
+        #print("cursor:", name)
         if name not in self.cursors:
             print("Warning: cannot set cursor '{}'".format(name))
             print(self.cursors.keys())
@@ -144,23 +143,23 @@ class Viewport:
         return True
 
     def draw_point(self, cr, p):
-        cr.arc(p.a[0], p.a[1], 3/self.scale, 0, 2*np.pi)
+        cr.arc(p.a[0], p.a[1], 3 / self.scale, 0, 2*np.pi)
         cr.fill()
     def point_shadow(self, cr, p):
-        cr.arc(p.a[0], p.a[1], 10/self.scale, 0, 2*np.pi)
+        cr.arc(p.a[0], p.a[1], 10 / self.scale, 0, 2*np.pi)
     def draw_point_selection(self, cr, p):
         cr.save()
         self.set_select_color(cr)
-        cr.arc(p.a[0], p.a[1], 8/self.scale, 0, 2*np.pi)
+        cr.arc(p.a[0], p.a[1], 8 / self.scale, 0, 2*np.pi)
         cr.fill()
         cr.restore()
     def draw_point_proposal(self, cr, p):
         cr.save()
         cr.set_source_rgb(0, 0, 0)
-        cr.arc(p.a[0], p.a[1], 4, 0, 2*np.pi)
+        cr.arc(p.a[0], p.a[1], 4 / self.scale, 0, 2*np.pi)
         cr.fill()
         cr.set_source_rgb(0.7, 0.9, 0.25)
-        cr.arc(p.a[0], p.a[1], 3, 0, 2*np.pi)
+        cr.arc(p.a[0], p.a[1], 3 / self.scale, 0, 2*np.pi)
         cr.fill()
         cr.restore()
 
@@ -457,7 +456,7 @@ class Viewport:
 
         # draw helpers
         cr.save()
-        cr.set_line_width(2)
+        cr.set_line_width(2 / self.scale)
         cr.set_dash([1])
         cr.set_source_rgb(0.5, 0.5, 0.5)
         for helper in env.hl_helpers:

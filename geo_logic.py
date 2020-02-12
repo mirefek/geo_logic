@@ -16,6 +16,7 @@ from movable_tools import MovableTool
 from basic_tools import load_tools, ImportedTools
 from gtool_general import GToolDict
 from gtool import ObjSelector, GTool, GToolMove, GToolHide
+from gtool_logic import GToolReason
 from gtool_constr import ComboPoint, ComboLine, ComboPerpLine, ComboCircle, ComboCircumCircle
 
 class Drawing(Gtk.Window):
@@ -81,6 +82,7 @@ class Drawing(Gtk.Window):
             'o' : (ComboCircumCircle, "circumcircle"),
             'm' : (GToolMove, "grab"),
             'h' : (GToolHide, "hide"),
+            'r' : (GToolReason, "reason"),
         }
         self.default_fname = None
 

@@ -73,6 +73,11 @@ class HighlightList:
         self.ini = [x for x in self.l if x[1]]
     def reset_save(self): self.ini = []
     def pop(self): return self.l.pop()
+    def remove(self, x): return self.l.remove((x, True))
+    def remove_if(self, cond):
+        self.l = [
+            (x,perm) for (x,perm) in self.l if not cond(x)
+        ]
 
 class GTool(ObjSelector):
     def __init__(self):

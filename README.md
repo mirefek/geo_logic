@@ -13,6 +13,7 @@ Tool for euclidean geometry aware of logic
 + 't' -- Combo Perpline
 + 'c' -- Combo Circle
 + 'o' -- Combo Circumcircle
++ 'r' -- Combo Reasoning Tool
 + '1' -- a point on circle has the radius distnce from its center
 + '2' -- if a point has a radius distance from a center of a circle, it lies on it
 + '3' -- if two triangles are equally oriented and has equally long sides, they have equal angles
