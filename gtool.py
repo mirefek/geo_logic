@@ -80,6 +80,15 @@ class HighlightList:
         ]
 
 class GTool(ObjSelector):
+    icon_name = None
+    key_shortcut = None
+    label = None
+    def get_icon_name(self): return self.icon_name
+    def get_cursor(self): return self.icon_name
+    def get_key_shortcut(self): return self.key_shortcut
+    def get_label(self):
+        return "{} ({})".format(self.label, self.key_shortcut.upper())
+
     def __init__(self):
         ObjSelector.__init__(self)
         self.distance_to_drag_pix = 5
@@ -258,6 +267,13 @@ class AmbiSelect(ObjSelector):
         self.env.visible_export()
 
 class GToolMove(GTool):
+    icon_name = "move"
+    key_shortcut = 'm'
+    label = "Move Tool"
+    def get_cursor(self):
+        if self.click_coor is None: return "grab"
+        else: return "grabbing"
+
     def __init__(self):
         GTool.__init__(self)
         self.distance_to_drag_pix = 0
@@ -274,8 +290,8 @@ class GToolMove(GTool):
         self.drag_start = self.move_start
 
     def move_start(self):
-        self.viewport.set_cursor("grabbing")
-        self.on_reset = self.viewport.set_cursor, "grab"
+        self.viewport.set_cursor_by_tool()
+        self.on_reset = self.viewport.set_cursor_by_tool
 
     def move_obj(self, coor, step, grasp, num_args):
         tool = step.tool
@@ -298,6 +314,9 @@ class GToolMove(GTool):
 
 class GToolHide(GTool):
 
+    icon_name = "hide"
+    key_shortcut = 'h'
+    label = "Hide Tool"
     def update_basic(self, coor):
         obj,_ = self.select_pcl(coor)
         if obj is not None:

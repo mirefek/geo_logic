@@ -556,7 +556,7 @@ class GraphicalEnv:
             return tuple(range(ori_len, new_len))
         except ToolError as e:
             if isinstance(e, ToolErrorException): raise e.e
-            print("Tool failed: {}".format(e))
+            print("Tool '{}' failed: {}".format(step.tool.name, e))
             self.refresh_steps()
             return None
 

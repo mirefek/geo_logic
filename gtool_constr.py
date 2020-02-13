@@ -101,6 +101,9 @@ class GToolConstr(GTool):
 
 class ComboPoint(GToolConstr):
 
+    icon_name = "point"
+    key_shortcut = 'x'
+    label = "Point Tool"
     def update_basic(self, coor):
 
         p, pn = self.select_point(coor)
@@ -229,6 +232,10 @@ class ComboPoint(GToolConstr):
 
 class ComboLine(GToolConstr):
 
+    icon_name = "line"
+    key_shortcut = 'l'
+    label = "(Parallel) Line"
+
     def update_basic(self, coor):
         p,pn = self.select_pi(coor)
         if p is not None:
@@ -334,6 +341,10 @@ class ComboLine(GToolConstr):
 
 class ComboPerpLine(GToolConstr):
 
+    icon_name = "perpline"
+    key_shortcut = 't'
+    label = "Perpendicular Line"
+
     def update_basic(self, coor):
         p,pn = self.select_pi(coor)
         if p is not None:
@@ -417,6 +428,10 @@ class ComboPerpLine(GToolConstr):
 
 class ComboCircle(GToolConstr):
 
+    icon_name = "circle"
+    key_shortcut = 'c'
+    label = "Circle with Center"
+
     def update_basic(self, coor):
         p,pn = self.select_pi(coor)
         if p is not None:
@@ -483,6 +498,10 @@ class ComboCircle(GToolConstr):
             self.confirm = self.run_tool, "compass", *args
 
 class ComboCircumCircle(GToolConstr):
+
+    icon_name = "circumcircle"
+    key_shortcut = 'o'
+    label = "Circumcircle tool"
 
     def update_basic(self, coor):
         p1,pn1 = self.select_pi(coor)

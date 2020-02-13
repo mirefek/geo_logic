@@ -24,11 +24,13 @@ class GToolDict:
                 if isinstance(type_set, set): type_set.add(t)
 
     def make_tool(self, name):
-        return GToolGeneral(self.name_to_prefixes[name])
+        if name not in self.name_to_prefixes: return None
+        return GToolGeneral(self.name_to_prefixes[name], name)
 
 class GToolGeneral(GTool):
 
-    def __init__(self, prefix_d):
+    def __init__(self, prefix_d, name):
+        self.name = name
         GTool.__init__(self)
         types_to_selector = {
             frozenset((Point, Line, Circle)): self.select_pcl,

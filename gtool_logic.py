@@ -6,6 +6,9 @@ import itertools
 
 class GToolReason(GTool):
 
+    icon_name = "reason"
+    key_shortcut = 'r'
+    label = "Reasoning Tool"
     def order_angle(self,pn1,pn2,pn3, x,y):
         if np.linalg.det(np.stack([pn2.a-pn1.a, pn3.a-pn1.a])) <= 0:
             return x,y
@@ -45,6 +48,7 @@ class GToolReason(GTool):
         c,cn = self.select_circle(coor)
         if c is not None:
             self.confirm = self.run_tool, "point_on_circle", p1,c
+            self.hl_add_helper((pn1.a, cn.c))
 
     # X Y (A)->B    = concyclic_to_angles
     def update_pp(self, coor, p1,pn1, p2,pn2):

@@ -19,6 +19,8 @@ class Viewport:
         self.ambi_select = AmbiSelect()
         self.shift_pressed = False
 
+        self.click_hook = None
+
         self.mb_grasp = None
         self.darea = Gtk.DrawingArea()
         self.darea.connect("draw", self.on_draw)
@@ -30,6 +32,7 @@ class Viewport:
         self.darea.connect("button-release-event", self.on_button_release)
         self.darea.connect("scroll-event", self.on_scroll)
         self.darea.connect("motion-notify-event", self.on_motion)
+        self.darea.set_property('can-focus', True)
 
         self.load_cursors()
 
@@ -55,44 +58,49 @@ class Viewport:
             )
         for name in names_gtk:
             self.cursors[name] = Gdk.Cursor.new_from_name(display, name)
-        self.cursor = self.cursors["basic"]
-        self.tool_cursor = self.cursor
-        def realize_cursor(darea):
-            darea.get_window().set_cursor(self.cursor)
-        self.darea.connect("realize", realize_cursor)
+        def realize(widget):
+            self.set_cursor_by_tool()
+        self.darea.connect("realize", realize)
 
     def set_cursor(self, name):
         #print("cursor:", name)
+        if name is None: name = "basic"
         if name not in self.cursors:
             print("Warning: cannot set cursor '{}'".format(name))
             print(self.cursors.keys())
             return
-        self.cursor = self.cursors[name]
         gdk_win = self.darea.get_window()
-        if gdk_win is not None: gdk_win.set_cursor(self.cursor)
+        if gdk_win is not None:
+            gdk_win.set_cursor(self.cursors[name])
 
-    def set_tool(self, gtool, cursor = "basic"):
+    def set_cursor_by_tool(self):
+        cursor = None
+        if self.gtool is not None:
+            cursor = self.gtool.get_cursor()
+        self.set_cursor(cursor)
+
+    def set_tool(self, gtool):
         if self.gtool is not None: self.gtool.leave()
         if gtool is not None:
             gtool.enter(self)
             self.gtool = gtool
-        self.tool_cursor = cursor
-        self.set_cursor(cursor)
+        self.set_cursor_by_tool()
 
     def update_shift_pressed(self, shift_pressed):
         if not isinstance(shift_pressed, bool):
             shift_pressed = bool(shift_pressed.state & Gdk.ModifierType.SHIFT_MASK)
         if self.shift_pressed and not shift_pressed:
             self.ambi_select.leave()
-            self.set_cursor(self.tool_cursor)
+            self.set_cursor_by_tool()
         elif not self.shift_pressed and shift_pressed:
             self.gtool.cursor_away()
             self.ambi_select.enter(self)
-            self.set_cursor("basic")
+            self.set_cursor(None)
         self.shift_pressed = shift_pressed
         if self.env.view_changed: self.darea.queue_draw()
 
     def on_button_press(self, w, e):
+        if self.click_hook is not None: self.click_hook()
         self.update_shift_pressed(e)
 
         if e.type != Gdk.EventType.BUTTON_PRESS: return
