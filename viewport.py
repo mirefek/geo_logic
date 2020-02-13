@@ -100,7 +100,9 @@ class Viewport:
         if self.env.view_changed: self.darea.queue_draw()
 
     def on_button_press(self, w, e):
-        if self.click_hook is not None: self.click_hook()
+        hook_used = False
+        if self.click_hook is not None:
+            hook_used = self.click_hook()
         self.update_shift_pressed(e)
 
         if e.type != Gdk.EventType.BUTTON_PRESS: return
@@ -115,7 +117,8 @@ class Viewport:
             return True
 
         if e.button in (1,3):
-            if e.button == 1: self.gtool.button_press(coor)
+            if e.button == 1:
+                if not hook_used: self.gtool.button_press(coor)
             else: self.gtool.reset()
             if self.env.view_changed: self.darea.queue_draw()
             return True

@@ -1,20 +1,10 @@
 Now
-* dist can be a part of a line
-* movable objects
-  * show in move_tool
-* don't add step if cached
-* active segments
-* collinear, concyclic
-* angles
-
-vymazlení GUI
-* prohlížení rovnic o úhlech a poměrech
-* skrývání objektů
-* logické setřidění nástrojů, nastavitelné klávesové zkratky
+* show steps
+* don't add step if cached?
+* export tool
 
 dohledná doba
 * trasování důkazů
-* remoter nedovolí stejné vzdálenosti
 * neopakovat ověřování důkazů při undo
 * mazání objektů
 * "level"
