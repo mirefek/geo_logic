@@ -14,10 +14,10 @@ class GToolReason(GTool):
             return x,y
         else: return y,x
 
-    # . (X) Y A->B    = concyclic_to_angles
+    # . (X) Y A->B    = angles_to_concyclic
     # . (Y) X->Z      = inscribed_angle
     # . (X) w         = point_on_circle
-    # . (A)->B X Y    = angles_to_concyclic
+    # . (A)->B X Y    = concyclic_to_angles
     # . (A)->B X w    = on_circle_by_angle
     # . (A)->B X l    = point_to_perp_bisector
     # . (A)->B l X    = point_on_perp_bisector
@@ -35,7 +35,7 @@ class GToolReason(GTool):
         if c is not None:
             self.confirm_next = self.update_c, c,cn
 
-    # X (Y) A->B    = concyclic_to_angles
+    # X (Y) A->B    = angles_to_concyclic
     # Y (X)->Z      = inscribed_angle
     # X (w)         = point_on_circle
     def update_p(self, coor, p1,pn1):
@@ -50,7 +50,7 @@ class GToolReason(GTool):
             self.confirm = self.run_tool, "point_on_circle", p1,c
             self.hl_add_helper((pn1.a, cn.c))
 
-    # X Y (A)->B    = concyclic_to_angles
+    # X Y (A)->B    = angles_to_concyclic
     def update_pp(self, coor, p1,pn1, p2,pn2):
         p3,pn3 = self.select_point(coor)
         if p3 is None: pn3 = Point(coor)
@@ -59,13 +59,13 @@ class GToolReason(GTool):
         if not_collinear(pn1,pn2,pn3):
             self.hl_add_helper(circumcircle(pn1,pn2,pn3), permanent = True)
 
-    # X Y A->(B)    = concyclic_to_angles
+    # X Y A->(B)    = angles_to_concyclic
     def drag_ppp(self, coor, p1,pn1, p2,pn2, p3,pn3):
         p4,pn4 = self.select_point(coor)
         if p4 is None: pn4 = Point(coor)
         else:
             a,b = self.order_angle(pn3,pn1,pn4, p3,p4)
-            self.confirm = self.run_tool, "concyclic_to_angles", a,b,p1,p2
+            self.confirm = self.run_tool, "angles_to_concyclic", a,b,p1,p2
 
         i_points = enumerate(x.a for x in (pn1,pn2,pn3,pn4))
         for (i,x),(j,y) in itertools.combinations(i_points, 2):
@@ -86,7 +86,7 @@ class GToolReason(GTool):
             (pn1.a, pn3.a),
         )
 
-    # A->(B) X Y    = angles_to_concyclic
+    # A->(B) X Y    = concyclic_to_angles
     # A->(B) X w    = on_circle_by_angle
     # A->(B) X l    = point_to_perp_bisector
     # A->(B) l X    = point_on_perp_bisector
@@ -97,7 +97,7 @@ class GToolReason(GTool):
             self.confirm_next = self.update_s, (p1,p2),(pn1,pn2)
         self.hl_add_helper((pn1.a,pn2.a), permanent = True)
 
-    # A->B (X) Y    = angles_to_concyclic
+    # A->B (X) Y    = concyclic_to_angles
     # A->B (X) w    = on_circle_by_angle
     # A->B (X) l    = point_to_perp_bisector
     # A->B (l) X    = point_on_perp_bisector
@@ -118,7 +118,7 @@ class GToolReason(GTool):
         if not_collinear(pn3, *segn):
             self.hl_add_helper(circumcircle(pn3, *segn))
 
-    # A->B X (Y)    = angles_to_concyclic
+    # A->B X (Y)    = concyclic_to_angles
     # A->B X (w)    = on_circle_by_angle
     # A->B X (l)    = point_to_perp_bisector
     def update_sp(self, coor, seg,segn, p3,pn3):
@@ -127,7 +127,7 @@ class GToolReason(GTool):
         if p4 is not None:
             if p4 != p3 and all(not pn.identical_to(p3) for pn in segn):
                 a,b = self.order_angle(pn1,pn3,pn2, *seg)
-                self.confirm = self.run_tool, "angles_to_concyclic", a,b,p3,p4
+                self.confirm = self.run_tool, "concyclic_to_angles", a,b,p3,p4
         else: pn4 = Point(coor)
 
         if p4 is None:
