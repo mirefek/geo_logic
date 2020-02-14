@@ -111,11 +111,11 @@ class GeoLogic(Gtk.Window):
         fname = select_file_open(self)
         self.load_file(fname)
     def save(self):
-        fname = select_file_save(self)
-        self.save_file(fname)
-    def save_as(self):
         fname = self.default_fname
         if fname is None: fname = select_file_save(self)
+        self.save_file(fname)
+    def save_as(self):
+        fname = select_file_save(self)
         self.save_file(fname)
     def on_exit(self, *args):
         print_times()

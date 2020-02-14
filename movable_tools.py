@@ -225,7 +225,7 @@ class CirclePassing1(MovableTool):
         )
 
     def get_meta(self, c, p):
-        return tuple(map(float, c.c))
+        return tuple(map(float, c.c - p.a))
     def get_grasp(self, coor, p, c):
         if eps_identical(p.a, coor): return 0
         coef = get_circle_coef(c, p, Point(coor))
@@ -233,9 +233,9 @@ class CirclePassing1(MovableTool):
         else: return 0
     def new_meta(self, grasp, coor, p):
         center = center_from_coef(grasp, p, Point(coor))
-        return tuple(map(float, center))
+        return tuple(map(float, center-p.a))
     def num_eval(self, x,y, p):
-        center = np.array((x,y))
+        center = np.array((x,y))+p.a
         radius = np.linalg.norm(center-p.a)
         return Circle(center, radius)
     def add_corollaries(self, model, p, circ):

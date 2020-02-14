@@ -220,7 +220,7 @@ class ToolBar(Gtk.HBox):
     def select_tool_button(self, tool):
         if tool is None: return
         if isinstance(tool, GToolGeneral):
-            self.entry.set_text(name)
+            self.entry.set_text(tool.name)
             self.other_tool_button.set_active(True)
         else:
             button = self.tool_to_button.get(tool, None)
