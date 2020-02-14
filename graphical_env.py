@@ -491,35 +491,6 @@ class GraphicalEnv:
         if li is None: return None
         return self.li_to_type(self.li_root(li))
 
-    """
-    def update_movable_objects(self):
-        self.movable_points = []
-        self.movable_clines = []
-        gi = 0
-        for step in self.steps:
-            if isinstance(step.tool, MovableTool):
-                num = self.gi_to_num(gi)
-                if num is not None:
-                    if isinstance(num, Point):
-                        self.movable_points.append((gi, num))
-                    else: self.movable_clines.append((gi, num))
-            gi += len(step.tool.out_types)
-    def select_movable_obj(self, coor, scale, radius = 20):
-        if self.movable_points:
-            d,p = min(
-                (num.dist_from(coor), gi)
-                for gi, num in self.movable_points
-            )
-            if d * scale < radius: return p
-        if self.movable_clines:
-            d,p = min(
-                (num.dist_from(coor), gi)
-                for gi, num in self.movable_clines
-            )
-            if d * scale < radius: return p
-        return None
-    """
-
     def gi_to_step(self, gi):
         i = self.gi_to_step_i[gi]
         return self.steps[i]
@@ -552,7 +523,7 @@ class GraphicalEnv:
             self.redo_stack = []
             if update:
                 self.refresh_visible()
-                #self.update_movable_objects()
+            print("Applied: {}".format(step.tool.name))
             return tuple(range(ori_len, new_len))
         except ToolError as e:
             if isinstance(e, ToolErrorException): raise e.e
@@ -586,14 +557,12 @@ class GraphicalEnv:
         self.step_env.run_steps((step,), 1, catch_errors = True)
 
         self.refresh_visible()
-        #self.update_movable_objects()
 
     def refresh_steps(self, catch_errors = True):
         proof_checker.reset()
         self.model = LogicModel(basic_tools = self.tools)
         self.step_env = ToolStepEnv(self.model)
         self.step_env.run_steps(self.steps, 1, catch_errors = catch_errors)
-        #self.update_movable_objects()
         self.refresh_visible()
 
     def _get_num_obj(self, d, l, constructor, obj, keys):

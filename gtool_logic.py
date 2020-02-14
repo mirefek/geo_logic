@@ -14,14 +14,14 @@ class GToolReason(GTool):
             return x,y
         else: return y,x
 
-    # . (X) Y A->B    = angles_to_concyclic
-    # . (Y) X->Z      = inscribed_angle
-    # . (X) w         = point_on_circle
-    # . (A)->B X Y    = concyclic_to_angles
-    # . (A)->B X w    = on_circle_by_angle
-    # . (A)->B X l    = point_to_perp_bisector
-    # . (A)->B l X    = point_on_perp_bisector
-    # . (w) X         = point_to_circle
+    # (X) Y A->B    = angles_to_concyclic
+    # (Y) X->Z      = inscribed_angle
+    # (X) w         = point_on_circle
+    # (A)->B X Y    = concyclic_to_angles
+    # (A)->B X w    = on_circle_by_angle
+    # (A)->B X l    = point_to_perp_bisector
+    # (A)->B l X    = point_on_perp_bisector
+    # (w) X         = point_to_circle
     # (w) A B C D   = eq_arcs_to_eq_dist
     # (w) A->B C->D = eq_dist_to_eq_arcs
     def update_basic(self, coor):
