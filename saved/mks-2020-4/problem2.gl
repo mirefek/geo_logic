@@ -1,9 +1,9 @@
-_ ->
-  x0 <- free_point 202.7908935546875 365.7325439453125
-  x1 <- free_point 390.4876708984375 275.13775634765625
+_ -> x0:P x10:L x11:P x1:P x2:L x3:L x4:P x5:C x6:C x7:P x8:L x9:P
+  x0 <- free_point 322.4656066894531 353.3541259765625
+  x1 <- free_point 431.5154724121094 233.50808715820312
   x2 <- line x0 x1
   x3 <- perpline x2 x1
-  x4 <- point_on 442.5037841796875 360.71282958984375 x3
+  x4 <- m_point_on 546.1598510742188 372.623779296875 x3
   x5 <- circle x4 x1
   x6 <- circle x0 x1
   x7 <- intersection_remoter x5 x6 x1

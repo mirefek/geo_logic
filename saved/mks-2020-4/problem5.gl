@@ -1,11 +1,11 @@
-_ ->
-  x0 <- free_point 160.799560546875 367.14813232421875
-  x1 <- free_point 374.941162109375 359.59942626953125
+_ -> x0:P x10:L x11:P x12:L x13:L x14:P x15:L x1:P x2:L x3:P x4:C x5:C x6:P x7:L x8:P x9:P
+  x0 <- free_point 264.5248718261719 317.69940185546875
+  x1 <- free_point 611.6620483398438 301.9326171875
   x2 <- line x1 x0
-  x3 <- point_on 246.0545654296875 359.255126953125 x2
+  x3 <- m_point_on 406.91748046875 343.75726318359375 x2
   x4 <- circle x0 x3
   x5 <- circle x1 x3
-  x6 <- point_on 327.6007080078125 245.87158203125 x5
+  x6 <- m_point_on -0.6151829349630342 x5
   x7 <- tangent_at x6 x5
   x8 x9 <- intersections x7 x4
   x10 <- line x6 x3

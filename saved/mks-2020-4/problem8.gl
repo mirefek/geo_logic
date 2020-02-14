@@ -1,7 +1,7 @@
-_ ->
-  x0 <- free_point 172.966552734375 84.53997802734375
-  x1 <- free_point 113.97802734375 442.28546142578125
-  x2 <- free_point 442.810302734375 437.706787109375
+_ -> x0:P x10:C x11:C x12:C x13:P x14:P x15:P x16:P x17:P x18:P x19:P x1:P x20:P x21:P x22:P x23:P x24:P x25:P x26:L x27:L x28:L x29:L x2:P x30:L x31:L x3:P x4:P x5:P x6:P x7:P x8:P x9:P
+  x0 <- free_point 414.24658203125 57.627410888671875
+  x1 <- free_point 327.0667724609375 436.85919189453125
+  x2 <- free_point 741.4964599609375 451.76678466796875
   x3 <- centroid x0 x1 x2
   x4 <- midpoint x0 x1
   x5 <- midpoint x1 x2
@@ -22,3 +22,9 @@ _ ->
   <- concyclic_to_angles x23 x21 x13 x19
   <- concyclic_to_angles x25 x23 x13 x22
   <- angles_to_concyclic x25 x21 x13 x24
+  x26 <- line x0 x1
+  x27 <- line x1 x2
+  x28 <- line x2 x0
+  x29 <- line x3 x0
+  x30 <- line x3 x1
+  x31 <- line x3 x2
