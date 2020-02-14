@@ -33,8 +33,8 @@ It is not possible to create lemmata in the user interface yet
 ## Automation
 
 As an interactive theorem prover, GeoLogic intentionally does not possess
-much automation, especially that would use visual steps. There are basically
-four ways in which GeoLogic makes automatic decisions:
+much automation, especially if it can me circumvented with visual steps.
+There are basically four ways in which GeoLogic makes automatic decisions:
 
 + Gaussian elimination for angles: GeoLogic uses "oriented angle chasing"
   for deriving facts about angles (similar to Full Angle Method).
@@ -59,9 +59,9 @@ Right click resets the current tool.
 
 ### Ambiguous objects
 
-If two numerically identical objects are about to be shown, geo_logic
+If two numerically identical objects are about to be shown, GeoLogic
 shows only one of them. They can be swapped using shift-click. During holding shift,
-the ambigous object turn silghtly red.
+the ambigous object turn slightly red.
 
 ### Point
 
