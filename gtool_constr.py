@@ -138,32 +138,34 @@ class ComboPoint(GToolConstr):
             filter_f = lambda l,ln: isinstance(ln, Circle) or not ln.contains(pn.a)
         )
 
-        if cl is None:
-            self.hl_propose(Point((pn.a+coor)/2))
-            self.hl_add_helper((pn.a, coor))
-            return
+        if cl is not None:
+            if isinstance(cln, Circle):
+                if eps_identical(cln.c, pn.a): return
+                if self.lies_on(p, cl):
+                    op_point = Point(2*cln.c - pn.a)
+                    if np.linalg.norm(op_point.a - coor) < self.find_radius:
+                        self.hl_propose(op_point)
+                        self.confirm = self.run_tool, "opposite_point", p, cl
+                    else:
+                        self.hl_selected.pop()
+                        pos1 = vector_direction(pn.a - cln.c)
+                        pos2 = vector_direction(coor - cln.c)
+                        pos_arc = ((pos2-pos1) % 2) < 1
+                        if pos_arc: self.hl_select((cl, pos1, pos1+1))
+                        else: self.hl_select((cl, pos1+1, pos1), permanent = False)
+                        self.confirm_next = self.select_arc_midpoint, p,pn, cl,cln, pos_arc
+                    return
 
-        if isinstance(cln, Circle):
-            if eps_identical(cln.c, pn.a): return
-            if self.lies_on(p, cl):
-                op_point = Point(2*cln.c - pn.a)
-                if np.linalg.norm(op_point.a - coor) < self.find_radius:
-                    self.hl_propose(op_point)
-                    self.confirm = self.run_tool, "opposite_point", p, cl
-                else:
-                    self.hl_selected.pop()
-                    pos1 = vector_direction(pn.a - cln.c)
-                    pos2 = vector_direction(coor - cln.c)
-                    pos_arc = ((pos2-pos1) % 2) < 1
-                    if pos_arc: self.hl_select((cl, pos1, pos1+1))
-                    else: self.hl_select((cl, pos1+1, pos1), permanent = False)
-                    self.confirm_next = self.select_arc_midpoint, p,pn, cl,cln, pos_arc
+            foot = cln.closest_on(pn.a)
+            if np.linalg.norm(coor-foot) < 4*self.find_radius:
+                self.hl_propose(Point(foot))
+                self.hl_add_helper((pn.a, foot))
+                self.confirm = self.run_tool, "foot", p, cl
                 return
-            
-        foot = cln.closest_on(pn.a)
-        self.hl_propose(Point(foot))
-        self.hl_add_helper((pn.a, foot))
-        self.confirm = self.run_tool, "foot", p, cl
+
+        self.hl_propose(Point((pn.a+coor)/2))
+        self.hl_add_helper((pn.a, coor))
+        return
 
     def select_arc_midpoint(self, coor, p1,pn1, circ,circn, pos_arc):
 
@@ -262,10 +264,16 @@ class ComboLine(GToolConstr):
         )
         if c is not None:
             if isinstance(cn, Circle):
+                if eps_identical(coor, cn.c): free_pos = 0
+                else: free_pos = vector_direction(coor-cn.c)
                 if self.lies_on(p1, c):
                     v = pn1.a - cn.c
-                    self.confirm = self.run_tool, "tangent_at", p1, c
-                    self.hl_propose(Line(v, np.dot(v, pn1.a)))
+                    pos = vector_direction(v)
+                    pos_diff = abs((free_pos - pos+1)%2-1)
+                    if pos_diff < 0.3:
+                        self.confirm = self.run_tool, "tangent_at", p1, c
+                        self.hl_propose(Line(v, np.dot(v, pn1.a)))
+                        return
                 else:
                     dia_rad = np.linalg.norm(pn1.a - cn.c)/2
                     if eps_zero(dia_rad): return
@@ -276,17 +284,20 @@ class ComboLine(GToolConstr):
                         enumerate(touchpoint_cand),
                         key = lambda x: np.linalg.norm(x[1]-coor)
                     )
-                    tangent_name = "tangent{}".format(i)
-                    self.confirm = self.run_tool, tangent_name, p1, c
-                    self.hl_propose(
-                        Point(touchpoint),
-                        line_passing_np_points(touchpoint, pn1.a),
-                    )
-            return
+                    pos = vector_direction(touchpoint-cn.c)
+                    pos_diff = abs((free_pos - pos+1)%2-1)
+                    if pos_diff < 0.2:
+                        tangent_name = "tangent{}".format(i)
+                        self.confirm = self.run_tool, tangent_name, p1, c
+                        self.hl_propose(
+                            Point(touchpoint),
+                            line_passing_np_points(touchpoint, pn1.a),
+                        )
+                        return
 
-        l = line_passing_np_points(pn1.a, coor)
-        self.confirm = self.run_m_tool, "m_line", l, p1
-        self.hl_propose(l)
+        free_l = line_passing_np_points(pn1.a, coor)
+        self.confirm = self.run_m_tool, "m_line", free_l, p1
+        self.hl_propose(free_l)
 
     def angle_bisector(self, A, B, C):
         v1 = A - B
@@ -457,11 +468,12 @@ class ComboCircle(GToolConstr):
         )
         if ln is not None:
             foot = ln.closest_on(center_n.a)
-            circle = Circle(center_n.a, np.linalg.norm(foot - center_n.a))
-            foot = Point(foot)
-            self.hl_propose(circle, foot)
-            self.confirm = self.make_tangent_to_line, center, l
-            return
+            if np.linalg.norm(coor-foot) < 4*self.find_radius:
+                circle = Circle(center_n.a, np.linalg.norm(foot - center_n.a))
+                foot = Point(foot)
+                self.hl_propose(circle, foot)
+                self.confirm = self.make_tangent_to_line, center, l
+                return
 
         new_c = Circle(center_n.a, np.linalg.norm(center_n.a-coor))
         self.hl_propose(new_c)
