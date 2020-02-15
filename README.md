@@ -19,9 +19,9 @@ objects are in the header of every tool.
 ## Semi-formal logic
 
 The background logical system requires proofs of exact statements
-(e.q. line contain a point, two angles are identical, ...) but it only
-checks for topological facts numerically
-(two circles intersect each other, two triangles are identically oriented).
+(e.q. line contain a point, two angles are identical, ...) but
+for topological facts (two circles intersect each other, two
+triangles are identically oriented) it only checks numerically.
 
 It is possible to write lemmata for GeoLogic -- some are in the file
 macros.gl. However, whenever a lemma is used, GeoLogic also checks whether
@@ -47,7 +47,9 @@ There are basically four ways in which GeoLogic makes automatic decisions:
   with them.
 + Extensionality: Whenever x0=y0, x1=y1, ..., xn=yn, then f(x0,...,xn) = f(y0,...,yn)
   for any f being a primitive command / defined macro.
-+ Equality triggers: Besides extensionality, there are a few extra 
++ Equality triggers: Besides extensionality, there are a few extra ways how GeoLogic
+  automatically detect identical objects: two lines passing two disting points are equal,
+  two points lying on two intersecting clines are equal, etc.
 
 ## Controls
 

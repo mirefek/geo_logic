@@ -1,0 +1,34 @@
+_ -> x0:P x10:L x11:L x12:L x13:L x14:P x15:L x16:P x17:L x18:P x19:A x1:P x20:A x21:A x22:P x23:P x24:L x25:L x2:P x3:C x4:P x5:P x6:P x7:P x8:L x9:L
+  x0 <- free_point 518.7274780273438 82.03643798828125
+  x1 <- free_point 435.75054931640625 254.43853759765625
+  x2 <- free_point 677.7418823242188 258.01605224609375
+  x3 <- circumcircle x0 x2 x1
+  x4 <- midpoint_arc x2 x1 x3
+  x5 <- incenter x0 x2 x1
+  x6 <- excenter x0 x1 x2
+  x7 <- m_point_on 0.3028842512456856 x3
+  x8 <- line x0 x2
+  x9 <- line x2 x1
+  x10 <- line x1 x0
+  x11 <- line x7 x5
+  x12 <- line x7 x0
+  x13 <- isogonal_by_refl x7 x0 x1 x2
+  x14 <- intersection x13 x9
+  x15 <- line x14 x5
+  x16 <- intersection 1 x11 x3 x7
+  x17 <- line x16 x4
+  x18 <- intersection x17 x15
+  x19 <- inscribed_angle x2 x1 x4
+  x20 <- inscribed_angle x4 x0 x1
+  x21 <- inscribed_angle x2 x0 x4
+  <- isosceles_aa x4 x5 x1
+  <- isosceles_aa x4 x1 x6
+  <- midpoint_uq x4 x5 x6
+  x22 x23 <- midsegment x5 x14 x6
+  x24 <- line x14 x6
+  x25 <- line x0 x4
+  <- concyclic_to_angles x0 x2 x1 x7
+  <- sim_aa x0 x1 x14 x0 x7 x2
+  <- sim_aa x0 x1 x5 x0 x6 x2
+  <- sim_sas x6 x0 x14 x7 x0 x5
+  <- concyclic_to_angles x16 x0 x7 x4

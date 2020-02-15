@@ -21,6 +21,7 @@ from gtool import ObjSelector, GTool, GToolMove, GToolHide
 from gtool_logic import GToolReason
 from gtool_constr import ComboPoint, ComboLine, ComboPerpLine, ComboCircle, ComboCircumCircle
 from toolbar import ToolBar
+from step_list import StepList
 
 class GeoLogic(Gtk.Window):
 
@@ -57,9 +58,15 @@ class GeoLogic(Gtk.Window):
         self.toolbar = ToolBar(menu_items, gtools, self.general_tools)
         vbox.pack_start(self.toolbar, False, False, 0)
 
+        hpaned = Gtk.HPaned()
+        vbox.add(hpaned)
+        self.step_list = StepList(self.env)
+        hpaned.pack1(self.step_list, False, True)
+
         self.viewport = Viewport(self.env)
         self.viewport.set_tool(ComboPoint())
-        vbox.add(self.viewport.darea)
+        hpaned.pack2(self.viewport.darea, True, False)
+        hpaned.set_position(250)
 
         self.viewport.click_hook = self.toolbar.entry.unselect
         self.toolbar.set_entry_unselect(self.viewport.darea.grab_focus)

@@ -220,8 +220,8 @@ class NumLineData(NumData):
         point_pos = [np.dot(self.num_obj.v, self.env.li_to_num(p).a) for p in points]
         dists_lev = tuple(distribute_segments(segments, point_pos))
         if len(points) <= 1:
-            if self.is_active: self.colorization = (None, None, -2),
-            else: self.colorization = (None, None, -1),
+            if self.is_active: self.colorization = (None, None, -1),
+            else: self.colorization = (None, None, -2),
             self.extra_segments = [
                 (a,b,col,lev)
                 for (a,b,_,_,col),lev in dists_lev
@@ -444,6 +444,11 @@ class GraphicalEnv:
         self.move_mode = False
         self.ambi_select_mode = False
 
+        # hooks
+        self.add_step_hook = lambda step: None
+        self.remove_step_hook = lambda step_i: None
+        self.reload_steps_hook = lambda steps: None
+
         # numerical representation
         #self.num_points_d = dict()
         #self.num_lines_d = dict()
@@ -497,6 +502,7 @@ class GraphicalEnv:
 
     def set_steps(self, steps, visible = None):
         self.steps = list(steps)
+        self.reload_steps_hook(self.steps)
         self.gi_to_step_i = []
         for i,step in enumerate(steps):
             self.gi_to_step_i += [i]*len(step.tool.out_types)
@@ -520,6 +526,7 @@ class GraphicalEnv:
             self.gi_to_priority += [2]*len(step.tool.out_types)
             self.gi_to_hidden += [False]*len(step.tool.out_types)
             self.steps.append(step)
+            self.add_step_hook(step)
             self.redo_stack = []
             if update:
                 self.refresh_visible()
@@ -536,6 +543,7 @@ class GraphicalEnv:
             print("No more steps to undo")
             return
         step = self.steps.pop()
+        self.remove_step_hook(len(self.steps))
         print("Undo {}".format(step.tool.name))
         self.redo_stack.append(step)
         if len(step.tool.out_types) > 0:
@@ -554,6 +562,7 @@ class GraphicalEnv:
         self.gi_to_priority += [2]*len(step.tool.out_types)
         self.gi_to_hidden += [False]*len(step.tool.out_types)
         self.steps.append(step)
+        self.add_step_hook(step)
         self.step_env.run_steps((step,), 1, catch_errors = True)
 
         self.refresh_visible()
