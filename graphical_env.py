@@ -448,6 +448,7 @@ class GraphicalEnv:
         self.add_step_hook = lambda step: None
         self.remove_step_hook = lambda step_i: None
         self.reload_steps_hook = lambda steps: None
+        self.update_step_hook = lambda step_i, step: None
 
         # numerical representation
         #self.num_points_d = dict()

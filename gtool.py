@@ -282,25 +282,28 @@ class GToolMove(GTool):
         obj,objn = self.select_pcl(coor, permanent = False)
         if obj is None: return
 
-        step = self.env.gi_to_step(obj)
+        step_i = self.env.gi_to_step_i[obj]
+        step = self.env.steps[step_i]
         num_args = tuple(self.env.gi_to_num(gi) for gi in step.local_args)
         num_res = self.env.gi_to_num(obj),
         grasp = step.tool.get_grasp(coor, *num_args+num_res)
-        self.drag = self.move_obj, step, grasp, num_args
+        self.drag = self.move_obj, step_i, grasp, num_args
         self.drag_start = self.move_start
 
     def move_start(self):
         self.viewport.set_cursor_by_tool()
         self.on_reset = self.viewport.set_cursor_by_tool
 
-    def move_obj(self, coor, step, grasp, num_args):
+    def move_obj(self, coor, step_i, grasp, num_args):
+        step = self.env.steps[step_i]
         tool = step.tool
         step.meta_args = tool.new_meta(grasp, coor, *num_args)
-        self.env.refresh_steps(catch_errors = True)
         if isinstance(tool, Intersection):
             intersections = tool.ordered_candidates(num_args)
             i, = step.meta_args
             self.hl_propose(Point(intersections[1-i]))
+        self.env.refresh_steps(catch_errors = True)
+        self.env.update_step_hook(step_i, step)
 
     def enter(self, viewport):
         ObjSelector.enter(self, viewport)
