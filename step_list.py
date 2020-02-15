@@ -27,14 +27,12 @@ class StepList(Gtk.ScrolledWindow):
 
     def add_step(self, step):
         row = Gtk.Label(self.get_step_str(step), xalign=0)
-        self.listbox.add(row)
         row.show()
+        self.listbox.add(row)
 
     def update_step(self, i, step):
-        #row = self.listbox.get_row_at_index(i)
-        #print(row.get_child)
-        #row.get_child.set_text(self.get_step_text(step))
-        print("update")
+        row = self.listbox.get_row_at_index(i)
+        row.get_child().set_text(self.get_step_str(step))
 
     def remove_step(self, i):
         row = self.listbox.get_row_at_index(i)
