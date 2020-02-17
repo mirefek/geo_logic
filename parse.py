@@ -22,6 +22,7 @@ class Parser:
         if tool_dict is None: self.tool_dict = make_primitive_tool_dict()
         else: self.tool_dict = dict(tool_dict)
         self.variables = None # dict: name -> index, type
+        self.var_num = None
 
     def add_var(self, name, t):
         if name in self.variables:
@@ -47,11 +48,11 @@ class Parser:
     def var_type(self, name):
         return self.variables[name][1]
 
-    def parse_line(self, line):
-        line_n, line = line
+    def parse_line(self, line_info, line):
         try:
+            start_var_num = self.var_num
             tokens = line.split()
-            debug_msg = "l{}: {}".format(line_n, line)
+            debug_msg = "l{}: {}".format(*line_info)
             i = tokens.index('<-')
             outputs = tokens[:i]
             tool_name = tokens[i+1]
@@ -93,7 +94,10 @@ class Parser:
             for o,t in zip(outputs, tool.out_types):
                 self.add_var(o, t)
 
-            return ToolStep(tool, meta_args, self.var_indices(obj_args), debug_msg)
+            return ToolStep(
+                tool, meta_args, self.var_indices(obj_args),
+                start_var_num, debug_msg,
+            )
         except Exception:
             print(debug_msg)
             raise
@@ -103,7 +107,7 @@ class Parser:
             if not self.allow_axioms and impl and proof is None:
                 raise Exception("Axioms are not allowed here")
 
-            header_line, header = header
+            header_info, header = header
 
             name, *data = header.split()
             i = data.index('->')
@@ -120,13 +124,13 @@ class Parser:
                 arg_types.append(t)
 
             assump = [
-                self.parse_line(line)
+                self.parse_line(*line)
                 for line in assump
             ]
             var_after_assump = dict(self.variables), self.var_num
 
             impl = [
-                self.parse_line(line)
+                self.parse_line(*line)
                 for line in impl
             ]
 
@@ -143,21 +147,26 @@ class Parser:
                 out_types.append(t)
                 result.append(i)
 
+            var_to_name = dict(
+                (i, name)
+                for (name, (i,t)) in self.variables.items()
+            )
+
             self.variables, self.var_num = var_after_assump
             if proof is not None:
                 proof = [
-                    self.parse_line(line)
+                    self.parse_line(*line)
                     for line in proof
                 ]
             arg_types = tuple(arg_types)
             out_types = tuple(out_types)
             self.add_tool(name, CompositeTool(
                 assump, impl, result, proof, arg_types, out_types, name,
-                basic_tools = self.basic_tools,
+                basic_tools = self.basic_tools, var_to_name = var_to_name,
             ))
 
         except Exception:
-            print("l{}: Tool: {}".format(header_line, header))
+            print("l{}: Tool: {}".format(*header_info))
             raise
 
     def parse_file(self, fname, axioms = True, basic_tools = None):
@@ -167,8 +176,10 @@ class Parser:
         try:
             with open(fname) as f:
                 mode = "init"
-                for i,line in enumerate(f):
-                    i += 1
+                for i,iline in enumerate(f):
+                    line_info = i+1, iline.strip()
+                    line = iline
+                    if '#' in line: line = line[:line.index('#')]
                     line = line.strip()
                     if line == '': continue
                     elif line == "THEN":
@@ -181,18 +192,18 @@ class Parser:
                         mode = 'proof'
                         proof = []
                     elif "<-" in line:
-                        if mode == 'assume': assump.append((i,line))
-                        elif mode == 'postulate': impl.append((i,line))
-                        elif mode == 'proof': proof.append((i,line))
+                        if mode == 'assume': assump.append((line_info, line))
+                        elif mode == 'postulate': impl.append((line_info, line))
+                        elif mode == 'proof': proof.append((line_info, line))
                         else: raise Exception("l{}: unexpected mode {} for a command: {}".format(
-                                i, mode, line
+                                line_info[0], mode, line_info[1]
                         ))
                     else:
                         if mode != 'init': self.parse_tool(header, assump, impl, proof)
                         assump = []
                         impl = []
                         proof = None
-                        header = i,line
+                        header = line_info, line
                         mode = 'assume'
                 if mode != 'init': self.parse_tool(header, assump, impl, proof)
         except Exception:
@@ -202,7 +213,7 @@ class Parser:
 
 if __name__ == "__main__":
     parser = Parser()
-    parser.parse_file("tools.gl")
+    parser.parse_file("basic.gl")
     for key, value in parser.tool_dict.items():
         if isinstance(key, tuple):
             name, in_types = key

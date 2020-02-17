@@ -220,11 +220,12 @@ class GTool(ObjSelector):
                 obj, = self.run_tool(cmd, *args, update = False)
             else: raise Exception("Unexpected command: {}".format(cmd))
         return obj
-    def run_tool(self, name, *args, update = True):
+    def run_tool(self, tool, *args, update = True):
         args = tuple(map(self.instantiate_obj, args))
-        arg_types = tuple(self.env.gi_to_type(x) for x in args)
-        tool = self.tools[name, arg_types]
-        step = ToolStep(tool, (), args)
+        if isinstance(tool, str):
+            arg_types = tuple(self.env.gi_to_type(x) for x in args)
+            tool = self.tools[tool, arg_types]
+        step = ToolStep(tool, (), args, len(self.env.gi_to_step_i))
         return self.env.add_step(step, update = update)
     def run_m_tool(self, name, res_obj, *args, update = True):
         args = tuple(map(self.instantiate_obj, args))
@@ -233,7 +234,7 @@ class GTool(ObjSelector):
         out_type = type(res_obj)
         tool = self.tools.m[name, arg_types, out_type]
         meta_args = tool.get_meta(res_obj, *num_args)
-        step = ToolStep(tool, meta_args, args)
+        step = ToolStep(tool, meta_args, args, len(self.env.gi_to_step_i))
         #if name == "intersection":
         #    print(arg_types, meta_args)
         return self.env.add_step(step, update = update)

@@ -1,4 +1,4 @@
-from tool_step import ToolStepEnv, proof_checker
+from tool_step import ToolStepEnv, CompositeTool, proof_checker
 from logic_model import LogicModel
 import geo_object
 from geo_object import *
@@ -441,6 +441,7 @@ class GraphicalEnv:
         self.gi_to_step_i = []
         self.gi_to_priority = []
         self.gi_to_hidden = []
+        self.gi_to_name = []
         self.move_mode = False
         self.ambi_select_mode = False
 
@@ -501,8 +502,9 @@ class GraphicalEnv:
         i = self.gi_to_step_i[gi]
         return self.steps[i]
 
-    def set_steps(self, steps, visible = None):
+    def set_steps(self, steps, names, visible = None):
         self.steps = list(steps)
+        self.gi_to_name = list(names)
         self.reload_steps_hook(self.steps)
         self.gi_to_step_i = []
         for i,step in enumerate(steps):
@@ -515,8 +517,46 @@ class GraphicalEnv:
                 i not in visible
                 for i,_ in enumerate(self.gi_to_step_i)
             ]
+        assert(len(self.gi_to_name) == len(self.gi_to_step_i))
         self.refresh_steps(False)
         self.redo_stack = []
+
+    def make_name(self, step, out_i, t):
+        tool = step.tool
+        used_names = set(self.gi_to_name)
+        if isinstance(tool, CompositeTool) and tool.var_to_name is not None:
+            candidate = tool.var_to_name.get(tool.result[out_i], None)
+            print("Candidate:", candidate)
+            if candidate is not None and candidate not in used_names:
+                return candidate
+        if t == Point:
+            i = -1
+            while True:
+                for c in range(ord('A'), ord('Z')+1):
+                    if i < 0: candidate = chr(c)
+                    else: candidate = chr(c)+str(i)
+                    if candidate not in used_names: return candidate
+                i += 1
+        elif t == Angle:
+            i = 0
+            while True:
+                candidate = "ang"+str(i)
+                if candidate not in used_names: return candidate
+                i += 1
+        elif t == Ratio:
+            i = 0
+            while True:
+                candidate = "d"+str(i)
+                if candidate not in used_names: return candidate
+                i += 1
+        else:
+            i = -1
+            while True:
+                for c in range(ord('a'), ord('z')+1):
+                    if i < 0: candidate = chr(c)
+                    else: candidate = chr(c)+str(i)
+                    if candidate not in used_names: return candidate
+                i += 1
 
     def add_step(self, step, update = True):
         try:
@@ -526,6 +566,8 @@ class GraphicalEnv:
             self.gi_to_step_i += [len(self.steps)]*len(step.tool.out_types)
             self.gi_to_priority += [2]*len(step.tool.out_types)
             self.gi_to_hidden += [False]*len(step.tool.out_types)
+            for i,t in enumerate(step.tool.out_types):
+                self.gi_to_name.append(self.make_name(step, i, t))
             self.steps.append(step)
             self.add_step_hook(step)
             self.redo_stack = []
@@ -546,22 +588,27 @@ class GraphicalEnv:
         step = self.steps.pop()
         self.remove_step_hook(len(self.steps))
         print("Undo {}".format(step.tool.name))
-        self.redo_stack.append(step)
+        names = ()
         if len(step.tool.out_types) > 0:
-            del self.gi_to_step_i[-len(step.tool.out_types):]
-            del self.gi_to_priority[-len(step.tool.out_types):]
-            del self.gi_to_hidden[-len(step.tool.out_types):]
+            i = len(self.gi_to_step_i)-len(step.tool.out_types)
+            del self.gi_to_step_i[i:]
+            del self.gi_to_priority[i:]
+            del self.gi_to_hidden[i:]
+            names = self.gi_to_name[i:]
+            del self.gi_to_name[i:]
+        self.redo_stack.append((step, names))
         self.refresh_steps()
     def redo(self):
         if not self.redo_stack:
             print("Redo stack is empty")
             return
-        step = self.redo_stack.pop()
+        step,names = self.redo_stack.pop()
         print("Redo {}".format(step.tool.name))
 
         self.gi_to_step_i += [len(self.steps)]*len(step.tool.out_types)
         self.gi_to_priority += [2]*len(step.tool.out_types)
         self.gi_to_hidden += [False]*len(step.tool.out_types)
+        self.gi_to_name.extend(names)
         self.steps.append(step)
         self.add_step_hook(step)
         self.step_env.run_steps((step,), 1, catch_errors = True)

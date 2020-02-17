@@ -4,13 +4,14 @@ from logic_model import LogicModel
 from geo_object import Point
 
 class ToolStep:
-    __slots__ = ["tool", "meta_args", "local_args", "debug_msg"]
-    def __init__(self, tool, meta_args, local_args, debug_msg = None):
+    #__slots__ = ["tool", "meta_args", "local_args", "debug_msg"]
+    def __init__(self, tool, meta_args, local_args, start_out, debug_msg = None):
         self.tool = tool
         if isinstance(tool, (DimCompute, DimPred)):
             self.meta_args = tuple(Fraction(x) for x in meta_args)
         else: self.meta_args = tuple(meta_args)
         self.local_args = tuple(local_args)
+        self.local_outputs = tuple(range(start_out, start_out+len(tool.out_types)))
         self.debug_msg = debug_msg
 
 class ToolStepEnv:
@@ -34,13 +35,15 @@ class ToolStepEnv:
             self.local_to_global.extend(subresult)
 
 class CompositeTool(CachedTool):
-    def __init__(self, assumptions, implications, result, proof, arg_types, out_types, name, basic_tools = None):
+    def __init__(self, assumptions, implications, result, proof, arg_types, out_types, name,
+                 basic_tools = None, var_to_name = None):
         CachedTool.__init__(self, arg_types, out_types, name)
         self.assumptions = assumptions
         self.implications = implications
         self.result = result
         self.proof = proof
         self.proof_tools = basic_tools
+        self.var_to_name = var_to_name
 
         self.deep_len_all = sum(
             step.tool.deep_len_all

@@ -39,10 +39,12 @@ class StepList(Gtk.ScrolledWindow):
         self.listbox.remove(row)
 
     def get_step_str(self, step):
-        tokens = [step.tool.name]
+        tokens = [self.env.gi_to_name[x] for x in step.local_outputs]
+        tokens.append('<-')
+        tokens.append(step.tool.name)
         for meta_arg in step.meta_args:
             if isinstance(meta_arg, float):
                 tokens.append("{:.3}".format(meta_arg))
             else: tokens.append(str(meta_arg))
-        tokens.extend('x{}'.format(x) for x in step.local_args)
+        tokens.extend(self.env.gi_to_name[x] for x in step.local_args)
         return ' '.join(tokens)

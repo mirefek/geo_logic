@@ -73,9 +73,5 @@ class GToolGeneral(GTool):
             types = types+(type(objn),)
             tool = self.prefix_d[types]
             if isinstance(tool, Tool):
-                self.confirm = self.run_tool, tool, args
+                self.confirm = self.run_tool, tool, *args
             else: self.confirm_next = self.update_basic, args, types
-
-    def run_tool(self, tool, args):
-        step = ToolStep(tool, (), args)
-        return self.env.add_step(step)
