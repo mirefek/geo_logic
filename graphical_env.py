@@ -447,9 +447,10 @@ class GraphicalEnv:
 
         # hooks
         self.add_step_hook = lambda step: None
-        self.remove_step_hook = lambda step_i: None
+        self.remove_step_hook = lambda step: None
         self.reload_steps_hook = lambda steps: None
-        self.update_step_hook = lambda step_i, step: None
+        self.update_meta_hook = lambda step: None
+        self.update_selected_hook = lambda: None
 
         # numerical representation
         #self.num_points_d = dict()
@@ -586,7 +587,7 @@ class GraphicalEnv:
             print("No more steps to undo")
             return
         step = self.steps.pop()
-        self.remove_step_hook(len(self.steps))
+        self.remove_step_hook(step)
         print("Undo {}".format(step.tool.name))
         names = ()
         if len(step.tool.out_types) > 0:
@@ -913,6 +914,7 @@ class GraphicalEnv:
             if self.obj_is_selected == obj_is_selected: return
         self.obj_is_selected = obj_is_selected
         self.visible_export()
+        self.update_selected_hook()
     def update_hl_proposals(self, proposals):
         if not self.view_changed and len(proposals) == len(self.hl_proposals):
             if all(
