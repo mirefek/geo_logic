@@ -8,14 +8,37 @@ class VarLabel(Gtk.Label):
         self.env = env
         self.gi = gi
         self.selected = None
-        self.update_selected()
+        self.defined = None
+        self.update()
 
-    def update_selected(self):
-        selected = self.env.gi_to_li(self.gi) in self.env.obj_is_selected
-        if selected is not self.selected:
-            self.selected = selected
+    def update(self):
+        li = self.env.gi_to_li(self.gi)
+        defined = li is not None
+        selected = li in self.env.obj_is_selected
+        if selected is self.selected and defined is self.defined: return
+        self.selected = selected
+        self.defined = defined
         markup = GLib.markup_escape_text(self.env.gi_to_name[self.gi])
         if selected: markup = "<span bgcolor='#00FFFF'>"+markup+"</span>"
+        elif not defined:
+            markup = "<span fgcolor='#777777'>"+markup+"</span>"
+        self.set_markup(markup)
+
+class StepMainLabel(Gtk.Label):
+    def __init__(self, env, step):
+        Gtk.Label.__init__(self)
+        self.env = env
+        self.step = step
+        self.success = None
+        self.update()
+
+    def update(self):
+        success = self.step.success
+        if success is self.success: return
+        self.success = success
+        markup = GLib.markup_escape_text("<- "+self.step.tool.name)
+        if not success:
+            markup = "<span fgcolor='#777777'>"+markup+"</span>"
         self.set_markup(markup)
 
 class StepListRow(Gtk.ListBoxRow):
@@ -28,7 +51,7 @@ class StepListRow(Gtk.ListBoxRow):
         self.add(self.hbox)
 
         self.output_widgets = self.make_var_widgets(self.step.local_outputs)
-        self.label = Gtk.Label("<- "+self.step.tool.name)
+        self.label = StepMainLabel(env, step)
         self.meta_widget = Gtk.Label(self.get_meta_str())
         self.arg_widgets = self.make_var_widgets(self.step.local_args)
 
@@ -54,8 +77,9 @@ class StepListRow(Gtk.ListBoxRow):
         return res
 
     def update_selected(self):
-        for w in self.output_widgets: w.update_selected()
-        for w in self.arg_widgets: w.update_selected()
+        self.label.update()
+        for w in self.output_widgets: w.update()
+        for w in self.arg_widgets: w.update()
 
 class StepList(Gtk.ScrolledWindow):
     def __init__(self, env):

@@ -23,14 +23,17 @@ class ToolStepEnv:
         for step in steps:
             global_args = tuple(self.local_to_global[v] for v in step.local_args)
             subresult = [None]*len(step.tool.out_types)
+            step.success = False
             if None not in global_args:
                 try:
                     subresult = step.tool.run(step.meta_args, global_args, self.model, strictness)
+                    step.success = True
                 except Exception as e:
                     if not isinstance(e, ToolError): e = ToolErrorException(e)
                     if step.debug_msg is not None: e.tool_traceback.append(step.debug_msg)
                     if catch_errors:
-                        print("Construction error: {}".format(e))
+                        #print("Construction error: {}".format(e))
+                        pass
                     else: raise e
             self.local_to_global.extend(subresult)
 

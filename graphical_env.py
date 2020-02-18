@@ -527,7 +527,7 @@ class GraphicalEnv:
         used_names = set(self.gi_to_name)
         if isinstance(tool, CompositeTool) and tool.var_to_name is not None:
             candidate = tool.var_to_name.get(tool.result[out_i], None)
-            print("Candidate:", candidate)
+            #print("Candidate:", candidate)
             if candidate is not None and candidate not in used_names:
                 return candidate
         if t == Point:
@@ -611,10 +611,10 @@ class GraphicalEnv:
         self.gi_to_hidden += [False]*len(step.tool.out_types)
         self.gi_to_name.extend(names)
         self.steps.append(step)
-        self.add_step_hook(step)
         self.step_env.run_steps((step,), 1, catch_errors = True)
 
         self.refresh_visible()
+        self.add_step_hook(step)
 
     def refresh_steps(self, catch_errors = True):
         proof_checker.reset()

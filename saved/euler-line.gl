@@ -1,0 +1,25 @@
+_ -> A:P B':P B:P C':P C:P D:P E:P F:P G:P H:P I:P J:P K:P L:P M:P O:P a:L b:L c:L d:L e:L f:L g:L p:L
+  A <- free_point 272.67291259765625 117.24664306640625
+  B <- free_point 206.54791259765625 388.65655517578125
+  C <- free_point 548.4716796875 382.93927001953125
+  H <- orthocenter A B C
+  O <- circumcenter A B C
+  G <- centroid A B C
+  p <- line A B
+  a <- line B C
+  b <- line C A
+  M <- midpoint A B
+  D <- midpoint B C
+  E <- midpoint C A
+  F <- orthocenter M E D
+  C' B' <- midsegment A B C
+  I J <- midsegment C A B
+  K L <- midsegment B A C
+  c <- line A H
+  d <- line D O
+  e <- line O E
+  f <- line H B
+  <- sim_aa H A B O D E
+  <- sim_aa G C A G M D
+  <- sim_sas H A G O D G
+  g <- line H G

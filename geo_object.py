@@ -210,6 +210,7 @@ def intersection_cc(circle1, circle2):
     center_diff = circle2.c - circle1.c
     center_dist_squared = np.dot(center_diff, center_diff)
     center_dist = np.sqrt(center_dist_squared)
+    if eps_zero(center_dist_squared): return []
     relative_center = (circle1.r_squared - circle2.r_squared) / center_dist_squared
     center = (circle1.c + circle2.c)/2 + relative_center*center_diff/2
 
