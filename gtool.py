@@ -47,11 +47,11 @@ class ObjSelector:
             if obj is not None: return obj,objn
         return None,None
     def coor_to_pcl(self, coor, **kwargs):
-        return self.coor_to_attempts(coor, self.coor_to_point, self.coor_to_cl)
+        return self.coor_to_attempts(coor, self.coor_to_point, self.coor_to_cl, **kwargs)
     def coor_to_pl(self, coor, **kwargs):
-        return self.coor_to_attempts(coor, self.coor_to_point, self.coor_to_line)
+        return self.coor_to_attempts(coor, self.coor_to_point, self.coor_to_line, **kwargs)
     def coor_to_pc(self, coor, **kwargs):
-        return self.coor_to_attempts(coor, self.coor_to_point, self.coor_to_circle)
+        return self.coor_to_attempts(coor, self.coor_to_point, self.coor_to_circle, **kwargs)
 
     def enter(self, viewport):
         self.viewport = viewport
@@ -319,7 +319,35 @@ class GToolHide(GTool):
     icon_name = "hide"
     key_shortcut = 'h'
     label = "Hide Tool"
+
     def update_basic(self, coor):
         obj,_ = self.select_pcl(coor)
-        if obj is not None:
+        if obj is None:
+            self.confirm = self.set_show_all, True
+            self.confirm_next = self.update_unhide
+        else:
             self.confirm = self.env.hide, obj
+
+    def update_unhide(self, coor):
+        def is_hidden(gi, num):
+            return self.env.gi_to_hidden[gi]
+        obj,_ = self.select_pcl(coor, filter_f = is_hidden)
+        if obj is None:
+            self.confirm = self.set_show_all, False
+        else:
+            self.confirm = self.unhide, obj
+
+    def unhide(self, obj):
+        self.env.gi_to_hidden[obj] = False
+        self.set_show_all(False)
+
+    def leave(self):
+        ObjSelector.leave(self)
+        self.set_show_all(False)
+    def on_reset(self):
+        self.set_show_all(False)
+
+    def set_show_all(self, value):
+        if self.env.show_all_mode != value:
+            self.env.show_all_mode = value
+            self.env.refresh_visible()

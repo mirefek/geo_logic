@@ -1012,7 +1012,7 @@ circle9 A:P B:P C:P -> f:C
   <- lies_on Fc f
   <- lies_on Ha f
   <- lies_on Hb f
-  <- lies_on Hc f  
+  <- lies_on Hc f
   PROOF
   _ _ <- midsegment A B C
   _ _ <- midsegment H B C

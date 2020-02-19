@@ -443,6 +443,7 @@ class GraphicalEnv:
         self.gi_to_hidden = []
         self.gi_to_name = []
         self.move_mode = False
+        self.show_all_mode = False
         self.ambi_select_mode = False
 
         # hooks
@@ -682,7 +683,7 @@ class GraphicalEnv:
         self.num_circles = []
 
         for gi,li in enumerate(self.step_env.local_to_global):
-            if self.gi_to_hidden[gi]: continue
+            if self.gi_to_hidden[gi] and not self.show_all_mode: continue
             if li is None: continue
             if self.li_to_type(li) not in (Point, Line, Circle):
                 continue
