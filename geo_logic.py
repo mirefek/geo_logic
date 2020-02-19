@@ -9,7 +9,7 @@ from parse import Parser, type_to_c
 import primitive_pred
 from collections import defaultdict
 from tool_step import ToolStep, proof_checker
-from file_chooser import select_file_open, select_file_save
+from file_chooser import select_file_open, select_file_save, add_svg_filters
 from stop_watch import print_times, StopWatch
 from itertools import islice
 from viewport import Viewport
@@ -38,6 +38,7 @@ class GeoLogic(Gtk.Window):
             ("Open...", self.load,  "<Control>o"),
             ("Save", self.save,     "<Control>s"),
             ("Save as...", self.save_as, "<Control><Shift>s"),
+            ("Export SVG...", self.export_svg, "<Control><Shift>e"),
             ("Quit", self.on_exit,  "<Control>q"),
         )
         gtools = (
@@ -124,6 +125,12 @@ class GeoLogic(Gtk.Window):
     def save_as(self):
         fname = select_file_save(self)
         self.save_file(fname)
+    def export_svg(self):
+        fname = select_file_save(
+            self, "Export SVG", folder = "pictures",
+            add_filters = add_svg_filters,
+        )
+        if fname is not None: self.viewport.export_svg(fname)
     def on_exit(self, *args):
         print_times()
         Gtk.main_quit()

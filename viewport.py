@@ -3,6 +3,7 @@ from itertools import islice
 from geo_object import Point, Line, Circle, vector_perp_rot, vector_of_direction
 from gtool import AmbiSelect
 from gi.repository import Gtk, Gdk, GdkPixbuf
+import cairo
 
 class Viewport:
     def __init__(self, env, scale = 1, shift = (0,0)):
@@ -397,6 +398,9 @@ class Viewport:
             self.darea.get_allocated_width(),
             self.darea.get_allocated_height()
         )
+        self.draw(cr)
+
+    def draw(self, cr):
         env = self.env
 
         # cr transform
@@ -486,3 +490,12 @@ class Viewport:
             if not isinstance(proposal, Point): self.draw_obj(cr, proposal)
         for proposal in env.hl_proposals:
             if isinstance(proposal, Point): self.draw_point_proposal(cr, proposal)
+
+    def export_svg(self, fname):
+        print("Exported to {}".format(fname))
+        if self.gtool is not None: self.gtool.cursor_away()
+        size = self.corners[1] - self.corners[0]
+        surface = cairo.SVGSurface(fname, *size)
+        cr = cairo.Context(surface)
+        self.draw(cr)
+

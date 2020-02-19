@@ -3,7 +3,19 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 import os
 
-def add_filters(dialog):
+def add_svg_filters(dialog):
+    filter_gl = Gtk.FileFilter()
+    filter_gl.set_name("SVG Images")
+    filter_gl.add_mime_type("image/svg+xml")
+    filter_gl.add_pattern("*.svg")
+    dialog.add_filter(filter_gl)
+
+    filter_any = Gtk.FileFilter()
+    filter_any.set_name("Any files")
+    filter_any.add_pattern("*")
+    dialog.add_filter(filter_any)
+
+def add_gl_filters(dialog):
     filter_gl = Gtk.FileFilter()
     filter_gl.set_name("GeoLogic Files")
     filter_gl.add_mime_type("text/geo_logic")
@@ -15,7 +27,7 @@ def add_filters(dialog):
     filter_any.add_pattern("*")
     dialog.add_filter(filter_any)
 
-def select_file_open(win):
+def select_file_open(win, add_filters = add_gl_filters):
     dialog = Gtk.FileChooserDialog("Open a file", win,
         Gtk.FileChooserAction.OPEN,
         (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
@@ -43,13 +55,13 @@ class DialogSaveFile(Gtk.Dialog):
         self.box.add(self.label)
         self.show_all()
 
-def select_file_save(win):
+def select_file_save(win, win_title = "Save file", folder = "saved", add_filters = add_gl_filters):
     dialog = Gtk.FileChooserDialog("Save file", win,
         Gtk.FileChooserAction.SAVE,
         (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
          Gtk.STOCK_SAVE, Gtk.ResponseType.OK))
     add_filters(dialog)
-    dialog.set_current_folder("saved")
+    dialog.set_current_folder(folder)
 
     while True:
 
