@@ -4,14 +4,16 @@ from logic_model import LogicModel
 from geo_object import Point
 
 class ToolStep:
-    #__slots__ = ["tool", "meta_args", "local_args", "debug_msg"]
+    #__slots__ = ["tool", "meta_args", "local_args", "debug_msg"] and more...
     def __init__(self, tool, meta_args, local_args, start_out, debug_msg = None):
         self.tool = tool
         if isinstance(tool, (DimCompute, DimPred)):
             self.meta_args = tuple(Fraction(x) for x in meta_args)
         else: self.meta_args = tuple(meta_args)
         self.local_args = tuple(local_args)
-        self.local_outputs = tuple(range(start_out, start_out+len(tool.out_types)))
+        if start_out is not None:
+            self.local_outputs = tuple(range(start_out, start_out+len(tool.out_types)))
+        else: self.local_outputs = None
         self.debug_msg = debug_msg
 
 class ToolStepEnv:

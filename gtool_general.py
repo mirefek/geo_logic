@@ -36,7 +36,7 @@ class GToolGeneral(GTool):
             frozenset((Point, Line, Circle)): self.select_pcl,
             frozenset((Point, Line)):   self.select_pl,
             frozenset((Point, Circle)): self.select_pc,
-            frozenset((Line, Circle)):  self.select_pc,
+            frozenset((Line, Circle)):  self.select_cl,
             frozenset((Point,)):  self.select_point,
             frozenset((Line,)):   self.select_line,
             frozenset((Circle,)): self.select_circle,

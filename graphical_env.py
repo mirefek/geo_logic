@@ -506,7 +506,6 @@ class GraphicalEnv:
     def set_steps(self, steps, names, visible = None):
         self.steps = list(steps)
         self.gi_to_name = list(names)
-        self.reload_steps_hook(self.steps)
         self.gi_to_step_i = []
         for i,step in enumerate(steps):
             self.gi_to_step_i += [i]*len(step.tool.out_types)
@@ -520,6 +519,7 @@ class GraphicalEnv:
             ]
         assert(len(self.gi_to_name) == len(self.gi_to_step_i))
         self.refresh_steps(False)
+        self.reload_steps_hook(self.steps)
         self.redo_stack = []
 
     def make_name(self, step, out_i, t):
