@@ -56,7 +56,7 @@ class DialogSaveFile(Gtk.Dialog):
         self.show_all()
 
 def select_file_save(win, win_title = "Save file", folder = "saved", add_filters = add_gl_filters):
-    dialog = Gtk.FileChooserDialog("Save file", win,
+    dialog = Gtk.FileChooserDialog(win_title, win,
         Gtk.FileChooserAction.SAVE,
         (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
          Gtk.STOCK_SAVE, Gtk.ResponseType.OK))
