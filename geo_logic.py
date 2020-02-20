@@ -139,7 +139,7 @@ class GeoLogic(Gtk.Window):
         if fname is None: return
         self.default_fname = fname
         parser = Parser(self.imported_tools.tool_dict)
-        parser.parse_file(fname, axioms = False)
+        parser.parse_file(fname, axioms = True)
         loaded_tool = parser.tool_dict['_', ()]
         visible = set(loaded_tool.result)
         if not visible: visible = None
@@ -147,7 +147,11 @@ class GeoLogic(Gtk.Window):
         steps = loaded_tool.assumptions
         for step in steps:
             names.extend(loaded_tool.var_to_name[x] for x in step.local_outputs)
-        self.env.set_steps(steps, names = names, visible = visible)
+        if loaded_tool.implications:
+            goals, proof = loaded_tool.implications, loaded_tool.proof
+        else: goals, proof = None, None
+        self.env.set_steps(steps, names = names, visible = visible,
+                           goals = goals, proof = proof)
         self.reset_view()
     def save_file(self, fname):
         if fname is None: return

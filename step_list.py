@@ -81,11 +81,24 @@ class StepListRow(Gtk.ListBoxRow):
         for w in self.output_widgets: w.update()
         for w in self.arg_widgets: w.update()
 
+class ListRowSeparator(Gtk.ListBoxRow):
+    def __init__(self):
+        Gtk.ListBoxRow.__init__(self)
+        #self.set_activatable(False)
+        self.set_selectable(False)
+        self.add(Gtk.HSeparator())
+        self.show_all()
+    def update_meta(self):
+        pass
+    def update_selected(self):
+        pass
+
 class StepList(Gtk.ScrolledWindow):
     def __init__(self, env):
         super(StepList, self).__init__()
         self.listbox = Gtk.ListBox()
         self.add(self.listbox)
+        self.insert_position = 0
         #self.listbox.set_selection_mode(Gtk.SelectionMode.MULTIPLE)
         #self.listbox.set_activate_on_single_click(False)
         self.listbox.set_selection_mode(Gtk.SelectionMode.NONE)
@@ -99,18 +112,43 @@ class StepList(Gtk.ScrolledWindow):
         #    label = Gtk.Label("An item number %d" % i, xalign=0)
         #    self.listbox.add(label)
         self.env = env
-        self.load_steps(self.env.steps)
+        self.load_steps()
 
-    def load_steps(self, steps):
+    def load_steps(self):
         for row in self.listbox.get_children(): 
             self.listbox.remove(row)
+        self.insert_position = 0
+
+        steps = self.env.steps
+        goals = self.env.goals
+        use_sep = goals is not None
+        if use_sep:
+            proof = self.env.steps[self.env.min_steps:]
+            steps = self.env.steps[:self.env.min_steps]
+
         for step in steps:
             self.add_step(step)
+
+        if use_sep:
+            self.add_separator()
+            if proof:
+                for step in proof:
+                    self.add_step(step)
+            insert_pos = self.insert_position
+            self.add_separator()
+            for step in goals:
+                self.add_step(step)
+            self.insert_position = insert_pos
+
+    def add_separator(self):
+        self.listbox.insert(ListRowSeparator(), self.insert_position)
+        self.insert_position += 1
 
     def add_step(self, step):
         row = StepListRow(step, self.env)
         row.show_all()
-        self.listbox.add(row)
+        self.listbox.insert(row, self.insert_position)
+        self.insert_position += 1
 
     def update_meta(self, step):
         step.gui_row.update_meta()
@@ -118,6 +156,7 @@ class StepList(Gtk.ScrolledWindow):
     def remove_step(self, step):
         self.listbox.remove(step.gui_row)
         step.gui_row = None
+        self.insert_position -= 1
 
     def update_selected(self):
         for row in self.listbox.get_children():

@@ -1,0 +1,15 @@
+_ -> A:P B:P C:P D:P E:P F:P G:P a:L b:L c:C d:L p:L
+  A <- free_point 311.769775390625 94.72988891601562
+  B <- free_point 257.6204833984375 262.5645446777344
+  C <- free_point 489.54486083984375 255.80807495117188
+  c <- circumcircle C A B
+  p <- line B C
+  a <- line C A
+  b <- line A B
+  D <- m_point_on 0.5862459822802772 c
+  F <- foot D p
+  E <- foot D b
+  G <- foot D a
+  d <- line E F
+  THEN
+  <- lies_on G d

@@ -104,10 +104,10 @@ class Parser:
 
     def parse_tool(self, header, assump, impl, proof):
         try:
+            header_info, header = header
+
             if not self.allow_axioms and impl and proof is None:
                 raise Exception("Axioms are not allowed here")
-
-            header_info, header = header
 
             name, *data = header.split()
             i = data.index('->')

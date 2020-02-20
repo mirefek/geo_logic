@@ -438,6 +438,8 @@ class GraphicalEnv:
 
         # long-term stored data
         self.steps = []
+        self.min_steps = 0
+        self.goals = None
         self.gi_to_step_i = []
         self.gi_to_priority = []
         self.gi_to_hidden = []
@@ -504,7 +506,12 @@ class GraphicalEnv:
         i = self.gi_to_step_i[gi]
         return self.steps[i]
 
-    def set_steps(self, steps, names, visible = None):
+    def set_steps(self, steps, names, visible = None, goals = None, proof = None):
+        if goals is None: self.min_steps = 0
+        else:
+            self.min_steps = len(steps)
+            if proof is not None: steps = steps + proof
+        self.goals = goals
         self.steps = list(steps)
         self.gi_to_name = list(names)
         self.gi_to_step_i = []
@@ -520,7 +527,7 @@ class GraphicalEnv:
             ]
         assert(len(self.gi_to_name) == len(self.gi_to_step_i))
         self.refresh_steps(False)
-        self.reload_steps_hook(self.steps)
+        self.reload_steps_hook()
         self.redo_stack = []
 
     def make_name(self, step, out_i, t):
@@ -574,6 +581,7 @@ class GraphicalEnv:
             self.add_step_hook(step)
             self.redo_stack = []
             if update:
+                self.check_goals()
                 self.refresh_visible()
             print("Applied: {}".format(step.tool.name))
             return tuple(range(ori_len, new_len))
@@ -584,7 +592,7 @@ class GraphicalEnv:
             return None
 
     def pop_step(self):
-        if not self.steps:
+        if len(self.steps) == self.min_steps:
             print("No more steps to undo")
             return
         step = self.steps.pop()
@@ -613,6 +621,7 @@ class GraphicalEnv:
         self.gi_to_name.extend(names)
         self.steps.append(step)
         self.step_env.run_steps((step,), 1, catch_errors = True)
+        self.check_goals()
 
         self.refresh_visible()
         self.add_step_hook(step)
@@ -622,7 +631,14 @@ class GraphicalEnv:
         self.model = LogicModel(basic_tools = self.tools)
         self.step_env = ToolStepEnv(self.model)
         self.step_env.run_steps(self.steps, 1, catch_errors = catch_errors)
+        self.check_goals()
         self.refresh_visible()
+    def check_goals(self):
+        if self.goals is None: return
+        self.step_env.run_steps(self.goals, 1, catch_errors = True)
+        if all(goal.success for goal in self.goals):
+            print("Goals accomplished")
+        else: print("Goals are not accomplished yet...")
 
     def _get_num_obj(self, d, l, constructor, obj, keys):
         for key in keys:
