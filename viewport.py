@@ -8,6 +8,7 @@ import cairo
 class Viewport:
     def __init__(self, env, scale = 1, shift = (0,0)):
         self.env = env
+        self.vis = env.vis
         self.scale = scale
         self.shift = np.array(shift)
         self.color_dict = dict()
@@ -98,7 +99,7 @@ class Viewport:
             self.ambi_select.enter(self)
             self.set_cursor(None)
         self.shift_pressed = shift_pressed
-        if self.env.view_changed: self.darea.queue_draw()
+        if self.vis.view_changed: self.darea.queue_draw()
 
     def on_button_press(self, w, e):
         hook_used = False
@@ -121,7 +122,7 @@ class Viewport:
             if e.button == 1:
                 if not hook_used: self.gtool.button_press(coor)
             else: self.gtool.reset()
-            if self.env.view_changed: self.darea.queue_draw()
+            if self.vis.view_changed: self.darea.queue_draw()
             return True
     def on_button_release(self, w, e):
         self.update_shift_pressed(e)
@@ -129,7 +130,7 @@ class Viewport:
         coor = self.mouse_coor(e)
         if not self.shift_pressed and e.button == 1:
             self.gtool.button_release(coor)
-            if self.env.view_changed: self.darea.queue_draw()
+            if self.vis.view_changed: self.darea.queue_draw()
             return True
     def on_motion(self,w,e):
         self.update_shift_pressed(e)
@@ -142,7 +143,7 @@ class Viewport:
             pressed = bool(e.state & Gdk.ModifierType.BUTTON1_MASK)
             coor = self.mouse_coor(e)
             self.gtool.motion(coor, pressed)
-            if self.env.view_changed: self.darea.queue_draw()
+            if self.vis.view_changed: self.darea.queue_draw()
     def on_scroll(self,w,e):
         self.update_shift_pressed(e)
         if e.direction == Gdk.ScrollDirection.DOWN:
@@ -393,7 +394,7 @@ class Viewport:
         cr.restore()
             
     def on_draw(self, wid, cr):
-        self.env.view_changed = False
+        self.vis.view_changed = False
         self.set_corners(
             self.darea.get_allocated_width(),
             self.darea.get_allocated_height()
@@ -401,7 +402,7 @@ class Viewport:
         self.draw(cr)
 
     def draw(self, cr):
-        env = self.env
+        vis = self.vis
 
         # cr transform
         cr.scale(self.scale, self.scale)
@@ -414,81 +415,81 @@ class Viewport:
 
         # draw extra lines and circles
         self.set_stroke(cr, 1, [3])
-        for line, points in env.extra_lines_numer:
+        for line, points in vis.extra_lines_numer:
             self.draw_line(cr, *line)
-        for circle, points in env.extra_circles_numer:
+        for circle, points in vis.extra_circles_numer:
             self.draw_circle(cr, *circle)
 
         # draw active lines and circles
         self.set_stroke(cr, 1, [])
-        for line, points in env.active_lines_numer:
+        for line, points in vis.active_lines_numer:
             self.draw_line(cr, *line)
-        for circle, points in env.active_circles_numer:
+        for circle, points in vis.active_circles_numer:
             self.draw_circle(cr, *circle)
 
         # draw points shadows
         cr.set_source_rgb(1,1,1)
-        for p,color,selected in env.visible_points_numer:
+        for p,color,selected in vis.visible_points_numer:
             self.point_shadow(cr, p)
             if selected: self.draw_point_selection(cr, p)
 
         # draw lies_on
         self.set_stroke(cr, 1, [3])
-        for line, points in env.extra_lines_numer:
+        for line, points in vis.extra_lines_numer:
             for point in points:
                 self.draw_lies_on_l(cr, point, line)
-        for circle, points in env.extra_circles_numer:
+        for circle, points in vis.extra_circles_numer:
             for point in points:
                 self.draw_lies_on_c(cr, point, circle)
         self.set_stroke(cr, 1, [])
-        for line, points in env.active_lines_numer:
+        for line, points in vis.active_lines_numer:
             for point in points:
                 self.draw_lies_on_l(cr, point, line)
-        for circle, points in env.active_circles_numer:
+        for circle, points in vis.active_circles_numer:
             for point in points:
                 self.draw_lies_on_c(cr, point, circle)
 
         # draw parallels
         self.set_color(cr, -1)
-        for line, lev in env.visible_parallels:
+        for line, lev in vis.visible_parallels:
             self.draw_parallel(cr, line, lev)
 
         # draw distances
         self.set_stroke(cr, 1, [3])
-        for a,b,col,lev in env.visible_dists:
+        for a,b,col,lev in vis.visible_dists:
             self.set_color(cr, col)
             self.draw_dist(cr, a,b,lev)
         # draw arcs
-        for a,b,circ,col,lev in env.visible_arcs:
+        for a,b,circ,col,lev in vis.visible_arcs:
             self.set_color(cr, col)
             self.draw_arc(cr, a,b,circ,lev)
         self.set_stroke(cr, 1, [])
         # draw angles
-        for coor, pos_a, pos_b, col, lev in env.visible_angles:
+        for coor, pos_a, pos_b, col, lev in vis.visible_angles:
             self.set_color(cr, col)
             self.draw_angle(cr, coor, pos_a, pos_b, lev)
         self.set_color(cr, -1)
-        for coor, pos_a, pos_b in env.visible_exact_angles:
+        for coor, pos_a, pos_b in vis.visible_exact_angles:
             self.draw_exact_angle(cr, coor, pos_a, pos_b)
 
         # draw helpers
         cr.save()
         self.set_stroke(cr, 2, [2])
         cr.set_source_rgb(0.5, 0.5, 0.5)
-        for helper in env.hl_helpers:
+        for helper in vis.hl_helpers:
             self.draw_helper(cr, helper)
         cr.restore()
 
         # draw points
-        for p,color,selected in env.visible_points_numer:
+        for p,color,selected in vis.visible_points_numer:
             self.set_color(cr, -1, color)
             self.draw_point(cr, p)
 
         # draw proposals
         cr.set_source_rgb(0.5, 0.65, 0.17)
-        for proposal in env.hl_proposals:
+        for proposal in vis.hl_proposals:
             if not isinstance(proposal, Point): self.draw_obj(cr, proposal)
-        for proposal in env.hl_proposals:
+        for proposal in vis.hl_proposals:
             if isinstance(proposal, Point): self.draw_point_proposal(cr, proposal)
 
     def export_svg(self, fname):

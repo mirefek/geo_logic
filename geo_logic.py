@@ -29,6 +29,7 @@ class GeoLogic(Gtk.Window):
 
         self.imported_tools = load_tools("macros.gl")
         self.env = GraphicalEnv(self.imported_tools)
+        self.vis = self.env.vis
         self.general_tools = GToolDict(self.imported_tools.tool_dict)
 
         menu_items = (
@@ -95,12 +96,10 @@ class GeoLogic(Gtk.Window):
 
         self.show_all()
 
-
         self.default_fname = None
 
-
     def reset_view(self):
-        if self.env.view_changed:
+        if self.vis.view_changed:
             self.viewport.gtool.reset()
             self.viewport.darea.queue_draw()
 

@@ -6,15 +6,16 @@ class VarLabel(Gtk.Label):
     def __init__(self, env, gi):
         Gtk.Label.__init__(self)
         self.env = env
+        self.vis = env.vis
         self.gi = gi
         self.selected = None
         self.defined = None
         self.update()
 
     def update(self):
-        li = self.env.gi_to_li(self.gi)
+        li = self.vis.gi_to_li(self.gi)
         defined = li is not None
-        selected = li in self.env.obj_is_selected
+        selected = li in self.vis.obj_is_selected
         if selected is self.selected and defined is self.defined: return
         self.selected = selected
         self.defined = defined
@@ -107,7 +108,7 @@ class StepList(Gtk.ScrolledWindow):
         env.remove_step_hook = self.remove_step
         env.reload_steps_hook = self.load_steps
         env.update_meta_hook = self.update_meta
-        env.update_selected_hook = self.update_selected
+        env.vis.update_selected_hook = self.update_selected
         #for i in range(20):
         #    label = Gtk.Label("An item number %d" % i, xalign=0)
         #    self.listbox.add(label)

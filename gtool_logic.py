@@ -222,7 +222,7 @@ class GToolReason(GTool):
             self.confirm = self.confirm_eq_arcs_by_dist, *args+(p2,)
     # w A->B C->D = (eq_dist_to_eq_arcs)
     def confirm_eq_arcs_by_dist(self, c,p1,p2,p3,p4):
-        cn,pn1,pn2 = map(self.env.gi_to_num, (c,p1,p2))
+        cn,pn1,pn2 = map(self.vis.gi_to_num, (c,p1,p2))
         pos1,pos2 = (
             vector_direction(pn.a - cn.c) for pn in (pn1,pn2)
         )

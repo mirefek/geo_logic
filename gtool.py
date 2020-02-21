@@ -30,15 +30,15 @@ class ObjSelector:
         return obj, objn
 
     def coor_to_point(self, coor, **kwargs):
-        return self.coor_to_obj(coor, self.env.selectable_points, **kwargs)
+        return self.coor_to_obj(coor, self.vis.selectable_points, **kwargs)
     def coor_to_line(self, coor, **kwargs):
-        return self.coor_to_obj(coor, self.env.selectable_lines, **kwargs)
+        return self.coor_to_obj(coor, self.vis.selectable_lines, **kwargs)
     def coor_to_circle(self, coor, **kwargs):
-        return self.coor_to_obj(coor, self.env.selectable_circles, **kwargs)
+        return self.coor_to_obj(coor, self.vis.selectable_circles, **kwargs)
     def coor_to_cl(self, coor, **kwargs):
         return self.coor_to_obj(
             coor,
-            itertools.chain(self.env.selectable_lines,self.env.selectable_circles),
+            itertools.chain(self.vis.selectable_lines,self.vis.selectable_circles),
             **kwargs
         )
     def coor_to_attempts(self, coor, *selectors, **kwargs):
@@ -56,6 +56,7 @@ class ObjSelector:
     def enter(self, viewport):
         self.viewport = viewport
         self.env = viewport.env
+        self.vis = viewport.vis
     def leave(self):
         pass
 
@@ -103,7 +104,7 @@ class GTool(ObjSelector):
 
         self._hl_reset()
         self._pre_update()
-        self._hl_update_env()
+        self._hl_update()
         self.update = self.update_basic
         run_tuple(self.on_reset)
 
@@ -113,14 +114,14 @@ class GTool(ObjSelector):
         for hl_list in self.hl_lists: hl_list.load()
     def _hl_save(self):
         for hl_list in self.hl_lists: hl_list.save()
-    def _hl_update_env(self):
-        self.env.update_hl_selected(self.hl_selected.to_list())
-        self.env.update_hl_proposals(self.hl_proposals.to_list())
-        self.env.update_hl_helpers(self.hl_helpers.to_list())
+    def _hl_update(self):
+        self.vis.update_hl_selected(self.hl_selected.to_list())
+        self.vis.update_hl_proposals(self.hl_proposals.to_list())
+        self.vis.update_hl_helpers(self.hl_helpers.to_list())
 
     def cursor_away(self):
         self._hl_load()
-        self._hl_update_env()
+        self._hl_update()
 
     def select_by_coor(self, coor, coor_to_x, permanent = True, **kwargs):
         obj,nobj = coor_to_x(coor, **kwargs)
@@ -159,7 +160,7 @@ class GTool(ObjSelector):
     def _run_update(self, coor):
         self._pre_update()
         run_tuple(self.update, coor)
-        self._hl_update_env()
+        self._hl_update()
 
     def _run_confirm(self):
         if self.confirm is not None:
@@ -206,11 +207,11 @@ class GTool(ObjSelector):
             self._run_update(coor)
 
     def lies_on(self, p, cl):
-        p_li = self.env.gi_to_li(p)
-        cl_li = self.env.gi_to_li(cl)
-        if self.env.li_to_type(cl_li) == Line: label = self.tools.lies_on_l
+        p_li = self.vis.gi_to_li(p)
+        cl_li = self.vis.gi_to_li(cl)
+        if self.vis.li_to_type(cl_li) == Line: label = self.tools.lies_on_l
         else: label = self.tools.lies_on_c
-        return self.env.model.get_constr(label, (p_li, cl_li)) is not None
+        return self.vis.model.get_constr(label, (p_li, cl_li)) is not None
 
     def instantiate_obj(self, obj):
         if isinstance(obj, tuple):
@@ -223,13 +224,13 @@ class GTool(ObjSelector):
     def run_tool(self, tool, *args, update = True):
         args = tuple(map(self.instantiate_obj, args))
         if isinstance(tool, str):
-            arg_types = tuple(self.env.gi_to_type(x) for x in args)
+            arg_types = tuple(self.vis.gi_to_type(x) for x in args)
             tool = self.tools[tool, arg_types]
         step = ToolStep(tool, (), args, len(self.env.gi_to_step_i))
         return self.env.add_step(step, update = update)
     def run_m_tool(self, name, res_obj, *args, update = True):
         args = tuple(map(self.instantiate_obj, args))
-        num_args = tuple(self.env.gi_to_num(x) for x in args)
+        num_args = tuple(self.vis.gi_to_num(x) for x in args)
         arg_types = tuple(type(x) for x in num_args)
         out_type = type(res_obj)
         tool = self.tools.m[name, arg_types, out_type]
@@ -256,16 +257,16 @@ class AmbiSelect(ObjSelector):
         obj,_ = self.coor_to_pcl(coor)
         if obj is None: return
         direction = 1 if rev else -1
-        self.env.swap_priorities(obj, direction)
+        self.vis.swap_priorities(obj, direction)
 
     def enter(self, viewport):
         ObjSelector.enter(self, viewport)
-        self.env.ambi_select_mode = True
-        self.env.visible_export()
+        self.vis.ambi_select_mode = True
+        self.vis.visible_export()
     def leave(self):
         ObjSelector.leave(self)
-        self.env.ambi_select_mode = False
-        self.env.visible_export()
+        self.vis.ambi_select_mode = False
+        self.vis.visible_export()
 
 class GToolMove(GTool):
     icon_name = "move"
@@ -284,8 +285,8 @@ class GToolMove(GTool):
         if obj is None: return
 
         step = self.env.gi_to_step(obj)
-        num_args = tuple(self.env.gi_to_num(gi) for gi in step.local_args)
-        num_res = self.env.gi_to_num(obj),
+        num_args = tuple(self.vis.gi_to_num(gi) for gi in step.local_args)
+        num_res = self.vis.gi_to_num(obj),
         grasp = step.tool.get_grasp(coor, *num_args+num_res)
         self.drag = self.move_obj, step, grasp, num_args
         self.drag_start = self.move_start
@@ -307,12 +308,12 @@ class GToolMove(GTool):
     def enter(self, viewport):
         ObjSelector.enter(self, viewport)
         self.reset()
-        self.env.move_mode = True
-        self.env.refresh_visible()
+        self.vis.move_mode = True
+        self.vis.refresh()
     def leave(self):
         ObjSelector.leave(self)
-        self.env.move_mode = False
-        self.env.refresh_visible()        
+        self.vis.move_mode = False
+        self.vis.refresh()        
 
 class GToolHide(GTool):
 
@@ -326,11 +327,11 @@ class GToolHide(GTool):
             self.confirm = self.set_show_all, True
             self.confirm_next = self.update_unhide
         else:
-            self.confirm = self.env.hide, obj
+            self.confirm = self.vis.hide, obj
 
     def update_unhide(self, coor):
         def is_hidden(gi, num):
-            return self.env.gi_to_hidden[gi]
+            return self.vis.gi_to_hidden[gi]
         obj,_ = self.select_pcl(coor, filter_f = is_hidden)
         if obj is None:
             self.confirm = self.set_show_all, False
@@ -338,7 +339,7 @@ class GToolHide(GTool):
             self.confirm = self.unhide, obj
 
     def unhide(self, obj):
-        self.env.gi_to_hidden[obj] = False
+        self.vis.gi_to_hidden[obj] = False
         self.set_show_all(False)
 
     def leave(self):
@@ -348,6 +349,6 @@ class GToolHide(GTool):
         self.set_show_all(False)
 
     def set_show_all(self, value):
-        if self.env.show_all_mode != value:
-            self.env.show_all_mode = value
-            self.env.refresh_visible()
+        if self.vis.show_all_mode != value:
+            self.vis.show_all_mode = value
+            self.vis.refresh()

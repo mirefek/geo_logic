@@ -30,8 +30,8 @@ class GToolConstr(GTool):
 
         candidates = []
         for cl2,cln2 in itertools.chain(
-            self.env.selectable_lines,
-            self.env.selectable_circles,
+            self.vis.selectable_lines,
+            self.vis.selectable_circles,
         ):
             if cl2 == cl1: continue
             dist_cl = cln2.dist_from(coor)
@@ -67,8 +67,8 @@ class GToolConstr(GTool):
         return self.select_intersection(coor, point_on = point_on)
 
     def smart_intersection(self, x, cl1, cl2, update = True):
-        cln1 = self.env.gi_to_num(cl1)
-        cln2 = self.env.gi_to_num(cl2)
+        cln1 = self.vis.gi_to_num(cl1)
+        cln2 = self.vis.gi_to_num(cl2)
         if isinstance(cln1, Line) and isinstance(cln2, Line):
             return self.run_tool("intersection", cl1, cl2, update = update)
         if isinstance(cln2, Line):
@@ -85,7 +85,7 @@ class GToolConstr(GTool):
 
         candidates = []
         l_candidates = []
-        for p,pn in self.env.selectable_points:
+        for p,pn in self.vis.selectable_points:
             d1,d2 = (np.linalg.norm(x12-pn.a) for x12 in (x1,x2))
             d = min(d1, d2)
 
