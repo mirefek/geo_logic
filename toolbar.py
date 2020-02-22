@@ -68,12 +68,12 @@ class SelectionEntry(Gtk.Entry):
             self.on_confirm_hook(text)
 
     def on_focus_in(self, *args):
-        print("focus in event")
+        #print("focus in event")
         self._last_text = self.get_text()
         if self.on_focus_hook is not None:
             self.on_focus_hook()
     def on_focus_out(self, *args):
-        print("focus out event", self._focus_out_mode)
+        #print("focus out event", self._focus_out_mode)
         self.select_region(0,0)
         if self._focus_out_mode != 2:
             self.set_text(self._last_text)

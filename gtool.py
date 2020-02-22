@@ -80,6 +80,20 @@ class HighlightList:
             (x,perm) for (x,perm) in self.l if not cond(x)
         ]
 
+
+class GToolNone:
+    def get_icon_name(self): return None
+    def get_cursor(self): return None
+    def get_key_shortcut(self): return None
+    def get_label(self): return None
+    def reset(self): pass
+    def cursor_away(self): pass
+    def button_press(self, coor): pass
+    def button_release(self, coor): pass
+    def motion(self, coor, button_pressed): pass
+    def enter(self, viewport): pass
+    def leave(self): pass
+
 class GTool(ObjSelector):
     icon_name = None
     key_shortcut = None
@@ -244,6 +258,9 @@ class GTool(ObjSelector):
         ObjSelector.enter(self, viewport)
         self.tools = self.env.tools
         self.reset()
+    def leave(self):
+        self.reset()
+        ObjSelector.leave(self)
 
     # to be implemented
     def on_reset(self):
@@ -264,9 +281,9 @@ class AmbiSelect(ObjSelector):
         self.vis.ambi_select_mode = True
         self.vis.visible_export()
     def leave(self):
-        ObjSelector.leave(self)
         self.vis.ambi_select_mode = False
         self.vis.visible_export()
+        GTool.leave(self)
 
 class GToolMove(GTool):
     icon_name = "move"
@@ -311,9 +328,9 @@ class GToolMove(GTool):
         self.vis.move_mode = True
         self.vis.refresh()
     def leave(self):
-        ObjSelector.leave(self)
         self.vis.move_mode = False
         self.vis.refresh()        
+        GTool.leave(self)
 
 class GToolHide(GTool):
 
@@ -343,8 +360,8 @@ class GToolHide(GTool):
         self.set_show_all(False)
 
     def leave(self):
-        ObjSelector.leave(self)
         self.set_show_all(False)
+        GTool.leave(self)
     def on_reset(self):
         self.set_show_all(False)
 

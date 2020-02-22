@@ -1,7 +1,7 @@
 import numpy as np
 from itertools import islice
 from geo_object import Point, Line, Circle, vector_perp_rot, vector_of_direction
-from gtool import AmbiSelect
+from gtool import AmbiSelect, GToolNone
 from gi.repository import Gtk, Gdk, GdkPixbuf
 import cairo
 
@@ -17,7 +17,8 @@ class Viewport:
             (0.6,  0, 0),   # ambiguous
             (0,    0, 0.7), # movable
         ]
-        self.gtool = None
+        self.none_gtool = GToolNone()
+        self.gtool = self.none_gtool
         self.ambi_select = AmbiSelect()
         self.shift_pressed = False
 
@@ -86,6 +87,8 @@ class Viewport:
         if gtool is not None:
             gtool.enter(self)
             self.gtool = gtool
+        else:
+            self.gtool = self.none_gtool
         self.set_cursor_by_tool()
 
     def update_shift_pressed(self, shift_pressed):
