@@ -160,19 +160,29 @@ class GeoLogic(Gtk.Window):
             visible = [
                 "{}:{}".format(
                     self.env.gi_to_name[gi],
-                    type_to_c[self.env.gi_to_type(gi)]
+                    type_to_c[self.vis.gi_to_type(gi)]
                 )
-                for gi,hidden in enumerate(self.env.gi_to_hidden)
+                for gi,hidden in enumerate(self.vis.gi_to_hidden)
                 if not hidden
             ]
             f.write('_ -> {}\n'.format(' '.join(sorted(visible))))
-            for step in self.env.steps:
+
+            def write_step(step):
                 tokens = [self.env.gi_to_name[x] for x in step.local_outputs]
                 tokens.append('<-')
                 tokens.append(step.tool.name)
                 tokens.extend(map(str, step.meta_args))
                 tokens.extend(self.env.gi_to_name[x] for x in step.local_args)
                 f.write('  '+' '.join(tokens)+'\n')
+
+            if self.env.goals is None:
+                for step in self.env.steps: write_step(step)
+            else:
+                for step in self.env.steps[:self.env.min_steps]: write_step(step)
+                f.write('  THEN\n')
+                for step in self.env.goals: write_step(step)
+                f.write('  PROOF\n')
+                for step in self.env.steps[self.env.min_steps:]: write_step(step)
         self.reset_view()
 
     def on_key_press(self,w,e):
