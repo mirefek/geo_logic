@@ -283,7 +283,7 @@ class AmbiSelect(ObjSelector):
     def leave(self):
         self.vis.ambi_select_mode = False
         self.vis.visible_export()
-        GTool.leave(self)
+        ObjSelector.leave(self)
 
 class GToolMove(GTool):
     icon_name = "move"
