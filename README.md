@@ -1,9 +1,10 @@
 # GeoLogic
 Tool for euclidean geometry aware of logic
 
+![GeoLogic Screenshot](images/screenshot.png)
+
 ## Dependencies
 + Python3
-+ pycairo
 + pyGtk3
 
 ## Data types
