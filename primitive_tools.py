@@ -21,6 +21,18 @@ def ratio_num_check(obj_sum, frac_const):
 def ratio_postulate(model, *args): model.add_ratio_equation(*args)
 def ratio_check(model, *args): return model.check_ratio_equation(*args)
 
+class CustomRatio(Tool):
+    def __init__(self):
+        Tool.__init__(self, (float, float), (), (Ratio,), "custom_ratio")
+    def run(self, meta_args, obj_args, model, strictness):
+        return model.add_obj(Ratio(meta_args)),
+class CustomAngle(Tool):
+    def __init__(self):
+        Tool.__init__(self, (float,), (), (Angle,), "custom_angle")
+    def run(self, meta_args, obj_args, model, strictness):
+        float_angle, = meta_args
+        return model.add_obj(Angle(float_angle)),
+
 def intypes_iter(f):
     in_varnames = f.__code__.co_varnames[:f.__code__.co_argcount]
     in_types = [f.__annotations__.get(name, None) for name in in_varnames]
@@ -70,10 +82,15 @@ def make_primitive_tool_dict():
             d[name, in_types] = tool
 
     # dimension tools
-    DimCompute(Angle, angle_num_comp, angle_postulate, "angle_compute", d)
-    DimCompute(Ratio, ratio_num_comp, ratio_postulate, "ratio_compute", d)
-    DimPred(Angle, angle_num_check, angle_postulate, angle_check, "angle_pred", d)
-    DimPred(Ratio, ratio_num_check, ratio_postulate, ratio_check, "ratio_pred", d)
+    dim_tools = [
+        DimCompute(Angle, angle_num_comp, angle_postulate, "angle_compute"),
+        DimCompute(Ratio, ratio_num_comp, ratio_postulate, "ratio_compute"),
+        DimPred(Angle, angle_num_check, angle_postulate, angle_check, "angle_pred"),
+        DimPred(Ratio, ratio_num_check, ratio_postulate, ratio_check, "ratio_pred"),
+        CustomRatio(),
+        CustomAngle(),
+    ]
+    for tool in dim_tools: tool.add_to_dict(d)
 
     # equality tool
     eq_tool = EqualObjects()

@@ -6,17 +6,16 @@ from gi.repository import Gtk, Gdk, GdkPixbuf
 import cairo
 
 class Viewport:
-    def __init__(self, env, scale = 1, shift = (0,0)):
+    def __init__(self, env):
         self.env = env
         self.vis = env.vis
-        self.scale = scale
-        self.shift = np.array(shift)
         self.color_dict = dict()
         self.default_colors = [
             (0,    0, 0),   # default
             (0.6,  0, 0),   # ambiguous
             (0,    0, 0.7), # movable
         ]
+        self.reset_zoom()
         self.none_gtool = GToolNone()
         self.gtool = self.none_gtool
         self.ambi_select = AmbiSelect()
@@ -24,7 +23,6 @@ class Viewport:
 
         self.click_hook = None
 
-        self.mb_grasp = None
         self.darea = Gtk.DrawingArea()
         self.darea.connect("draw", self.on_draw)
         self.darea.set_events(Gdk.EventMask.BUTTON_PRESS_MASK |
@@ -39,6 +37,13 @@ class Viewport:
 
         self.load_cursors()
 
+    def reset_zoom(self):
+        self.set_zoom((0,0), 1)
+    def set_zoom(self, center, scale):
+        self.mb_grasp = None
+        self.view_center = np.array(center, dtype = float)
+        self.scale = float(scale)
+        
     def load_cursors(self):
         self.cursors = dict()
         import os
@@ -337,21 +342,28 @@ class Viewport:
         cr.line_to(*(coor+v2))
         cr.stroke()
 
+    def get_pixel_size(self):
+        return np.array([
+            self.darea.get_allocated_width(),
+            self.darea.get_allocated_height()
+        ], dtype = float)
+    def update_corners(self):
+        size = self.get_pixel_size()
+        pixel_corners = np.stack([-size/2, size/2])
+        self.corners = pixel_corners/self.scale + self.view_center
+
     def mouse_coor(self, e):
-        return np.array([e.x, e.y])/self.scale - self.shift
+        center_coor = np.array([e.x, e.y]) - self.get_pixel_size()/2
+        return center_coor/self.scale + self.view_center
     def shift_to_mouse(self, coor, mouse):
-        self.shift = np.array([mouse.x, mouse.y])/self.scale - coor
+        center_mouse = np.array([mouse.x, mouse.y]) - self.get_pixel_size()/2
+        self.view_center = coor - center_mouse/self.scale
     def zoom(self, scale_change, e):
         coor = self.mouse_coor(e)
         self.scale *= scale_change
         self.shift_to_mouse(coor, e)
         print("zoom {}".format(self.scale))
 
-    def set_corners(self, width, height):
-        self.corners = np.array([
-            [0, 0],
-            [width, height],
-        ])/self.scale - self.shift
 
     def set_select_color(self, cr):
         cr.set_source_rgb(0.3, 1, 1)
@@ -398,18 +410,16 @@ class Viewport:
             
     def on_draw(self, wid, cr):
         self.vis.view_changed = False
-        self.set_corners(
-            self.darea.get_allocated_width(),
-            self.darea.get_allocated_height()
-        )
+        self.update_corners()
         self.draw(cr)
 
     def draw(self, cr):
         vis = self.vis
 
         # cr transform
+        cr.translate(*(self.get_pixel_size()/2))
         cr.scale(self.scale, self.scale)
-        cr.translate(*self.shift)
+        cr.translate(*(-self.view_center))
         # erase background
         size = self.corners[1] - self.corners[0]
         cr.rectangle(*(list(self.corners[0])+list(size)))

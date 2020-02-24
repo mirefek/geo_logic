@@ -32,6 +32,15 @@ class Tool:
         self.arg_types = arg_types
         self.out_types = out_types
         self.name = name
+
+    def add_to_dict(self, d):
+        if self.name is None: return
+        if self.meta_types is None or self.arg_types is None: in_types = None
+        else: in_types = self.meta_types+self.arg_types
+        key = self.name, in_types
+        if self.name == "custom_ratio": print(key)
+        assert(key not in d)
+        d[key] = self
     #def run(self, meta_args, obj_args, model, strictness):
         # strictness: 0 = postulate, 1 = benevolent to coexact, 2 = everything must be proved
 
@@ -132,12 +141,11 @@ class PrimitiveConstr(CachedTool):
         return model.add_objs(num_outs)
 
 class DimCompute(Tool):
-    def __init__(self, obj_type, num_comp, postulate, name, d = None):
+    def __init__(self, obj_type, num_comp, postulate, name):
         Tool.__init__(self, None, None, (obj_type,), name)
         self.obj_type = obj_type
         self.num_comp = num_comp
         self.postulate = postulate
-        if d is not None: d[name, None] = self
     def run(self, meta_args, args, model, strictness):
         coefs = meta_args[1:]
         assert(len(coefs) == len(args))
@@ -160,14 +168,13 @@ class DimCompute(Tool):
 
 class DimPred(Tool):
     def __init__(self, obj_type, num_check, postulate, check, name,
-                 d = None, willingness = 0):
+                 willingness = 0):
         self.obj_type = obj_type
         self.num_check = num_check
         self.postulate = postulate
         self.check = check
         self.willingness = willingness
         Tool.__init__(self, None, None, (), name)
-        if d is not None: d[name, None] = self
     def run(self, meta_args, args, model, strictness):
         coefs = meta_args[1:]
         assert(len(coefs) == len(args))

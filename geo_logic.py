@@ -22,6 +22,7 @@ from gtool_logic import GToolReason
 from gtool_constr import ComboPoint, ComboLine, ComboPerpLine, ComboCircle, ComboCircumCircle
 from toolbar import ToolBar
 from step_list import StepList
+from logic_model import LogicModel
 
 class GeoLogic(Gtk.Window):
 
@@ -113,6 +114,7 @@ class GeoLogic(Gtk.Window):
         print("RESTART")
         self.default_fname = None
         self.env.set_steps((), ())
+        self.viewport.reset_zoom()
         self.reset_view()
     def load(self):
         fname = select_file_open(self)
@@ -151,6 +153,18 @@ class GeoLogic(Gtk.Window):
         else: goals, proof = None, None
         self.env.set_steps(steps, names = names, visible = visible,
                            goals = goals, proof = proof)
+
+        view_data_tool = parser.tool_dict.get(('view__data', ()), None)
+
+        if view_data_tool is None:
+            self.viewport.set_zoom((375, 277), 1)
+        else:
+            model = LogicModel(basic_tools = self.imported_tools)
+            anchor_l, zoom_l = view_data_tool.run((), (), model, 0)
+            anchor = model.num_model[anchor_l].a
+            zoom = model.num_model[zoom_l].x
+            self.viewport.set_zoom(anchor, zoom)
+
         self.reset_view()
     def save_file(self, fname):
         if fname is None: return
@@ -183,6 +197,12 @@ class GeoLogic(Gtk.Window):
                 for step in self.env.goals: write_step(step)
                 f.write('  PROOF\n')
                 for step in self.env.steps[self.env.min_steps:]: write_step(step)
+
+            f.write("\n")
+            f.write("view__data -> anchor:P zoom:D\n")
+            f.write("  anchor <- free_point {} {}\n".format(*self.viewport.view_center))
+            f.write("  zoom <- custom_ratio {} 0.\n".format(self.viewport.scale))
+
         self.reset_view()
 
     def on_key_press(self,w,e):
