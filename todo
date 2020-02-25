@@ -1,23 +1,84 @@
-Now
-* show steps
-* don't add step if cached?
-* export tool
+0.2 (do odevzdání článku 15.3. -- jednodušší záležitosti)
+* (5d) napsat článek (long abstract?) pro ICMS
+* (2h) rozmyslet funkčnost GUI pro verzi 0.3
+* (1.5h) don't add step if cached?
+* (1d) label tool
+* (2h) neopakovat ověřování důkazů při undo
+* (2d) okomentovat zdrojáky
+* (2.5d) inteligentnější sparse_elim (být si vědom až na konstantu ekvivalentních proměnných)
+* (4h) vizualizace úhlů: vždycky menší úhel / oblouk
+* (3h) implementace vizualizace:
+  * vlastní implementace výřezu přímky / kružnice pro neprocházející body
+    -> čistší výsledný obrázek
+* (2d) víc příkladů levelů
+* (0.5h) založit jako 0.2 verze na githubu
 
-dohledná doba
-* trasování důkazů
-* neopakovat ověřování důkazů při undo
-* mazání objektů
-* "level"
-* Lemma proven for a special case can be used in general
-  * possible cheating:
-    * equilateral_aa -> ss can be used
-      for proving that C is a midpoint of AB, if A,B,C are collinear
-      and it is checked numerically
+0.3 (během následujících měsíců, ideálně fo konání ICMS 13.7. -- hlubši propojení logiky a GUI)
+Hlavní cíle:
+* (1) možnost tvorby vlastních nástrojů / tvrzení
+  * (1a) možnost tvorby levelů
+  * (1b) flexibilnějši editace kroků
+* (2) řešení levelů
+  * (2a) podchytit základní řešicí úvahy (reformulace, částečný cíl)
+  * (2b) poznat, že je level vyřešený (včetně podlemmat)
+* (3) možnost úlohy, která nemá konstrukci
+  * (3a) (pře)chycení úlohy
+  * přiklady
+    * mám tři body, kružnici opsanou a bod na ní,
+      chci napřed kružnici a pak 4 body na ní
+    * mám trojúhelník ABC a jeho vepsiště I
+      * chci začít s ABI, a z toho sestrojit C
+    * mám pevné X,Y tak, že XA = YB, chci sestrojit hýbatelný X, a Y pomocí kružítka
+
+Co je obecný stav?
+* (1,3) (nehýbatelné) vstupní objekty
+* (1) předpoklady (postulate)
+* (1) proof (check, nevadí, když jednotlivý krok selže)
+* (1,1b) závěry (check, možnost vytvořit pouze pár typů)
+
+* Dorozmyslet (!):
+  * Pravidla přechycení,
+    a jak zajistit kompatibilitu s původním levelem
+
+Akce:
+* (3a) "zafixovat" objekt závislý jenom na vstupních objektech
+  * (přidat předpoklady)?
+* (3a) Jak něco odfixovat?
+  * TODO
+* (1a) fact tool (pro začátek funkčnost jako v geogebře -- numerický check)
+  * přidat předpoklad, přidat cíl
+* odebrat předpoklad / cíl
+* (1b) přesunout / smazat krok
+* (1b) analýza, proč krok selhal
+* (1b) otevřít krok
+* (1b,2a) přehled lemmat, která nejsou dokázaná
+* (2b) reset input, check všech důkazů
+* (1b) editace, k čemu je chycený průsečík
+* (2a)
+  * stanovení podcíle
+    * vybrat vstupní objekty
+    * vybrat předpoklady
+    * podcíl
+    * (export podcíle jako nástroje)
+  * reformulace cíle
+    * TODO
+* jak zkombinovat fix / unfix a editaci předpokladů s řešením levelu?
+* undo / redo v rámci komplexnějšich akcí
 
 
-long term (v1.0)
-* sparse_elim: zahazovat duplicitní proměnné?
+long-term (další featury)
+* zobrazit rovnice
+* num_check optimalizace
+  (najít si v důkazu propositions,
+  které je třeba zkontrolovat)
+* zobrazení
+  * obecné podobné zobrazení funkční bez výjimek
+  * přenášení objektů, faktů
+  * automatické dokázání komutativity zobrazení a nástroje
+* skrytá konstrukce
+  * aby toho na konci věděl míň
 * rozdělit logiku a automatizaci
+  * trasovat, která tvrzení byla použita pro důkaz daného faktu
 * další varianty průsečíku?
   * aby XC0C1 mělo stejnou orientaci jako ABC
   * s přímkou AB víc ve směru AB
