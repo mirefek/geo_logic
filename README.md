@@ -56,6 +56,12 @@ There are basically four ways in which GeoLogic makes automatic decisions:
 
 All non-movable logical tools which take only graphical objects (Point / Line / Circle)
 on input can be reached using the entry-area in the up right corner of the window.
+Tools that can turn out to be useful:
++ (triangle centers) centroid, orthocenter, circumcenter, incenter, excenter
++ (lemma) midsegment -- recognizes that the midsegment of a triangle is parallel and half long
++ (lemma) midpoint_uq -- recognizes that a point on line having the same distances is a midpoint
++ copy_triangle, copy_triangle_r -- constructions of similar / congruent triangles
++ sim_*, cong_* -- lemmata about similar / congruent triangles
 There are also six "smart" graphical tools that automaticaly run the appropriate logical tool,
 and can be used for constructing movable objects.
 Right click resets the current tool.
