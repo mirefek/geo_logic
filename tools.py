@@ -38,7 +38,6 @@ class Tool:
         if self.meta_types is None or self.arg_types is None: in_types = None
         else: in_types = self.meta_types+self.arg_types
         key = self.name, in_types
-        if self.name == "custom_ratio": print(key)
         assert(key not in d)
         d[key] = self
     #def run(self, meta_args, obj_args, model, strictness):
