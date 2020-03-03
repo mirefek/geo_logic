@@ -32,7 +32,28 @@ class GraphicalEnv:
         i = self.gi_to_step_i[gi]
         return self.steps[i]
 
+    def change_name(self, gi, name):
+        if name == self.gi_to_name[gi]: return
+        problems = []
+        
+        if ':' in name:
+            problems.append("Name cannot contain ':'")
+        if not name[:1].isalpha():
+            problems.append("Name must start with a letter of alphabet")
+        if any(c.isspace() for c in name):
+            problems.append("Name cannot contain space characters")
+        if problems:
+            print("Warning: Cannot use name \"{}\":".format(name))
+            for problem in problems: print('  ', problem)
+            return
+        if name in self.gi_to_name:
+            gi2 = self.gi_to_name.index(name)
+            self.gi_to_name[gi2] = self.gi_to_name[gi]
+        self.gi_to_name[gi] = name
+        self.vis.update_selected_hook()
+    
     def set_steps(self, steps, names, visible = None, goals = None, proof = None):
+        self.vis.truncate_gis(0)
         if goals is None: self.min_steps = 0
         else:
             self.min_steps = len(steps)
@@ -43,14 +64,9 @@ class GraphicalEnv:
         self.gi_to_step_i = []
         for i,step in enumerate(steps):
             self.gi_to_step_i += [i]*len(step.tool.out_types)
-        self.vis.gi_to_priority = [2]*len(self.gi_to_step_i)
-        if visible is None:
-            self.vis.gi_to_hidden = [False]*len(self.gi_to_step_i)
-        else:
-            self.vis.gi_to_hidden = [
-                i not in visible
-                for i,_ in enumerate(self.gi_to_step_i)
-            ]
+        self.vis.add_gis(len(self.gi_to_step_i))
+        if visible is not None:
+            self.vis.set_visible_set(visible)
         assert(len(self.gi_to_name) == len(self.gi_to_step_i))
         self.refresh_steps(False)
         self.reload_steps_hook()
@@ -99,8 +115,7 @@ class GraphicalEnv:
             self.step_env.run_steps((step,), 1)
             new_len = len(self.step_env.local_to_global)
             self.gi_to_step_i += [len(self.steps)]*len(step.tool.out_types)
-            self.vis.gi_to_priority += [2]*len(step.tool.out_types)
-            self.vis.gi_to_hidden += [False]*len(step.tool.out_types)
+            self.vis.add_gis(len(step.tool.out_types))
             for i,t in enumerate(step.tool.out_types):
                 self.gi_to_name.append(self.make_name(step, i, t))
             self.steps.append(step)
@@ -127,11 +142,10 @@ class GraphicalEnv:
         names = ()
         if len(step.tool.out_types) > 0:
             i = len(self.gi_to_step_i)-len(step.tool.out_types)
-            del self.gi_to_step_i[i:]
-            del self.vis.gi_to_priority[i:]
-            del self.vis.gi_to_hidden[i:]
             names = self.gi_to_name[i:]
             del self.gi_to_name[i:]
+            del self.gi_to_step_i[i:]
+            self.vis.truncate_gis(i)
         self.redo_stack.append((step, names))
         self.refresh_steps()
     def redo(self):
@@ -142,8 +156,7 @@ class GraphicalEnv:
         print("Redo {}".format(step.tool.name))
 
         self.gi_to_step_i += [len(self.steps)]*len(step.tool.out_types)
-        self.vis.gi_to_priority += [2]*len(step.tool.out_types)
-        self.vis.gi_to_hidden += [False]*len(step.tool.out_types)
+        self.vis.add_gis(len(step.tool.out_types))
         self.gi_to_name.extend(names)
         self.steps.append(step)
         self.step_env.run_steps((step,), 1, catch_errors = True)

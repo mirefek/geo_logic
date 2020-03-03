@@ -3,12 +3,15 @@ from itertools import islice
 from geo_object import Point, Line, Circle, vector_perp_rot, vector_of_direction
 from gtool import AmbiSelect, GToolNone
 from gi.repository import Gtk, Gdk, GdkPixbuf
+from label_visualiser import LabelVisualiser
 import cairo
 
 class Viewport:
-    def __init__(self, env):
+    def __init__(self, env, app):
+        self.app = app
         self.env = env
         self.vis = env.vis
+        self.label_vis = LabelVisualiser(16, 10, 6)
         self.color_dict = dict()
         self.default_colors = [
             (0,    0, 0),   # default
@@ -22,6 +25,7 @@ class Viewport:
         self.shift_pressed = False
 
         self.click_hook = None
+        self.edited_label = None
 
         self.darea = Gtk.DrawingArea()
         self.darea.connect("draw", self.on_draw)
@@ -43,7 +47,7 @@ class Viewport:
         self.mb_grasp = None
         self.view_center = np.array(center, dtype = float)
         self.scale = float(scale)
-        
+
     def load_cursors(self):
         self.cursors = dict()
         import os
@@ -52,6 +56,7 @@ class Viewport:
             "line", "perpline",
             "circle", "circumcircle",
             "reason", "hide",
+            "label",
         ]
         names_gtk = [
             "grab", "grabbing"
@@ -181,6 +186,45 @@ class Viewport:
         self.point_dot(cr, p, 4)
         cr.set_source_rgb(0.7, 0.9, 0.25)
         self.point_dot(cr, p, 3)
+        cr.restore()
+
+    def draw_label(self, cr, label, obj, position, edit = None):
+        cr.save()
+        # go to the right position
+        if isinstance(obj, Point):
+            coor = obj.a + position / self.scale
+        elif isinstance(obj, Circle):
+            direction, offset = position
+            coor = obj.c + vector_of_direction(direction) * (obj.r + offset / self.scale)
+        elif isinstance(obj, Line):
+            pos, offset = position
+            endpoints = self.get_line_endpoints(obj)
+            if endpoints is None: return
+            e1,e2 = endpoints
+            if e1[0] > e2[0]: e1, e2 = e2, e1
+            coor = (1-pos)*e1 + pos*e2 + obj.n*offset/self.scale
+        cr.translate(*coor)
+        cr.scale(1 / self.scale, 1 / self.scale)
+
+        cr.select_font_face('serif', cairo.FONT_SLANT_ITALIC)
+        texts, subscripts, extents = self.label_vis.parse(cr, label)
+        if edit is not None:
+            cursor, new_text = edit
+            if cursor is None:
+                width, height = extents[2:4]
+                cr.rectangle(-width/2,-height/2,width,height)
+                cr.set_source_rgb(0, 1, 1)
+                cr.fill()
+                cr.set_source_rgb(0, 0, 0)
+                self.label_vis.show_center(cr, texts, subscripts, extents)
+            else:
+                coor = self.label_vis.get_center_start(extents)
+                cr.set_source_rgb(0, 0, 0)
+                self.label_vis.show_edit(cr, new_text, cursor, coor)
+        else:
+            cr.set_source_rgb(0, 0, 0)
+            self.label_vis.show_center(cr, texts, subscripts, extents)
+
         cr.restore()
 
     def set_stroke(self, cr, pix_width, dashes = None):
@@ -498,12 +542,19 @@ class Viewport:
             self.set_color(cr, -1, color)
             self.draw_point(cr, p)
 
+        # draw labels
+        for data in vis.visible_labels:
+            self.draw_label(cr, *data)
+
         # draw proposals
         cr.set_source_rgb(0.5, 0.65, 0.17)
         for proposal in vis.hl_proposals:
             if not isinstance(proposal, Point): self.draw_obj(cr, proposal)
         for proposal in vis.hl_proposals:
             if isinstance(proposal, Point): self.draw_point_proposal(cr, proposal)
+
+        if self.edited_label is not None:
+            self.draw_label(cr, *self.edited_label)
 
     def export_svg(self, fname):
         print("Exported to {}".format(fname))

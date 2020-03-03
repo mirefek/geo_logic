@@ -431,6 +431,8 @@ class KnowledgeVisualisation:
 
         self.gi_to_priority = []
         self.gi_to_hidden = []
+        self.gi_label_show = []
+        self.gi_label_position = []
 
         self.update_selected_hook = lambda: None
 
@@ -462,6 +464,20 @@ class KnowledgeVisualisation:
         #self.visible_points = set()
         #self.visible_lines = set()
         #self.visible_circles = set()
+
+    def add_gis(self, number):
+        self.gi_to_priority += [2]*number
+        self.gi_to_hidden += [False]*number
+        self.gi_label_show += [False]*number
+        self.gi_label_position += [None]*number
+    def truncate_gis(self, number):
+        del self.gi_to_priority[number:]
+        del self.gi_to_hidden[number:]
+        del self.gi_label_show[number:]
+        del self.gi_label_position[number:]
+    def set_visible_set(self, visible):
+        for i in range(len(self.gi_to_hidden)):
+            self.gi_to_hidden[i] = i not in visible
 
     def li_root(self, li):
         return self.model.ufd.obj_to_root(li)
@@ -833,6 +849,18 @@ class KnowledgeVisualisation:
         elif self.is_move_mode(): return self.is_movable(li)
         else: return True
 
+    def get_label_position(self, gi):
+        position = self.gi_label_position[gi]
+
+        if position is None: # default position
+            num_obj = self.gi_to_num(gi)
+            if isinstance(num_obj, Point): position = np.array((0, -20))
+            elif isinstance(num_obj, Circle): position = (0, 20)
+            elif isinstance(num_obj, Line): position = (0.1, 20)
+            else: raise Exception("Unexpected type {}".format(type(num_obj)))
+            self.gi_label_position[gi] = position
+        return position
+        
     def visible_export(self):
         self.view_changed = True
         self.visible_points_numer = [
@@ -843,6 +871,17 @@ class KnowledgeVisualisation:
             )
             for point in self.visible_points
         ]
+        self.visible_labels = []
+        def add_label(obj):
+            gi = self.li_to_gi_first[obj]
+            if not self.gi_label_show[gi]: return
+            num_obj = self.li_to_num(obj)
+
+            self.visible_labels.append((
+                self.env.gi_to_name[gi], num_obj, self.get_label_position(gi),
+            ))
+        for point in self.visible_points: add_label(point)
+
         self.active_lines_numer = []
         self.extra_lines_numer = []
         self.active_circles_numer = []
@@ -860,7 +899,7 @@ class KnowledgeVisualisation:
             if self.is_selectable(li)
         ]
 
-        def export_numer(data_list, to_points, ):
+        def export_numer(data_list, to_points):
             active = []
             extra = []
             selectable = []
@@ -878,6 +917,7 @@ class KnowledgeVisualisation:
                 ]
                 exported = (num_data.num_obj, colorization), points
                 if num_data.is_active:
+                    add_label(obj)
                     active.append(exported)
                     if self.is_selectable(obj):
                         selectable.append((

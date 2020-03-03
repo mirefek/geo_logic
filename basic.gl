@@ -1,13 +1,13 @@
-line A:P B:P -> p:L
+line A:P B:P -> a:L
   <- not_eq A B
   THEN
-  p <- prim__line A B
-  <- lies_on A p
-  <- lies_on B p
+  a <- prim__line A B
+  <- lies_on A a
+  <- lies_on B a
 
-direction_of l:L -> a:A
+direction_of l:L -> dir:A
   THEN
-  a <- prim__direction_of l
+  dir <- prim__direction_of l
 direction_of A:P B:P -> dir:A
   <- not_eq A B
   l <- line A B

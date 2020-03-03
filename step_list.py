@@ -10,16 +10,22 @@ class VarLabel(Gtk.Label):
         self.gi = gi
         self.selected = None
         self.defined = None
+        self.name = env.gi_to_name[gi]
         self.update()
 
     def update(self):
         li = self.vis.gi_to_li(self.gi)
         defined = li is not None
         selected = li in self.vis.obj_is_selected
-        if selected is self.selected and defined is self.defined: return
+        name = self.env.gi_to_name[self.gi]
+        if selected is self.selected\
+           and defined is self.defined\
+           and name is self.name:
+            return
         self.selected = selected
         self.defined = defined
-        markup = GLib.markup_escape_text(self.env.gi_to_name[self.gi])
+        self.name = name
+        markup = GLib.markup_escape_text(name)
         if selected: markup = "<span bgcolor='#00FFFF'>"+markup+"</span>"
         elif not defined:
             markup = "<span fgcolor='#777777'>"+markup+"</span>"

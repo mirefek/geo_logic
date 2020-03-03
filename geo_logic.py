@@ -16,8 +16,9 @@ from viewport import Viewport
 from graphical_env import GraphicalEnv
 from movable_tools import MovableTool
 from basic_tools import load_tools, ImportedTools
-from gtool_general import GToolDict
 from gtool import ObjSelector, GTool, GToolMove, GToolHide
+from gtool_general import GToolDict
+from gtool_label import GToolLabel
 from gtool_logic import GToolReason
 from gtool_constr import ComboPoint, ComboLine, ComboPerpLine, ComboCircle, ComboCircumCircle
 from toolbar import ToolBar
@@ -32,6 +33,7 @@ class GeoLogic(Gtk.Window):
         self.env = GraphicalEnv(self.imported_tools)
         self.vis = self.env.vis
         self.general_tools = GToolDict(self.imported_tools.tool_dict)
+        self.keyboard_capture = None
 
         menu_items = (
             ("Undo", self.undo,     "<Control>z"),
@@ -47,7 +49,8 @@ class GeoLogic(Gtk.Window):
             ComboPoint(),
             ComboLine(), ComboPerpLine(),
             ComboCircle(), ComboCircumCircle(),
-            GToolMove(), GToolHide(), GToolReason(), 
+            GToolMove(), GToolHide(), GToolLabel(),
+            GToolReason(),
         )
         self.key_to_gtool = dict(
             (gtool.get_key_shortcut(), gtool)
@@ -66,7 +69,7 @@ class GeoLogic(Gtk.Window):
         self.step_list = StepList(self.env)
         hpaned.pack1(self.step_list, False, True)
 
-        self.viewport = Viewport(self.env)
+        self.viewport = Viewport(self.env, self)
         self.viewport.set_tool(ComboPoint())
         hpaned.pack2(self.viewport.darea, True, False)
         hpaned.set_position(250)
@@ -206,6 +209,9 @@ class GeoLogic(Gtk.Window):
         self.reset_view()
 
     def on_key_press(self,w,e):
+
+        if self.keyboard_capture is not None:
+            return self.keyboard_capture(e)
 
         keyval = e.keyval
         keyval_name = Gdk.keyval_name(keyval)
