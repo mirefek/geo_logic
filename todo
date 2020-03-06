@@ -1,16 +1,14 @@
 0.2 (do odevzdání článku 15.3. -- jednodušší záležitosti)
 * (5d) napsat článek (long abstract?) pro ICMS
-* (2h) rozmyslet funkčnost GUI pro verzi 0.3
 * (1.5h) don't add step if cached?
-* (1d) label tool
 * (2h) neopakovat ověřování důkazů při undo
 * (2d) okomentovat zdrojáky
-* (2.5d) inteligentnější sparse_elim (být si vědom až na konstantu ekvivalentních proměnných)
-* (4h) vizualizace úhlů: vždycky menší úhel / oblouk
-* (3h) implementace vizualizace:
+* (1d) vizualizace úhlů: vždycky menší úhel / oblouk
+* (3h) implementace vizualizace: nechci, hůř vypadající výběr
   * vlastní implementace výřezu přímky / kružnice pro neprocházející body
     -> čistší výsledný obrázek
 * (2d) víc příkladů levelů
+* (4h) completely movable objects line / circle
 * (0.5h) založit jako 0.2 verze na githubu
 
 0.3 (během následujících měsíců, ideálně fo konání ICMS 13.7. -- hlubši propojení logiky a GUI)

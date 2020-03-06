@@ -21,6 +21,14 @@ class ImportedTools:
         self.arc_length = tool_dict.get(('arc_length', (Point, Point, Circle)), None)
         self.angle_ll = tool_dict.get(('angle', (Line, Line)), None)
         self.angle_ppl = tool_dict.get(('angle', (Point, Point, Line)), None)
+        self.angle_lpp = tool_dict.get(('angle', (Line, Point, Point)), None)
+        self.angle_pppp = tool_dict.get(('angle', (Point, Point, Point, Point)), None)
+        self.angle_tools = (
+            self.angle_ll,
+            self.angle_ppl,
+            self.angle_lpp,
+            self.angle_pppp,
+        )
 
         # special dictionary for movable tools
         self.tool_dict = dict(tool_dict)

@@ -86,10 +86,10 @@ class NumPointData(NumData):
             d,_ = self.vis.model.angles.equal_to[d]
             self.exact_lines[d].update((angle_data.l1, angle_data.l2))
             self.exact_angles[d].append(angle_data)
-        elif isinstance(angle_data, AnglePPLData):
-            self.angles_ppl.append(angle_data)
-        else:
+        elif angle_data.l1_dir_sgn is None:
             self.angles_ll.append(angle_data)
+        else:
+            self.angles_ppl.append(angle_data)
     def add_exact(self, line, d):
         self.exact_lines[d].add(line)
 
@@ -98,8 +98,6 @@ class NumPointData(NumData):
         used = set()
         segments = []
         for angle in self.angles_ppl:
-            angle.find_l1_dir()
-
             key = (angle.l1, angle.l2, angle.l1_dir_sgn)
             if key in used: continue
             used.add(key)
@@ -109,7 +107,7 @@ class NumPointData(NumData):
         for angle in self.angles_ll:
             if (angle.l1, angle.l2, 1) in used or (angle.l1, angle.l2, -1) in used:
                 continue
-            angle.find_l1_dir()
+            angle.find_nicer_l1_dir()
             used.add((angle.l1, angle.l2, angle.l1_dir_sgn))
             
             angle.find_arc()
@@ -142,40 +140,41 @@ class NumPointData(NumData):
             used = [False]*full_circ
 
             def set_used(i1, i2):
+                i1 = i1 % full_circ
                 i2 = i1 + (i2-i1) % half_circ
                 for i in range(i1, i2):
                     used[i % full_circ] = True
-            def count_used(i1, i2):
+            def count_unused(i1, i2):
+                i1 = i1 % full_circ
                 i2 = i1 + (i2-i1) % half_circ
                 res = 0
                 for i in range(i1, i2):
-                    if used[i % full_circ]: res += 1
+                    if not used[i % full_circ]: res += 1
                 return res
-            def get_start_from_angle(angle):
-                pos_real = vector_direction(angle.l1_num.v * angle.l1_dir_sgn)
-                i = li_to_pos_index[angle.l1]
-                if eps_identical((line_pos[i] - pos_real + 1)%2, 1): return i
-                else: return i+half_circ
+            def get_line_dir_indices(l_num, l_dir_sgn, l):
+                i = li_to_pos_index[l]
+                if l_dir_sgn is None: return [i, i+half_circ]
+                pos_real = vector_direction(l_num.v * l_dir_sgn)
+                if eps_identical((line_pos[i] - pos_real + 1)%2, 1): return [i]
+                else: return [i+half_circ]
+            def shorter_seg(a,b):
+                if (b-a) % full_circ <= half_circ: return a,b
+                else: return b,a
 
-            ambig_angles = []
-            for angle in self.exact_angles[d]:
-                if isinstance(angle, AnglePPLData):
-                    angle.find_l1_dir()
-                    i1 = get_start_from_angle(angle)
-                    i2 = li_to_pos_index[angle.l2]
-                    set_used(i1,i2)
-                else: ambig_angles.append(angle)
-            for angle in ambig_angles:
-                i1 = li_to_pos_index[angle.l1]
-                i2 = li_to_pos_index[angle.l2]
-                count1 = count_used(i1, i2)
-                count2 = count_used(i1+half_circ, i2)
-                if count1 > count2: set_used(i1, i2)
-                elif count2 > count1: set_used(i1+half_circ, i2)
-                else:
-                    angle.find_l1_dir()
-                    i1 = get_start_from_angle(angle)
-                    set_used(i1,i2)
+            angle_candidates = [
+                [
+                    shorter_seg(a,b)
+                    for a in get_line_dir_indices(angle.l1_num, angle.l1_dir_sgn, angle.l1)
+                    for b in get_line_dir_indices(angle.l2_num, angle.l2_dir_sgn, angle.l2)
+                ]
+                for angle in self.exact_angles[d]
+            ]
+            angle_candidates.sort(key = len)
+            #print("candidates", angle_candidates)
+            for candidates in angle_candidates:
+                best = min(candidates, key = lambda seg: count_unused(*seg))
+                set_used(*best)
+
             last_added = None
             for i in range(half_circ):
                 if not used[i] and not used[i+half_circ]:
@@ -361,19 +360,30 @@ class ArcData:
         self.p1 = p1
         self.p2 = p2
         self.c = c
-    def activate(self, color):
-        self.vis.circle_to_arcs[self.c].append((self.p1,self.p2,color))
-
-class AngleLLData:
-    def __init__(self, vis,l1,l2):
+    def activate(self, color, positive):
+        if positive: p1,p2 = self.p1, self.p2
+        else: p1,p2 = self.p2, self.p1
+        self.vis.circle_to_arcs[self.c].append((p1, p2, color))
+    def get_repr(self):
+        if self.p1 < self.p2: return self.p1,self.p2,self.c
+        else: return self.p2,self.p1,self.c
+class AngleData:
+    def __init__(self, vis, lines, dir_reqs):
         self.vis = vis
-        self.l1 = l1
-        self.l2 = l2
-    def activate(self, color):
-        self.color = color
-        self.vis.angles_ll.append(self)
+        self.l1, self.l2 = lines
+        self.dr1, self.dr2 = dir_reqs
+        self.positive = True
+    def require_lines(self):
         self.vis.line_to_angle_number[self.l1] += 1
         self.vis.line_to_angle_number[self.l2] += 1
+    def activate(self, color, positive):
+        self.color = color
+        if self.positive != positive:
+            self.l1, self.l2 = self.l2, self.l1
+            self.dr1, self.dr2 = self.dr2, self.dr1
+            self.positive = positive
+        self.vis.angles.append(self)
+        self.require_lines()
     def add_to_point(self):
         self.p = Point(intersection_ll(
             self.vis.li_to_num(self.l1),
@@ -381,8 +391,36 @@ class AngleLLData:
         ))
         self.l1_num = self.vis.li_to_num_data[self.l1].num_obj
         self.l2_num = self.vis.li_to_num_data[self.l2].num_obj
+
+        # get orientation:
+        self.l1_dir_sgn = None
+        self.l2_dir_sgn = None
+        if self.dr1 is not None or self.dr2 is not None:
+            if self.dr1 is not None:
+                p1,p2 = self.dr1
+                if np.dot(self.vis.li_to_num(p2).a - self.vis.li_to_num(p1).a, self.l1_num.v) > 0:
+                    self.l1_dir_sgn = 1
+                else: self.l1_dir_sgn = -1
+            if self.dr2 is not None:
+                p1,p2 = self.dr2
+                if np.dot(self.vis.li_to_num(p2).a - self.vis.li_to_num(p1).a, self.l2_num.v) > 0:
+                    self.l2_dir_sgn = 1
+                else: self.l2_dir_sgn = -1
+
+            if self.color >= 0:
+                if (vector_direction(self.l2_num.v) - vector_direction(self.l1_num.v))%2 <= 1:
+                    relative_sgn = 1
+                else: relative_sgn = -1
+
+                if self.l2_dir_sgn is None: self.l2_dir_sgn = relative_sgn * self.l1_dir_sgn
+                elif self.l1_dir_sgn is None: self.l1_dir_sgn = relative_sgn * self.l2_dir_sgn
+                elif self.l1_dir_sgn != self.l2_dir_sgn * relative_sgn:
+                    self.l1_dir_sgn = None
+                    self.l2_dir_sgn = None
+
         self.vis.get_num_point(self.p).add_angle(self)
-    def find_l1_dir(self):
+
+    def find_nicer_l1_dir(self):
         points = self.vis.line_to_points[self.l1]
         if not points:
             self.l1_dir_sgn = 1
@@ -403,17 +441,8 @@ class AngleLLData:
             if self.pos_b >= 1: self.pos_b -= 1
             else: self.pos_b += 1
         if self.pos_b < self.pos_a: self.pos_b += 2
-
-class AnglePPLData(AngleLLData):
-    def __init__(self, vis,p1,p2,l2):
-        self.p1 = p1
-        self.p2 = p2
-        l1, = vis.model.get_constr(vis.tools.line, (p1, p2))
-        AngleLLData.__init__(self, vis, l1, l2)
-    def find_l1_dir(self):
-        if np.dot(self.vis.li_to_num(self.p2).a - self.vis.li_to_num(self.p1).a, self.l1_num.v) > 0:
-            self.l1_dir_sgn = 1
-        else: self.l1_dir_sgn = -1        
+    def get_repr(self):
+        return tuple(sorted((self.l1, self.l2)))
 
 class KnowledgeVisualisation:
     def __init__(self, env):
@@ -435,6 +464,14 @@ class KnowledgeVisualisation:
         self.gi_label_position = []
 
         self.update_selected_hook = lambda: None
+
+        # static
+        self.angle_label_to_larg = {
+            self.tools.angle_ll : (True, True),
+            self.tools.angle_ppl : (False, True),
+            self.tools.angle_lpp : (True, False),
+            self.tools.angle_pppp : (False, False),
+        }
 
         # for visualisation
         #self.movable_objects = ()
@@ -595,11 +632,32 @@ class KnowledgeVisualisation:
     def select_visible_circles(self):
         self.visible_circles = self.select_visible_objs(self.num_circles)
 
+    def get_angle_lines(self, angle_label, args):
+        res = []
+        dir_reqs = []
+        arg_it = iter(args)
+        for is_larg in self.angle_label_to_larg[angle_label]:
+            if is_larg:
+                l = next(arg_it)
+                if l not in self.li_to_gi_first and len(self.line_to_points[l]) < 2:
+                    return None
+                dir_req = None
+            else:
+                p1 = next(arg_it)
+                p2 = next(arg_it)
+                if p1 not in self.li_to_gi_first or p2 not in self.li_to_gi_first:
+                    return None
+                l, = self.model.ufd.get(self.tools.line, (p1,p2))
+                dir_req = (p1,p2)
+            res.append(l)
+            dir_reqs.append(dir_req)
+        return res, dir_reqs
+
     def extract_knowledge(self):
         self.line_to_points = defaultdict(list)
         self.circle_to_points = defaultdict(list)
         self.circle_to_arcs = defaultdict(list)
-        self.angles_ll = []
+        self.angles = []
         direction_to_line = defaultdict(list)
         direction_q_to_line = defaultdict(list)
         self.line_to_angle_number = defaultdict(int)
@@ -608,14 +666,19 @@ class KnowledgeVisualisation:
         lies_on_labels = self.tools.lies_on_l, self.tools.lies_on_c
         dist_to_points = defaultdict(list)
         angle_to_data = defaultdict(list)
+
+        # points on lines and circles
         for (label, args), out in self.model.ufd.data.items():
-            if label is self.tools.lies_on_l:      #### lies_on
+            if label is self.tools.lies_on_l:
                 p,l = args
                 if p in self.li_to_gi_first: self.line_to_points[l].append(p)
             elif label is self.tools.lies_on_c:
                 p,c = args
                 if p in self.li_to_gi_first: self.circle_to_points[c].append(p)
-            elif label is self.tools.arc_length:   #### arc length
+
+        zero_angle = Angle(0)
+        for (label, args), out in self.model.ufd.data.items():
+            if label is self.tools.arc_length:   #### arc length
                 p1,p2,c = args
                 if p1 not in self.li_to_gi_first or p2 not in self.li_to_gi_first:
                     continue
@@ -636,37 +699,14 @@ class KnowledgeVisualisation:
                 d, = out
                 direction_to_line[d].append(l)
                 direction_q_to_line[self.model.angles.equal_to[d][0]].append((l,d))
-
-        #### angles
-        zero_angle = Angle(0)
-        for (label, args), out in self.model.ufd.data.items():
-            if label is self.tools.angle_ll:
-                l1,l2 = args
-                if l1 not in self.li_to_gi_first and len(self.line_to_points[l1]) < 2:
-                    continue
-                if l2 not in self.li_to_gi_first and len(self.line_to_points[l2]) < 2:
-                    continue
+            elif label in self.tools.angle_tools: #### angles
+                lines_dr = self.get_angle_lines(label, args)
+                if lines_dr is None: continue
                 a, = out
                 num = self.li_to_num(a)
                 if num.identical_to(zero_angle): continue
-                angle_to_data[a].append(AngleLLData(self, l1,l2))
-            elif label is self.tools.angle_ppl:
-                p1,p2,l = args
-                if p1 not in self.li_to_gi_first or p2 not in self.li_to_gi_first:
-                    continue
-                if len(self.line_to_points[l]) < 2: continue
-                a, = out
-                num = self.li_to_num(a)
-                if num.identical_to(zero_angle): continue
-                angle_to_data[a].append(AnglePPLData(self, p1,p2,l))
-
-        #### Filter out hidden points
-        for line, points in self.line_to_points.items():
-            points = [p for p in points if p in self.visible_points]
-            self.line_to_points[line] = points
-        for circle, points in self.circle_to_points.items():
-            points = [p for p in points if p in self.visible_points]
-            self.circle_to_points[circle] = points
+                lines, dir_req = lines_dr
+                angle_to_data[a].append(AngleData(self, lines, dir_req))
 
         #### store repeated dists
         dist_num = 0
@@ -685,12 +725,21 @@ class KnowledgeVisualisation:
 
         #### store repeated angles / arcs
         angle_num = 0
+        used_compl = set()
         for a, l in sorted(angle_to_data.items(), key = lambda x: x[0]):
+            if a in used_compl: continue
             if self.model.angles.has_exact_difference(a, self.model.exact_angle):
-                for data in l: data.activate(-1)
+                for data in l: data.activate(-1, True)
             else:
-                if len(l) <= 1: continue
-                for data in l: data.activate(angle_num)
+                c = self.li_root(self.model.angles.get_complement(a))
+                if c is not None:
+                    used_compl.add(c)
+                    cl = angle_to_data[c]
+                else: cl = []
+                if len(set(x.get_repr() for x in l+cl)) <= 1: continue
+                positive = self.li_to_num(a).data % 1 <= 0.5
+                for data in l: data.activate(angle_num, positive)
+                for data in cl: data.activate(angle_num, not positive)
                 angle_num += 1
 
         #### store additional exact angles
@@ -712,6 +761,14 @@ class KnowledgeVisualisation:
             for l in lines:
                 self.visible_parallels.append((self.li_to_num(l), parallel_num))
             parallel_num += 1
+
+        #### Filter out hidden points
+        for line, points in self.line_to_points.items():
+            points = [p for p in points if p in self.visible_points]
+            self.line_to_points[line] = points
+        for circle, points in self.circle_to_points.items():
+            points = [p for p in points if p in self.visible_points]
+            self.circle_to_points[circle] = points
 
     def find_extra_clines(self):
         lines = set(self.line_to_points.keys()) | set(self.line_to_angle_number.keys())
@@ -746,13 +803,14 @@ class KnowledgeVisualisation:
         if num_data is None or num_data.visible is None: return False
         return num_data.visible == li
     def filter_visible_angles(self):
-        angles_ll_ori = self.angles_ll
-        self.angles_ll = []
         self.line_to_angle_number = defaultdict(int)
-        for a in angles_ll_ori:
+        used_angles = []
+        for a in self.angles:
             if a.l1 in self.visible_lines and a.l2 in self.visible_lines:
-                a.activate(a.color)
+                used_angles.append(a)
+                a.require_lines()
                 a.add_to_point()
+        self.angles = used_angles
 
         # remove redundant lines
         for line_data in self.num_lines:

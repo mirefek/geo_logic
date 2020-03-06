@@ -1,6 +1,8 @@
 import numpy as np
 from geo_object import Angle, Ratio
-from sparse_elim import SparseRow, EquationIndex, ElimMatrix, AngleChasing, equality_sr
+from sparse_row import SparseRow, equality_sr
+from sparse_elim import EquationIndex, ElimMatrix
+from angle_chasing import AngleChasing
 from uf_dict import UnionFindDict
 from fractions import Fraction
 from triggers import TriggerEnv, RelStrEnv

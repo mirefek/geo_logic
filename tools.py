@@ -1,5 +1,5 @@
 from fractions import Fraction
-from sparse_elim import SparseRow
+from sparse_row import SparseRow
 from stop_watch import StopWatch
 
 class ToolError(Exception):

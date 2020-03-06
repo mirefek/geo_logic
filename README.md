@@ -109,7 +109,7 @@ the ambigous object turn slightly red.
 
 ### Circumcircle
 
-+ Free circle through 1 / 2 points: click the point(s), then into space
++ Free circle through 1 or 2 points: click the point(s), then into space
 + Circle with diameter: select the diameter, and confirm by clicking on one of the two points
 + Circumcircle: select three points
 

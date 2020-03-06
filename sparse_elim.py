@@ -1,71 +1,13 @@
-from math import gcd, pi, floor
+from math import gcd
 from fractions import Fraction
 from collections import defaultdict
+from sparse_row import SparseRow
 from stop_watch import StopWatch
-from geo_object import eps_identical
 
-class SparseRow(dict):
-    def __init__(self, data):
-        if isinstance(data, SparseRow):
-            super(SparseRow, self).__init__(data)
-        else:
-            if isinstance(data, dict): data = data.items()
-            super(SparseRow, self).__init__()
-            self.__iadd__(data)
-    def __getitem__(self, key):
-        return self.get(key, 0)
-    def __mul__(self, n):
-        if n == 0: return zero_sr
-        return SparseRow(
-            (k, n*x) for (k,x) in self.items()
-        )
-    def __rmul__(self, n):
-        return self.__mul__(n)
-    def __imul__(self, n):
-        if n == 0: self.clear()
-        else:
-            for k,x in self.items():
-                self[k] = x*n
-        return self
-
-    def iadd_coef(self, coef, other):
-        if coef == 0: return
-        other = other.items()
-        for k,x in other:
-            if x == 0: continue
-            x *= coef
-            x2 = self.get(k, 0)+x
-            if x2 == 0: del self[k]
-            else: self[k] = x2
-        return self
-        
-    def __iadd__(self, other):
-        if isinstance(other, dict): other = other.items()
-        for k,x in other:
-            if x == 0: continue
-            if not isinstance(x, Fraction): x = Fraction(x)
-            x2 = self.get(k, 0)+x
-            if x2 == 0: del self[k]
-            else: self[k] = x2
-        return self
-    def __add__(self, other):
-        res = SparseRow(self)
-        res.__iadd__(other)
-        return res
-    def __isub__(self, other):
-        self.__iadd__((k,-x) for (k,x) in other.items())
-        return self
-    def __sub__(self, other):
-        res = SparseRow(self.items())
-        res.__isub__(other)
-        return res
-
-zero_sr = SparseRow(())
-
-def lcm(a,b):
-    return a//gcd(a,b)*b
-def equality_sr(a, b):
-    return SparseRow(((a, Fraction(-1)), (b, Fraction(1))))
+def lcm(a, *args):
+    for b in args:
+        a *= b // gcd(a,b)
+    return a
 
 class EquationIndex:
     def __init__(self, equation):
@@ -75,29 +17,72 @@ class ElimMatrix:
     def __init__(self):
         self.rows = dict() # pivot -> row
         self.cols = defaultdict(set) # varname -> pivot set
-        self.value_to_var = dict() # tuple of (var, num) -> pivot variable equal to that
+        self.value_to_var = dict() # value_key -> pivot variable proportional to that
+        self.zeroes = dict() # varname -> equation(size=1)
+        self.proportional_to = dict() # varname -> (varname, equation(size=2) )
+        self.root_to_proportions = dict() # varname -> size, dict(proportion -> varnames)
 
+    #def query(self, query_r):
+    #    with StopWatch("SparseElim2"):
+    #        with StopWatch("Query"):
+    #            return self._query(query_r)
+    def query(self, query_r):
+        query_r = SparseRow(query_r)
+        self._eliminate(query_r)
+        if not all(isinstance(key, EquationIndex) for key in query_r.keys()):
+            return 0
+        return self._least_denom(query_r)
+
+    #def add(self, added):
+    #    with StopWatch("SparseElim2"):
+    #        with StopWatch("Add"):
+    #            return self._add(added)
     def add(self, added):
-
         new_r = SparseRow(added)
-        self.eliminate(new_r)
+        self._elim_by_proportions(new_r)
+        eq_pure = [
+            (x,coef) for (x,coef) in new_r.items()
+            if not isinstance(x, EquationIndex)
+        ]
+        if len(eq_pure) <= 2 and any(x not in self.cols for x,coef in eq_pure):
+            if not eq_pure: return False, () # Already known equation
+            eqi = EquationIndex(added)
+            new_r[eqi] = Fraction(1)
+            to_glue_out = []
+            if len(eq_pure) == 1:
+                (x,coef), = eq_pure
+                new_r *= -1/coef
+                self._add_zero(x,new_r, to_glue_out)
+            else:
+                (x,cx),(y,cy) = eq_pure
+                if x in self.cols or (y not in self.cols and
+                                      self._get_root_to_prop(x)[0] > self._get_root_to_prop(y)[0]):
+                    x,cx,y,cy = y,cy,x,cx
+                new_r *= -1/cx
+                self._add_proportion(x,y, new_r, to_glue_out)
+            return True, to_glue_out
+
+        self._elim_by_matrix(new_r)
         pivot_candidates = list(filter(
-            lambda x: not isinstance(x, EquationIndex), new_r,
+            lambda x: not isinstance(x, EquationIndex), new_r.keys(),
         ))
-        if not pivot_candidates: return False, () # Already known
+        if not pivot_candidates: return False, () # Already known equation
 
         # label equation
         eqi = EquationIndex(added)
         new_r[eqi] = Fraction(1)
 
         # select pivot
-        pivot = min(pivot_candidates, key = lambda x: len(self.cols[x]))
+        if len(pivot_candidates) == 2:
+            def cand_cost(cand):
+                return 3*len(self.cols[cand]) + self._get_root_to_prop(cand)[0]
+        else:
+            def cand_cost(cand):
+                return len(self.cols[cand])
+        pivot = min(pivot_candidates, key = cand_cost)
         new_r *= -1 / new_r[pivot]
-        self.rows[pivot] = new_r
 
-        glued = []
-        self._row_updated_value(new_r, pivot, glued)
-
+        to_glue_out = []
         cols_to_update = [
             (self.cols[x], x)
             for x in pivot_candidates
@@ -108,69 +93,76 @@ class ElimMatrix:
         for ri in self.cols[pivot]:
             row = self.rows[ri]
             coef = row[pivot]
-            value = self._row_to_value(row, ri)
-            if self.value_to_var[value] == ri:
-                del self.value_to_var[value]
+            self._deactivate_row(ri, row)
 
             row.iadd_coef(coef, new_r) # the essential command
 
-            self._row_updated_value(row, ri, glued)
-            for col, ci in cols_to_update:
-                if ci in row: col.add(ri)
-                else: col.discard(ri)
+            if self._activate_row(ri, row, to_glue_out):
+                # kept in matrix
+                for col, ci in cols_to_update:
+                    if ci in row: col.add(ri)
+                    else: col.discard(ri)
+            else:
+                # removed from matrix
+                for col, ci in cols_to_update:
+                    col.discard(ri)
 
-        self.cols[pivot] = { pivot }
-        #self.cols[pivot] = None
-        for col, ci in cols_to_update: col.add(pivot)
+        # add new row
+        self.rows[pivot] = new_r
+        if self._activate_row(pivot, new_r, to_glue_out):
+            # add new row to columns
+            self.cols[pivot] = { pivot }
+            for col, ci in cols_to_update: col.add(pivot)
 
-        return True, glued
+        return True, to_glue_out
 
-    def query(self, query_r): # return 0 = not derivable, (d > 0) = odvoditelné pomocí dělení d
-        query_r = SparseRow(query_r)
-        self.eliminate(query_r)
-        if not all(isinstance(key, EquationIndex) for key in query_r.keys()):
-            return 0
-        return self._least_denom(query_r)
+    def get_inverse(self, x):
+        r, eq_rx = self.proportional_to.get(x, (x, None))
+        if eq_rx is None:
+            ratio = Fraction(-1)
+            denom_x = 1
+        else:
+            ratio = -eq_rx[r]
+            denom_x = self._least_denom(eq_rx)            
+        r_dict = self._get_root_to_prop(r)[1]
+        y_list = r_dict.get(ratio, None)
+        if y_list is None: return None, 0
 
-    # helper functions
-    def eliminate(self, row): # in place elimination of a single row
-        updates = []
-        for var, coef in row.items():
-            update = self.rows.get(var)
-            if update is not None: updates.append((coef, update))
-        for coef, update in updates:
-            row.iadd_coef(coef, update)
+        y = y_list[0]
 
-    def _least_denom(self, row): # common denominator of the equation indices
-        res = 1
-        for key, val in row.items():
-            if not isinstance(key, EquationIndex): continue
-            denom = val.denominator
-            res = lcm(denom, res)
-        return res
+        # get denominator
+        _,eq_ry = self.proportional_to.get(y, (x, None))
+        if eq_ry is None: denom_y = 1
+        else: denom_y = self._least_denom(eq_ry)
 
-    def _row_to_value(self, row, pivot): # compute key for self.value_to_var
-        return frozenset(
-            (var, coef)
-            for (var, coef) in row.items()
-            if var != pivot and not isinstance(var, EquationIndex)
-        )
+        return y, lcm(denom_x, denom_y)
 
-    def _row_updated_value(self, row, ri, glued_list): # update value_to_var, or notice gluing
-        value = self._row_to_value(row, ri)
-        denom = self._least_denom(row)
-        dest = ri,denom
-        ri2,denom2 = self.value_to_var.setdefault(value, (ri,denom))
-        if ri2 is not ri:
-            glued_list.append((ri, ri2, lcm(denom, denom2)))
+    # debug functions
+    def print_self(self):
+        keys = set(self.cols.keys())
+        pivots = set(self.rows.keys())
+        print("Pivots:", pivots)
+        print("Variables:", keys)
+        print("------------")
+        keys = sorted(pivots)+sorted(keys-pivots)
+        print(' '.join("{:^7}".format(k) for k in keys))
+        for _,r in sorted(self.rows.items()):
+            print(' '.join("{:>3}/{:<3}".format(
+                r[k].numerator, r[k].denominator
+            ) if r[k] != 0 else 7*' ' for k in keys))
+        print(".....")
+        for x,(y,eq) in self.proportional_to.items():
+            print("  ({}) -> {}*({})".format(x, eq[y], y))
+        for x in self.zeroes.keys():
+            print("  ({}) -> 0".format(x))
+        print("------------")
 
-        if len(value) == 1:
-            (var2, coef), = value
-            if coef == 1: glued_list.append((ri, var2, denom))
-
-    def check_cols(self): # debug function, verification of internal consistency
+    def check_consistency(self): # debug function, verification of internal consistency
         ok = True
         for ri, r in self.rows.items():
+            if r[ri] != -1:
+                print("pivot {} has wrong coefficient in its row: {}".format(ri, r[ri]))
+                ok = False
             for ci in r.keys():
                 if isinstance(ci, EquationIndex): continue
                 if ri not in self.cols[ci]:
@@ -181,156 +173,177 @@ class ElimMatrix:
                 if ci not in self.rows[ri]:
                     print("[{}, {}] not in row".format(ri, ci))
                     ok = False
+        for x,eq in zeroes.items():
+            if eq[x] != -1:
+                print("zero {} has wrong coefficient: {}".format(ri, r[ri]))
+                ok = False
+            if any(y != x and not isinstance(y, EquationIndex) for y,_ in eq.items()):
+                print("other variables in zero equation {}: {}".format(x, eq))
+                ok = False
+        for x,(y,eq) in proportional_to.items():
+            if eq[x] != -1 or eq[y] == 0:
+                print("proportion {} -> {} has wrong coefficients: {}".format(x,y, r))
+                ok = False
+            if any(z != x and z != y and not isinstance(y, EquationIndex) for z,_ in eq.items()):
+                print("other variables in proportion equation {} -> {}: {}".format(x, y, eq))
+                ok = False
+
         return ok
 
-    def print_self(self):
-        keys = set(self.cols.keys())
-        pivots = set(self.rows.keys())
-        print(pivots)
-        print(keys)
-        keys = sorted(pivots)+sorted(keys-pivots)
-        print(' '.join("{:^7}".format(k) for k in keys))
-        for _,r in sorted(self.rows.items()):
-            print(' '.join("{:>3}/{:<3}".format(
-                r[k].numerator, r[k].denominator
-            ) if r[k] != 0 else 7*' ' for k in keys))
+    # helper functions
+    def _eliminate(self, row): # in place elimination of a single row
+        self._elim_by_proportions(row)
+        self._elim_by_matrix(row)
 
-class AngleChasing:
-    def __init__(self):
-        self.elim = ElimMatrix()
-        self.equal_to = dict() # var -> root, denominator
-        self.root_to_vars = dict() # root -> size, dict( frac_diff -> var_list )
-        self.value = dict() # var -> value
+    def _elim_by_proportions(self, row):
+        updates = []
+        for var, coef in row.items():
+            _,update = self.proportional_to.get(var, (None, None))
+            if update is None: update = self.zeroes.get(var)
+            if update is not None: updates.append((coef, update))
+        for coef, update in updates:
+            row += coef*update
+    def _elim_by_matrix(self, row):
+        updates = []
+        for var, coef in row.items():
+            update = self.rows.get(var)
+            if update is not None: updates.append((coef, update))
+        for coef, update in updates:
+            row += coef*update        
+            
+    def _least_denom(self, row): # common denominator of the equation indices
+        res = 1
+        for key, coef in row.items():
+            if not isinstance(key, EquationIndex): continue
+            denom = coef.denominator
+            res *= denom // gcd(res, denom)
+        return res
 
-    def add_var(self, var, value):
-        #print("    angles.add_var({}, {})".format(var, value))
-        self.value[var] = value
-        self.equal_to[var] = var, 1
-        self.root_to_vars[var] = 1, { Fraction(0) : [var] }
+    def _add_zero(self, x, eq, to_glue_out):
+        if self.zeroes:
+            y,eq2 = next(iter(self.zeroes.items()))
+            denom = lcm(self._least_denom(eq),self._least_denom(eq2))
+            to_glue_out.append((x,y, denom))
+        self.zeroes[x] = eq
 
-    def query(self, equation, frac_offset):
-        #print("    print(angles.query(SparseRow({}), Fraction({})))".format(
-        #    equation, frac_offset
-        #))
-        denom = self.elim.query(equation)
-        if denom == 0 or denom % frac_offset.denominator != 0: return False
+    def _get_root_to_prop(self, x):
+        res = self.root_to_proportions.get(x, None)
+        if res is None:
+            res = 1, {Fraction(1) : [x]}
+            self.root_to_proportions[x] = res
+        return res
 
-        return self.num_check(equation, frac_offset)
+    def _add_proportion(self, x, y, eq_yx, to_glue_out):
+        # get data
+        x_size, x_dict = self._get_root_to_prop(x)
+        y_size, y_dict = self._get_root_to_prop(y)
 
-    def num_check(self, equation, frac_offset):
-        num_val = 0
-        for v,coef in equation.items():
-            if isinstance(v, EquationIndex): continue
-            assert(coef.denominator == 1)
-            num_val += self.value[v] * coef.numerator
+        ratio_yx = eq_yx[y]
+        denom_yx = self._least_denom(eq_yx)
+        for ratio_xz, z_list in x_dict.items():
+            ratio_yz = ratio_xz*ratio_yx
 
-        num_val += float(frac_offset)
-        num_val = (num_val+0.5) % 1 - 0.5
-        return eps_identical(num_val, 0)
+            # update proportional_to
+            for z in z_list:
+                if z == x: eq_yz = eq_yx
+                else:
+                    # x,eq2 ==
+                    _,eq_xz = self.proportional_to[z]
+                    # eq_yz = eq_xz + ratio_xz * eq_yx
+                    eq_xz.iadd_coef(ratio_xz, eq_yx)
+                    eq_yz = eq_xz
+                self.proportional_to[z] = y, eq_yz
 
-    def has_exact_difference(self, a, b):
-        return self.equal_to[a][0] == self.equal_to[b][0]
+            # update y_dict
+            zz_list = y_dict.setdefault(ratio_yz, z_list)
+            if zz_list is not z_list:
+                z = z_list[0]
+                zz = zz_list[0]
+                zz_list.extend(z_list)
 
-    def postulate(self, equation, frac_offset):
-        #print("    angles.postulate(SparseRow({}), Fraction({}))".format(
-        #    equation, frac_offset
-        #))
-        #assert(self.num_check(equation, frac_offset))
-        denom = frac_offset.denominator
-        if denom > 1: equation *= denom
-        changed, to_glue = self.elim.add(equation)
-        to_glue_out = []
-        for x,y,denom in to_glue:
-            #print("{} == {} (mod 1/{})".format(x,y,denom))
-            x,denom2 = self.equal_to[x]
-            denom = lcm(denom, denom2)
-            y,denom2 = self.equal_to[y]
-            denom = lcm(denom, denom2)
-            if x == y: continue
+                # get the denominator of the equation stating z == zz
+                if z == x: denom_xz = 1
+                else:
+                    _, eq_xz = self.proportional_to[z]
+                    denom_xz = self._least_denom(eq_xz)
+                if zz == y: denom_yzz = 1
+                else:
+                    _, eq_yzz = self.proportional_to[zz]
+                    denom_yzz = self._least_denom(eq_yzz)
+                denom = lcm(denom_xz, denom_yzz, ratio_yz.denominator * denom_yx)
 
-            x_size, x_dict = self.root_to_vars[x]
-            y_size, y_dict = self.root_to_vars[y]
-            if y_size > x_size:
+                # update to_glue
+                to_glue_out.append((z, zz, denom))
+
+        self.root_to_proportions[y] = x_size+y_size, y_dict
+        del self.root_to_proportions[x]
+
+    def _row_valkey(self, pivot, row):
+        relevant_items = tuple(
+            (x,coef) for (x,coef) in row.items()
+            if not isinstance(x, EquationIndex) and x != pivot
+        )
+        if not relevant_items: return ()
+        _,coef0 = min(relevant_items)
+        return frozenset((x, coef/coef0) for (x,coef) in relevant_items)
+
+    # remove from self.rows and self.cols
+    def _remove_row(self, pivot, row):
+        del self.rows[pivot]
+        for x,coef in row.items():
+            if not isinstance(x, EquationIndex):
+                self.cols[x].discard(pivot)
+
+    # updates only self.value_to_var, not self.rows nor solf.cols
+    def _deactivate_row(self, pivot, row):
+        valkey = self._row_valkey(pivot, row)
+        del self.value_to_var[valkey]
+
+    def _activate_row(self, x, row, to_glue_out):
+        valkey = self._row_valkey(x, row)
+        if len(valkey) <= 1:
+            if len(valkey) == 0:
+                self._add_zero(x, row, to_glue_out)
+            else:
+                (y,_), = valkey
+                self._add_proportion(x, y, row, to_glue_out)
+            self._remove_row(x, row)
+            return False
+        else:
+            y = self.value_to_var.setdefault(valkey, x)
+            if y is x: return True
+
+            # x and y are proportional
+
+            # swap if more efficient
+            cost_x, _ = self._get_root_to_prop(x)
+            cost_y, _ = self._get_root_to_prop(y)
+            if cost_x > cost_y:
                 x,y = y,x
-                x_dict,y_dict = y_dict,x_dict
-                x_size,y_size = y_size,x_size
+                eq_x = self.rows[x]
+                eq_y = row
+                preserve_x = True
+            else:
+                eq_x = row
+                eq_y = self.rows[y]
+                preserve_x = False
 
-            # find fractional difference between x,y
+            # get equation stating x = coef*y
+            z,_ = next(iter(valkey))
+            eq = eq_x + eq_y * (-eq_y[z] / eq_x[z])
 
-            numer_f = (self.value[y] - self.value[x]) * denom + 0.5
-            numer = int(floor(numer_f)) % denom
-            numer_f = numer_f % denom - 0.5
-            assert(eps_identical(numer, numer_f))
-            frac_dist = Fraction(numer, denom)
+            # add as a proportion, remove from matrix
+            self._add_proportion(x, y, eq, to_glue_out)
+            self._remove_row(x, eq_x)
 
-            # add y_dict to x_dict, calculate to_glue_out
-
-            for fd2, y_var_list in y_dict.items():
-                fd_sum = (fd2 + frac_dist)%1
-                for y_var in y_var_list: self.equal_to[y_var] = x, fd_sum.denominator
-                x_var_list = x_dict.setdefault(fd_sum, y_var_list)
-                if x_var_list is not y_var_list:
-                    to_glue_out.append((x_var_list[0], y_var_list[0]))
-                    x_var_list.extend(y_var_list)
-
-            del self.root_to_vars[y]
-            self.root_to_vars[x] = (x_size + y_size), x_dict
-
-        return to_glue_out
+            return preserve_x
 
 if __name__ == "__main__":
 
-    angles = AngleChasing()
+    elim = ElimMatrix()
 
-    angles.add_var(36, -1.5921653169057746)
-    angles.add_var(39, -0.02136899011087801)
-    angles.add_var(83, 1.5494273366840186)
-    angles.add_var(86, 3.120223663478915)
-    angles.add_var(89, -1.1510110184045386)
-    angles.add_var(92, 0.419785308390358)
-    angles.add_var(95, -2.7285459835681265)
-    angles.add_var(133, 2.700438355088557)
-    angles.add_var(168, 1.55616597505271)
-    angles.add_var(172, 1.136380666662352)
-    angles.add_var(173, -0.7165953582719934)
-    angles.add_var(174, 1.1363806666623515)
-    angles.add_var(201, -1.577534965163588)
-    angles.add_var(206, 1.136380666662352)
-    angles.add_var(210, -2.721807345199435)
-    angles.add_var(211, 1.9838429968165634)
-    angles.add_var(212, -4.705650342015998)
-    angles.add_var(216, 4.2712346818834535)
-    angles.add_var(218, 1.5494273366840186)
-    angles.add_var(219, 4.2712346818834535)
-    angles.add_var(228, 5.84203100867835)
-    angles.add_var(232, -5.848769647047042)
-    angles.add_var(233, -5.848769647047042)
-    angles.add_var(239, 1.1363806666623517)
-    angles.add_var(241, -0.021368990110935782)
-    angles.add_var(242, -2.0052119869274994)
-    angles.add_var(244, -4.2712346818834535)
-    angles.add_var(272, 3.120223663478915)
-    angles.add_var(274, 3.120223663478915)
-
-    angles.postulate(SparseRow({83: Fraction(1, 1), 89: Fraction(-1, 1), 133: Fraction(-1, 1)}), Fraction(0))
-    angles.postulate(SparseRow({168: Fraction(1, 1), 92: Fraction(-1, 1), 172: Fraction(-1, 1)}), Fraction(0))
-    angles.postulate(SparseRow({92: Fraction(1, 1), 173: Fraction(-1, 1), 174: Fraction(-1, 1)}), Fraction(0))
-    angles.postulate(SparseRow({172: Fraction(-1, 1), 174: Fraction(1, 1)}), Fraction(0))
-    angles.postulate(SparseRow({95: Fraction(1, 1), 89: Fraction(-1, 1), 201: Fraction(-1, 1)}), Fraction(0))
-    angles.postulate(SparseRow({36: Fraction(1, 1), 95: Fraction(-1, 1), 206: Fraction(-1, 1)}), Fraction(0))
-    angles.postulate(SparseRow({83: Fraction(-1, 1), 36: Fraction(1, 1)}), Fraction(0))
-    angles.postulate(SparseRow({86: Fraction(-1, 1), 39: Fraction(1, 1)}), Fraction(0))
-    angles.postulate(SparseRow({210: Fraction(1, 1), 211: Fraction(-1, 1), 212: Fraction(-1, 1)}), Fraction(0))
-    angles.postulate(SparseRow({218: Fraction(1, 1), 210: Fraction(-1, 1), 219: Fraction(-1, 1)}), Fraction(0))
-    angles.postulate(SparseRow({216: Fraction(-1, 1), 219: Fraction(1, 1)}), Fraction(0))
-    angles.postulate(SparseRow({83: Fraction(-1, 1), 218: Fraction(1, 1)}), Fraction(0))
-    angles.postulate(SparseRow({86: Fraction(1, 1), 210: Fraction(-1, 1), 228: Fraction(-1, 1)}), Fraction(0))
-    angles.postulate(SparseRow({95: Fraction(1, 1), 86: Fraction(-1, 1), 233: Fraction(-1, 1)}), Fraction(0))
-    angles.postulate(SparseRow({232: Fraction(-1, 1), 233: Fraction(1, 1)}), Fraction(0))
-    angles.postulate(SparseRow({241: Fraction(1, 1), 211: Fraction(-1, 1), 242: Fraction(-1, 1)}), Fraction(0))
-    angles.postulate(SparseRow({239: Fraction(-1, 1), 242: Fraction(1, 1)}), Fraction(0))
-    angles.postulate(SparseRow({86: Fraction(-1, 1), 241: Fraction(1, 1)}), Fraction(0))
-    angles.postulate(SparseRow({89: Fraction(1, 1), 86: Fraction(-1, 1), 244: Fraction(-1, 1)}), Fraction(0))
-    angles.postulate(SparseRow({83: Fraction(1, 1), 272: Fraction(-1, 1)}), Fraction(1/2))
-    angles.postulate(SparseRow({86: Fraction(-1, 1), 272: Fraction(1, 1)}), Fraction(0))
-    angles.postulate(SparseRow({86: Fraction(-1, 1), 274: Fraction(1, 1)}), Fraction(0))
+    elim.add(SparseRow({'A': Fraction(3, 2), 'B': Fraction(-1, 1)}))
+    elim.add(SparseRow({'C': Fraction(3, 2), 'D': Fraction(-1, 1)}))
+    elim.add(SparseRow({'A': Fraction(1, 1), 'C': Fraction(1, 1)}))
+    print(elim.get_inverse('D'))
+    #print(elim.proportional_to)

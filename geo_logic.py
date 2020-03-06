@@ -86,7 +86,7 @@ class GeoLogic(Gtk.Window):
         def update_progress_bar_idle(done, size):
             GLib.idle_add(update_progress_bar, done, size)
         proof_checker.paralelize(progress_hook = update_progress_bar_idle)
-
+        
         self.progress_bar = Gtk.ProgressBar(show_text=False)
         vbox.pack_end(self.progress_bar, False, False, 0)
 
