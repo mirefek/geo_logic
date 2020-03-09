@@ -116,6 +116,7 @@ class GeoLogic(Gtk.Window):
     def restart(self):
         print("RESTART")
         self.default_fname = None
+        self.viewport.reset_tool()
         self.env.set_steps((), ())
         self.viewport.reset_zoom()
         self.reset_view()
@@ -140,6 +141,7 @@ class GeoLogic(Gtk.Window):
         Gtk.main_quit()
 
     def load_file(self, fname):
+        self.viewport.reset_tool()
         if fname is None: return
         self.default_fname = fname
         parser = Parser(self.imported_tools.tool_dict)

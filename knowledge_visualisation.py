@@ -980,7 +980,8 @@ class KnowledgeVisualisation:
                     if self.is_selectable(obj):
                         selectable.append((
                             li_to_select[obj],
-                            num_data.num_obj
+                            #num_data.num_obj,
+                            self.li_to_num(obj),
                         ))
                 else: extra.append(exported)
 

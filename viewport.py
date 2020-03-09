@@ -92,6 +92,9 @@ class Viewport:
             cursor = self.gtool.get_cursor()
         self.set_cursor(cursor)
 
+    def reset_tool(self):
+        self.gtool.reset()
+
     def set_tool(self, gtool):
         if self.gtool is not None: self.gtool.leave()
         if gtool is not None:
@@ -198,11 +201,10 @@ class Viewport:
             coor = obj.c + vector_of_direction(direction) * (obj.r + offset / self.scale)
         elif isinstance(obj, Line):
             pos, offset = position
-            endpoints = self.get_line_endpoints(obj)
+            endpoints = self.get_line_endpoints_ordered(obj)
             if endpoints is None: return
-            e1,e2 = endpoints
-            if e1[0] > e2[0]: e1, e2 = e2, e1
-            coor = (1-pos)*e1 + pos*e2 + obj.n*offset/self.scale
+            v,n,c,e1,e2 = endpoints
+            coor = (1-pos)*e1 + pos*e2 + n*offset/self.scale
         cr.translate(*coor)
         cr.scale(1 / self.scale, 1 / self.scale)
 
@@ -273,13 +275,18 @@ class Viewport:
 
         if endpoints[0] is None or endpoints[1] is None: return None
         return endpoints
-
-    def draw_parallel(self, cr, l, lev):
+    def get_line_endpoints_ordered(self, l):
         endpoints = self.get_line_endpoints(l)
-        if endpoints is None: return
+        if endpoints is None: return None
         e1,e2 = endpoints
         if e1[0] > e2[0]: e1, e2 = e2, e1
-        v, n = l.v, l.n
+        if np.dot(e2-e1, l.v) >= 0: return l.v, l.n, l.c, e1, e2
+        else: return -l.v, -l.n, -l.c, e1, e2
+
+    def draw_parallel(self, cr, l, lev):
+        endpoints = self.get_line_endpoints_ordered(l)
+        if endpoints is None: return
+        v,n,c,e1,e2 = endpoints
         if np.dot(e2-e1, v) < 0:
             v,n = -v,-n
         center = e2 - v * (70 / self.scale)

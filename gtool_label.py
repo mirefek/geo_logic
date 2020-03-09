@@ -37,12 +37,14 @@ class GToolLabel(GTool):
         self.vis.visible_export()
 
     def label_activate(self, obj, objn, coor = None):
+        print("activate")
         if self.obj_edit is not None and obj == self.obj_edit:
             self.on_reset()
             return
         self.on_reset()
 
         self.vis.gi_label_show[obj] = False
+        self.vis.view_changed = True
         self.no_cancel = True
         self.label_edit = [
             None, self.env.gi_to_name[obj],
@@ -58,7 +60,7 @@ class GToolLabel(GTool):
                 direction = vector_direction(coor - objn.c)
                 position = direction, offset
                 self.vis.gi_label_position[obj] = position
-                
+
         self.viewport.edited_label = [
             self.env.gi_to_name[obj], objn,
             position,
@@ -167,13 +169,12 @@ class GToolLabel(GTool):
             offset = np.clip(offset, -max_offset, max_offset)
             pos = direction, offset
         elif isinstance(objn, Line):
-            endpoints = self.viewport.get_line_endpoints(objn)
+            endpoints = self.viewport.get_line_endpoints_ordered(objn)
             if endpoints is None: return
-            e1,e2 = endpoints
-            if e1[0] > e2[0]: e1, e2 = e2, e1
-            p1, p, p2 = (np.dot(e, objn.v) for e in (e1, coor, e2))
+            v,n,c,e1,e2 = endpoints
+            p1, p, p2 = (np.dot(e, v) for e in (e1, coor, e2))
             line_pos = np.clip((p-p1) / (p2-p1), 0.05, 0.95)
-            offset = np.dot(objn.n, coor) - objn.c
+            offset = np.dot(n, coor) - c
             offset = np.clip(offset, -max_offset, max_offset)
             pos = line_pos, offset
         else: raise Exception("Unexpected type {}".format(type(objn)))
