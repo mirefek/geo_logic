@@ -28,6 +28,7 @@ from logic_model import LogicModel
 class GeoLogic(Gtk.Window):
 
     def __init__(self):
+        super(GeoLogic, self).__init__()
 
         self.imported_tools = load_tools("macros.gl")
         self.env = GraphicalEnv(self.imported_tools)
@@ -57,7 +58,6 @@ class GeoLogic(Gtk.Window):
             for gtool in gtools
         )
 
-        super(GeoLogic, self).__init__()
         vbox = Gtk.VBox()
         self.add(vbox)
 
@@ -100,8 +100,15 @@ class GeoLogic(Gtk.Window):
 
         self.show_all()
 
-        self.default_fname = None
+        self.update_title(None)
 
+    def update_title(self, fname):
+        self.default_fname = fname
+        title = "GeoLogic"
+        if fname is not None:
+            title = "{} -- {}".format(title, fname.split('/')[-1])
+        self.set_title(title)
+        
     def reset_view(self):
         if self.vis.view_changed:
             self.viewport.gtool.reset()
@@ -115,7 +122,7 @@ class GeoLogic(Gtk.Window):
         self.reset_view()
     def restart(self):
         print("RESTART")
-        self.default_fname = None
+        self.update_title(None)
         self.viewport.reset_tool()
         self.env.set_steps((), ())
         self.viewport.reset_zoom()
@@ -143,7 +150,7 @@ class GeoLogic(Gtk.Window):
     def load_file(self, fname):
         self.viewport.reset_tool()
         if fname is None: return
-        self.default_fname = fname
+        self.update_title(fname)
         parser = Parser(self.imported_tools.tool_dict)
         parser.parse_file(fname, axioms = True)
         loaded_tool = parser.tool_dict['_', ()]
@@ -174,7 +181,7 @@ class GeoLogic(Gtk.Window):
     def save_file(self, fname):
         if fname is None: return
         print("saving to '{}'".format(fname))
-        self.default_fname = fname
+        self.update_title(fname)
         with open(fname, 'w') as f:
             visible = [
                 "{}:{}".format(

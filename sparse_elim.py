@@ -38,6 +38,8 @@ class ElimMatrix:
     #        with StopWatch("Add"):
     #            return self._add(added)
     def add(self, added):
+        #assert(self.check_consistency())
+        #print("elim.add({})".format(added))
         new_r = SparseRow(added)
         self._elim_by_proportions(new_r)
         eq_pure = [
@@ -90,7 +92,8 @@ class ElimMatrix:
         ]
 
         # update matrix, compute glued
-        for ri in self.cols[pivot]:
+        col = set(self.cols[pivot])
+        for ri in col:
             row = self.rows[ri]
             coef = row[pivot]
             self._deactivate_row(ri, row)
@@ -113,6 +116,8 @@ class ElimMatrix:
             # add new row to columns
             self.cols[pivot] = { pivot }
             for col, ci in cols_to_update: col.add(pivot)
+        else:
+            if pivot in self.cols: del self.cols[pivot]
 
         return True, to_glue_out
 
@@ -170,21 +175,21 @@ class ElimMatrix:
                     ok = False
         for ci, col in self.cols.items():
             for ri in col:
-                if ci not in self.rows[ri]:
+                if ri not in self.rows or ci not in self.rows[ri]:
                     print("[{}, {}] not in row".format(ri, ci))
                     ok = False
-        for x,eq in zeroes.items():
+        for x,eq in self.zeroes.items():
             if eq[x] != -1:
                 print("zero {} has wrong coefficient: {}".format(ri, r[ri]))
                 ok = False
-            if any(y != x and not isinstance(y, EquationIndex) for y,_ in eq.items()):
+            if any(y != x and not isinstance(y, EquationIndex) for y in eq.keys()):
                 print("other variables in zero equation {}: {}".format(x, eq))
                 ok = False
-        for x,(y,eq) in proportional_to.items():
+        for x,(y,eq) in self.proportional_to.items():
             if eq[x] != -1 or eq[y] == 0:
                 print("proportion {} -> {} has wrong coefficients: {}".format(x,y, r))
                 ok = False
-            if any(z != x and z != y and not isinstance(y, EquationIndex) for z,_ in eq.items()):
+            if any(z != x and z != y and not isinstance(z, EquationIndex) for z in eq.keys()):
                 print("other variables in proportion equation {} -> {}: {}".format(x, y, eq))
                 ok = False
 
@@ -234,6 +239,8 @@ class ElimMatrix:
         return res
 
     def _add_proportion(self, x, y, eq_yx, to_glue_out):
+        if 22 in eq_yx and 13 in eq_yx and 26 in eq_yx:
+            raise Exception()
         # get data
         x_size, x_dict = self._get_root_to_prop(x)
         y_size, y_dict = self._get_root_to_prop(y)
@@ -330,7 +337,7 @@ class ElimMatrix:
 
             # get equation stating x = coef*y
             z,_ = next(iter(valkey))
-            eq = eq_x + eq_y * (-eq_y[z] / eq_x[z])
+            eq = eq_x + eq_y * (-eq_x[z] / eq_y[z])
 
             # add as a proportion, remove from matrix
             self._add_proportion(x, y, eq, to_glue_out)
@@ -342,8 +349,25 @@ if __name__ == "__main__":
 
     elim = ElimMatrix()
 
-    elim.add(SparseRow({'A': Fraction(3, 2), 'B': Fraction(-1, 1)}))
-    elim.add(SparseRow({'C': Fraction(3, 2), 'D': Fraction(-1, 1)}))
-    elim.add(SparseRow({'A': Fraction(1, 1), 'C': Fraction(1, 1)}))
-    print(elim.get_inverse('D'))
+    #elim.add(SparseRow({'A': Fraction(3, 2), 'B': Fraction(-1, 1)}))
+    #elim.add(SparseRow({'C': Fraction(3, 2), 'D': Fraction(-1, 1)}))
+    #elim.add(SparseRow({'A': Fraction(1, 1), 'C': Fraction(1, 1)}))
+    #print(elim.get_inverse('D'))
     #print(elim.proportional_to)
+
+    elim.add({0: Fraction(1, 1)})
+    elim.add({6: Fraction(2, 1), 8: Fraction(-1, 1)})
+    elim.add({6: Fraction(4, 1), 10: Fraction(-4, 1)})
+    elim.add({10: Fraction(2, 1), 13: Fraction(-1, 1)})
+    elim.add({9: Fraction(-1, 1), 14: Fraction(1, 1)})
+    elim.add({15: Fraction(2, 1), 17: Fraction(-1, 1)})
+    elim.add({18: Fraction(2, 1), 13: Fraction(-1, 1)})
+    elim.add({10: Fraction(-1, 1), 18: Fraction(1, 1)})
+    elim.add({15: Fraction(-1, 1), 18: Fraction(1, 1), 19: Fraction(-1, 1)})
+    elim.add({20: Fraction(2, 1), 22: Fraction(-1, 1)})
+    elim.add({10: Fraction(-1, 1), 20: Fraction(1, 1), 23: Fraction(-1, 1)})
+    elim.add({19: Fraction(-1, 1), 23: Fraction(1, 1)})
+    elim.add({9: Fraction(-1, 1), 24: Fraction(1, 1)})
+    elim.add({9: Fraction(-1, 1), 25: Fraction(1, 1)})
+    elim.add({22: Fraction(-1, 1), 13: Fraction(1, 1), 26: Fraction(-1, 1)})
+    elim.check_consistency()
