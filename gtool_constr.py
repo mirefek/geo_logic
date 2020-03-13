@@ -223,10 +223,11 @@ class ComboPoint(GToolConstr):
                 return
 
         cl2,cln2 = self.select_cl(coor)
-        if cl2 is None and isinstance(cln1, Circle):
-            if np.linalg.norm(coor - cln1.c) < cln1.r:
-                self.hl_propose(Point(cln1.c))
-                self.confirm = self.run_tool, "center_of", cl1
+        if cl2 is None:
+            if isinstance(cln1, Circle) and \
+               np.linalg.norm(coor - cln1.c) < cln1.r:
+                    self.hl_propose(Point(cln1.c))
+                    self.confirm = self.run_tool, "center_of", cl1
             return
         if cl2 == cl1: return
 
