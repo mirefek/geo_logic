@@ -25,6 +25,7 @@ class GToolLabel(GTool):
             else: self.confirm = self.label_hide, obj
             self.drag = self.label_drag, obj, objn, prev_hidden
 
+    # mouse movement with edited label (with cursor)
     def update_edited(self, coor):
         self.confirm = self.confirm_edit
         obj = self.obj_edit
@@ -36,8 +37,8 @@ class GToolLabel(GTool):
         self.vis.gi_label_show[obj] = False
         self.vis.visible_export()
 
+    # unhide and select, capture keyboard for editing the current label
     def label_activate(self, obj, objn, coor = None):
-        print("activate")
         if self.obj_edit is not None and obj == self.obj_edit:
             self.on_reset()
             return
@@ -70,6 +71,8 @@ class GToolLabel(GTool):
         #self.vis.gi_label_show[obj] = not self.vis.gi_label_show[obj]
         self.viewport.darea.queue_draw()
 
+    ## Properties active during editing -- cursor position and the current text
+        
     @property
     def cursor(self):
         return self.label_edit[0]
@@ -84,6 +87,7 @@ class GToolLabel(GTool):
     def new_text(self, value):
         self.label_edit[1] = value
 
+    # when starting writing, or moving cursor
     def edit_start(self):
         self.update = self.update_edited
 
@@ -92,6 +96,7 @@ class GToolLabel(GTool):
         self._hl_load()
         self._hl_update()
 
+    # key event handler
     def on_key_edit(self, e):
         keyval = e.keyval
         keyval_name = Gdk.keyval_name(keyval)

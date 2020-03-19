@@ -7,6 +7,8 @@ Tool for euclidean geometry aware of logic
 + Python3
 + pyGtk3
 
+For studying the source code, start [here](technical_doc.txt).
+
 ## Data types
 
 GeoLogic can handle five types of objects: Point (P), Line (L), Circle

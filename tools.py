@@ -2,6 +2,9 @@ from fractions import Fraction
 from sparse_row import SparseRow
 from stop_watch import StopWatch
 
+### Tool Exceptions
+# used for tracing failed tools
+
 class ToolError(Exception):
     def __init__(self, *args, **kwargs):
         self.tool_traceback = []
@@ -26,35 +29,27 @@ class ToolErrorException(ToolError):
         ToolError.__init__(self, "Python exception occured")
         self.e = e
 
-class Tool:
-    def __init__(self, meta_types, arg_types, out_types, name):
-        self.meta_types = meta_types
-        self.arg_types = arg_types
-        self.out_types = out_types
-        self.name = name
+### Tools
 
+class Tool:
+    def __init__(self, hyper_types, arg_types, out_types, name):
+        self.hyper_types = hyper_types # types of hyperparameter, can be None
+        self.arg_types = arg_types # geometrical types of arguments, can be None
+        self.out_types = out_types # types of output
+        self.name = name # string, can be none
+
+    # if possible, add the tool to a dictionary of the form:
+    # (name, input_types_or_none) -> tool
     def add_to_dict(self, d):
         if self.name is None: return
-        if self.meta_types is None or self.arg_types is None: in_types = None
-        else: in_types = self.meta_types+self.arg_types
+        if self.hyper_types is None or self.arg_types is None: in_types = None
+        else: in_types = self.hyper_types+self.arg_types
         key = self.name, in_types
         assert(key not in d)
         d[key] = self
-    #def run(self, meta_args, obj_args, model, strictness):
-        # strictness: 0 = postulate, 1 = benevolent to coexact, 2 = everything must be proved
 
-        #if self.meta_types is not None:
-        #    assert(len(meta_args) == len(self.meta_types))
-        #    for x,t in zip(meta_args, self.meta_types): assert(isinstance(x, t))
-        #if self.obj_types is not None:
-        #    assert(len(obj_args) == len(self.obj_types))
-        #    for x,t in zip(obj_args, self.obj_types): assert(model.obj_types[x] == t)
-        #result = self.run_type_checked(meta_args, obj_types)
-        #assert(len(result) == len(self.out_types))
-        #for x,t in zip(result, self.out_types): assert(model.obj_types[x] == t)
-        #return result
-
-    def run(self, meta_args, obj_args, model, strictness):
+    def run(self, hyper_params, obj_args, logic, strictness):
+        # strictness: 0 = postulate, 1 = check
         raise Exception("Not implemented")
 
 class EqualObjects(Tool):
@@ -62,25 +57,25 @@ class EqualObjects(Tool):
         self.willingness = willingness
         Tool.__init__(self, (), None, (), name)
 
-    def run(self, meta_args, obj_args, model, strictness):
-        assert(len(meta_args) == 0)
+    def run(self, hyper_params, obj_args, logic, strictness):
+        assert(len(hyper_params) == 0)
         a,b = obj_args
-        if not (model.num_model[a] == model.num_model[b]):
+        if not logic.num_model[a].identical_to(logic.num_model[b]):
             raise ToolErrorNum()
         elif strictness <= self.willingness: # postulate
-            model.glue(a,b)
+            logic.glue(a,b)
             return ()
         else: # check
-            if model.check_equal(a,b): return ()
+            if logic.check_equal(a,b): return ()
             else:
                 print('not provably equal', a, b)
                 raise ToolErrorLog()
 
-class CachedTool(Tool):
+class MemoizedTool(Tool):
     def __init__(self, arg_types, out_types, name):
         Tool.__init__(self, (), arg_types, out_types, name)
         self.symmetries = []
-    def add_symmetry(self, perm):
+    def add_symmetry(self, perm): # for storing symmetrical inputs to the lookup table
         perm = tuple(perm)
         assert(set(perm) == set(range(len(perm)))) # check permutation
         assert(len(perm) == len(self.arg_types)) # check size
@@ -90,95 +85,91 @@ class CachedTool(Tool):
 
         self.symmetries.append(perm)
         
-    def get_cache(self, args, model):
-        return model.get_constr(self, args)
-    def set_cache(self, args, model, vals):
-        model.add_constr(self, args, vals)
+    def memoize(self, args, logic, vals):
+        logic.add_constr(self, args, vals)
         for perm in self.symmetries:
             perm_args = tuple(args[i] for i in perm)
-            model.add_constr(self, perm_args, vals)
+            logic.add_constr(self, perm_args, vals)
 
-    def run(self, meta_args, obj_args, model, strictness):
-        # strictness: 0 = postulate, 1 = benevolent to coexact, 2 = everything must be proved
+    def run(self, hyper_params, obj_args, logic, strictness):
 
-        cached = self.get_cache(obj_args, model)
-        if cached is not None: return cached
-        result = self.run_no_cache(obj_args, model, strictness)
-        self.set_cache(obj_args, model, result)
+        memoized = logic.get_constr(self, obj_args)
+        if memoized is not None: return memoized
+        result = self.run_no_mem(obj_args, logic, strictness)
+        self.memoize(obj_args, logic, result)
 
         return result
 
-    def run_no_cache(self, args):
+    def run_no_mem(self, args):
         raise Exception("Not implemented")
 
-class PrimitivePred(CachedTool):
+class PrimitivePred(MemoizedTool):
     def __init__(self, num_check, arg_types, name, willingness = 0):
-        CachedTool.__init__(self, arg_types, (), name)
+        MemoizedTool.__init__(self, arg_types, (), name)
+        # willingness: 0 = exact predicate, 1 = coexact
         self.willingness = willingness
         self.num_check = num_check
 
-    def run_no_cache(self, args, model, strictness):
-        num_args = tuple(model.num_model[arg] for arg in args)
+    def run_no_mem(self, args, logic, strictness):
+        num_args = tuple(logic.num_model[arg] for arg in args)
         if not self.num_check(*num_args): raise ToolErrorNum()
         elif strictness > self.willingness: raise ToolErrorLog()
         else: return ()
 
-# almost the same as movable tool, just with cache
-class PrimitiveConstr(CachedTool):
+class PrimitiveConstr(MemoizedTool):
     def __init__(self, num_eval, arg_types, out_types, name):
-        CachedTool.__init__(self, arg_types, out_types, name)
+        MemoizedTool.__init__(self, arg_types, out_types, name)
         self.num_eval = num_eval
 
-    def run_no_cache(self, args, model, strictness):
+    def run_no_mem(self, args, logic, strictness):
         if strictness > 0:
             raise ToolError("Primitive construction cannot be run in check-mode")
-        num_args = (model.num_model[arg] for arg in args)
+        num_args = (logic.num_model[arg] for arg in args)
         num_outs = self.num_eval(*num_args)
         if len(self.out_types) == 1 and not isinstance(num_outs, (list, tuple)):
             num_outs = num_outs,
         assert(len(num_outs) == len(self.out_types))
-        return model.add_objs(num_outs)
+        return logic.add_objs(num_outs)
 
+# class for construction tools angle_compute and ratio_compute
 class DimCompute(Tool):
     def __init__(self, obj_type, num_comp, postulate, name):
         Tool.__init__(self, None, None, (obj_type,), name)
-        self.obj_type = obj_type
-        self.num_comp = num_comp
-        self.postulate = postulate
-    def run(self, meta_args, args, model, strictness):
-        coefs = meta_args[1:]
+        self.obj_type = obj_type # Angle / Ratio
+        self.num_comp = num_comp # function for final construction
+        self.postulate = postulate # function interacting with the logical core
+    def run(self, hyper_params, args, logic, strictness):
+        coefs = hyper_params[1:]
         assert(len(coefs) == len(args))
 
-        frac_const = meta_args[0]
-        obj_sum = sum(model.num_model[arg].data*float(coef)
+        frac_const = hyper_params[0]
+        obj_sum = sum(logic.num_model[arg].data*float(coef)
                       for coef, arg in zip(coefs, args))
         new_obj_num = self.num_comp(obj_sum, frac_const)
-        #new_obj_num = self.const_num(float(frac_const))
-        #for coef, arg in zip(coefs, args):
-        #    new_obj_num += model.num_model[arg].data*float(coef)
-        new_obj = model.add_obj(self.obj_type(new_obj_num))
+        new_obj = logic.add_obj(self.obj_type(new_obj_num))
 
         equation = SparseRow(zip(args, coefs))
         equation[new_obj] = Fraction(-1)
         assert(all(isinstance(x, Fraction) for x in equation.values()))
-        self.postulate(model, equation, frac_const)
+        self.postulate(logic, equation, frac_const)
 
         return (new_obj,)
 
+# class for predicate tools angle_pred and ratio_pred
 class DimPred(Tool):
     def __init__(self, obj_type, num_check, postulate, check, name,
                  willingness = 0):
-        self.obj_type = obj_type
+        self.obj_type = obj_type   # Angle / Ratio
         self.num_check = num_check
         self.postulate = postulate
         self.check = check
         self.willingness = willingness
         Tool.__init__(self, None, None, (), name)
-    def run(self, meta_args, args, model, strictness):
-        coefs = meta_args[1:]
+    def run(self, hyper_params, args, logic, strictness):
+        coefs = hyper_params[1:]
         assert(len(coefs) == len(args))
-        frac_const = meta_args[0]
-        obj_sum = sum(model.num_model[arg].data*float(coef)
+        frac_const = hyper_params[0]
+        obj_sum = sum(logic.num_model[arg].data*float(coef)
                       for coef, arg in zip(coefs, args))
         if not self.num_check(obj_sum, frac_const):
             raise ToolErrorNum()
@@ -186,8 +177,8 @@ class DimPred(Tool):
         equation = SparseRow(zip(args, coefs))
 
         if strictness <= self.willingness:
-            self.postulate(model, equation, frac_const)
+            self.postulate(logic, equation, frac_const)
             return ()
-        elif self.check(model, equation, frac_const):
+        elif self.check(logic, equation, frac_const):
             return ()
         else: raise ToolErrorLog()

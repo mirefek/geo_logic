@@ -5,8 +5,20 @@ from tool_step import ToolStep
 from collections import defaultdict
 from parse import Parser, type_to_c
 
+"""
+GToolDict investigates a dictionary of parsed (and primitive) tools,
+selects the geometrical ones, and is capable of creating the appropriate
+general tools that can be reached from GUI from the input entry in the toolbar.
+"""
 class GToolDict:
     def __init__(self, tool_dict):
+        """
+        a "prefix" here is a tuple of types that were selected so far,
+        prefix_d is a dictionary from prefixes to the appropriate actions
+        appropriate action can be either
+         * a tool (if the tool already have anough data), or
+         * a set of types -- the available next objects that can be selected
+        """
         self.name_to_prefixes = defaultdict(dict)
         for (name, arg_types), tool in tool_dict.items():
             if arg_types is None: continue

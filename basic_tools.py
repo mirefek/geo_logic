@@ -2,6 +2,8 @@ from geo_object import *
 from parse import Parser
 from movable_tools import add_movable_tools, MovableTool
 
+# class for extracting some tools from the tool dictionary into a python object,
+# also contains the original dictionary as "tool_dict" property
 class ImportedTools:
     def __init__(self, tool_dict):
         # for triggers and movables
@@ -29,6 +31,7 @@ class ImportedTools:
             self.angle_lpp,
             self.angle_pppp,
         )
+        self.is_tangent_cl = tool_dict.get(('is_tangent', (Circle, Line)), None)
 
         # special dictionary for movable tools
         self.tool_dict = dict(tool_dict)
@@ -42,6 +45,7 @@ class ImportedTools:
     def __getitem__(self, key):
         return self.tool_dict[key]
 
+# load basic.gl and the primitive tools around
 def load_basic_tools(fname = "basic.gl"):
     parser = Parser()
     parser.parse_file(fname)
@@ -54,6 +58,7 @@ def load_basic_tools(fname = "basic.gl"):
     add_movable_tools(tool_dict, basic_tools)
     return ImportedTools(tool_dict)
 
+# load macros.gl
 def load_tools(fname):
     basic_tools = load_basic_tools()
     parser = Parser(basic_tools.tool_dict)

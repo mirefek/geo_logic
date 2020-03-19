@@ -1,5 +1,8 @@
 import numpy as np
 
+### approximal equality / inequalities
+### inequality must hold by at least epsilon
+
 epsilon = 0.00001
 def eps_zero(npa):
     result = np.abs(npa) < epsilon
@@ -12,37 +15,29 @@ def eps_smaller(x1, x2):
 def eps_bigger(x1, x2):
     return eps_smaller(x2, x1)
 
-def vector_perp_rot(vec):
+### helper functions
+
+def vector_perp_rot(vec): # rotate vector by 90 degrees
     return np.array((vec[1], -vec[0]))
-def vector_direction(vec):
+def vector_direction(vec): # get direction of a vector in straight angle units
     return np.arctan2(vec[1], vec[0]) / np.pi
-def vector_of_direction(direction, logsize = 0):
+def vector_of_direction(direction, logsize = 0): # inverse to the former
     cplx = np.exp(logsize + np.pi*direction*1j)
     return np.array((cplx.real, cplx.imag))
 
-def line_passing_np_points(point1, point2):
-    normal_vector = vector_perp_rot(point1 - point2)
-    c = np.dot(normal_vector, point1)
-    return Line(normal_vector, c)
-def line_passing_points(point1, point2):
-    return line_passing_np_points(point1.a, point2.a)
-
 class GeoObject:
-    def identical_to(self, x):
+    def identical_to(self, x): # check equality up to numerical inaccuracy
         if not type(self) == type(x): return False
         return eps_identical(x.data, self.data)
     def __eq__(self, other):
         return self.identical_to(other)
 
+    # distance from a point in the form of a two-element numpy array
     def dist_from(self, np_point):
         raise Exception("Not implemented")
-    #def draw(self, cr, corners, scale):
-    #    raise Exception("Not implemented")
 
-class NumObject(GeoObject):
+class NumObject(GeoObject): # angle or ratio
     pass
-    #def draw(self, *args):
-    #    pass
 
 class Angle(NumObject):
     def __init__(self, data):
@@ -53,6 +48,7 @@ class Angle(NumObject):
         return eps_identical((self.data - other.data + 0.5) % 1, 0.5)
 
 class Ratio(NumObject):
+    # data = [x, dim], dim = 1 for a distance, dim = 0 for a distance ratio, etc.
     def __init__(self, data):
         self.x, self.dim = data
         self.data = np.array(data)
@@ -71,16 +67,11 @@ class Point(GeoObject):
     def dist_from(self, np_point):
         return np.linalg.norm(self.a - np_point)
 
-    #def draw(self, cr, corners, scale):
-    #    cr.arc(self.a[0], self.a[1], 3/scale, 0, 2*np.pi)
-    #    cr.fill()
-
-    def add_shadow_curve(self, cr, corners, scale):
-        cr.arc(self.a[0], self.a[1], 10/scale, 0, 2*np.pi)
-
-class PointSet(GeoObject):
+class PointSet(GeoObject): # line or circle
+    # check whether a point (as np.array) is contained by the set up to numerical inaccuracy
     def contains(self, np_point):
         raise Exception("Not implemented")
+    # returns closest point (as np.array) in the set to a given point (as np.array)
     def closest_on(self, np_point):
         raise Exception("Not implemented")
 
@@ -106,11 +97,6 @@ class Circle(PointSet):
         vec *= self.r/np.linalg.norm(vec)
         return self.c + vec
 
-    #def draw(self, cr, corners, scale):
-    #    cr.arc(self.c[0], self.c[1], self.r, 0, 2*np.pi)
-    #    cr.set_line_width(1/scale)
-    #    cr.stroke()
-
 
 class Line(PointSet):
     def __init__(self, normal_vector, c): # [x,y] in Line([a,b],c) <=> xa + yb == c
@@ -123,35 +109,8 @@ class Line(PointSet):
         self.c = c
         self.data = np.concatenate([normal_vector, [c]])
 
-        #print("n={} c={}".format(self.n, self.c))
-
     def __repr__(self):
         return "Line(normal_vector = {}, c = {})".format(self.n, self.c)
-
-    #def get_endpoints(self, corners):
-    #
-    #    result = [None, None]
-    #    boundaries = list(zip(*corners))
-    #    if np.prod(self.n) > 0:
-    #        #print('swap')
-    #        boundaries[1] = boundaries[1][1], boundaries[1][0]
-    #
-    #    for coor in (0,1):
-    #        if self.n[1-coor] == 0: continue
-    #        for i, bound in enumerate(boundaries[coor]):
-    #            p = np.zeros([2])
-    #            p[coor] = bound
-    #            p[1-coor] = (self.c - bound*self.n[coor])/self.n[1-coor]
-    #            #print(p)
-    #            #print("({} - {}) * ({} - {} = {})".format(
-    #            #    p[1-coor], boundaries[1-coor][0], p[1-coor], boundaries[1-coor][1],
-    #            #    (p[1-coor] - boundaries[1-coor][0]) * (p[1-coor] - boundaries[1-coor][1]),
-    #            #))
-    #            if (p[1-coor] - boundaries[1-coor][0]) * (p[1-coor] - boundaries[1-coor][1]) <= 0:
-    #                result[i] = p
-    #
-    #    if result[0] is None or result[1] is None: return None
-    #    else: return result
 
     def dist_from(self, np_point):
         c2 = np.dot(self.n, np_point)
@@ -173,16 +132,23 @@ class Line(PointSet):
         if eps_identical(x.data, -self.data): return True
         return False
 
-    #def draw(self, cr, corners, scale):
-    #    endpoints = self.get_endpoints(corners)
-    #    if endpoints is None: return
-    #
-    #    cr.move_to(*endpoints[0])
-    #    cr.line_to(*endpoints[1])
-    #
-    #    cr.set_line_width(1/scale)
-    #    cr.stroke()
 
+### more helper constructions
+
+def line_passing_np_points(np_point1, np_point2):
+    normal_vector = vector_perp_rot(np_point1 - np_point2)
+    c = np.dot(normal_vector, np_point1)
+    return Line(normal_vector, c)
+def line_passing_points(point1, point2):
+    return line_passing_np_points(point1.a, point2.a)
+
+
+"""
+functions intersection_ll / _lc / _cc compute the intersection of
+two point sets as a list (actually np.array) of size from 0 to 2,
+of points (two-dimensional numpy arrays).
+intersection_univ() then combines them together by detecting input types
+"""
 
 def intersection_ll(line1, line2):
 
@@ -236,6 +202,7 @@ def intersection_univ(point_set1, point_set2):
         result = intersection_cc(point_set1, point_set2)
         return result
 
+# numerical checks whether two point sets are intersecting in at least two points    
 def intersecting_lc(l,c):
     return eps_smaller(l.dist_from(c.c), c.r)
 def intersecting_cc(c1,c2):

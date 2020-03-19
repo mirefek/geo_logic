@@ -1,15 +1,35 @@
 from fractions import Fraction
-from tools import CachedTool, ToolError, DimCompute, DimPred, ToolErrorException
-from logic_model import LogicModel
+from tools import MemoizedTool, ToolError, DimCompute, DimPred, ToolErrorException
+from logical_core import LogicalCore
 from geo_object import Point
 
+
+"""
+A CompositeTool is a sequence of ToolStep's -- previously defined tools
+applied to a given input.
+
+From the perspective of a ToolStep / CompositeTool
+we don't have access to all possible objects in the logical core but only
+to the ones which are either input objects, or outputs of one of the previous
+steps. This introduces "local indices" to objects contrary to "global indices"
+meaning the general geometrical references accessible in the logical core.
+
+ToolStepEnv is used for execution of tool steps. It contains a logical core, and also
+the translation from local indices to the global ones.
+
+ToolStep and ToolStepEnv are used for
+1) running a composite tool
+2) checking a proof of a composite tool
+3) running the steps built by GUI
+"""
 class ToolStep:
-    #__slots__ = ["tool", "meta_args", "local_args", "debug_msg"] and more...
-    def __init__(self, tool, meta_args, local_args, start_out, debug_msg = None):
+    def __init__(self, tool, hyper_params, local_args, start_out, debug_msg = None):
+        # output = start_out, start_out+1, ...
+
         self.tool = tool
         if isinstance(tool, (DimCompute, DimPred)):
-            self.meta_args = tuple(Fraction(x) for x in meta_args)
-        else: self.meta_args = tuple(meta_args)
+            self.hyper_params = tuple(Fraction(x) for x in hyper_params)
+        else: self.hyper_params = tuple(hyper_params)
         self.local_args = tuple(local_args)
         if start_out is not None:
             self.local_outputs = tuple(range(start_out, start_out+len(tool.out_types)))
@@ -17,18 +37,19 @@ class ToolStep:
         self.debug_msg = debug_msg
 
 class ToolStepEnv:
-    def __init__(self, logic_model, ini_vars = ()):
-        self.model = logic_model
+    def __init__(self, logic, ini_vars = ()):
+        self.logic = logic
         self.local_to_global = list(ini_vars)
 
     def run_steps(self, steps, strictness, catch_errors = False):
+        # strictness: 0 = postulate, 1 = check
         for step in steps:
             global_args = tuple(self.local_to_global[v] for v in step.local_args)
             subresult = [None]*len(step.tool.out_types)
-            step.success = False
+            step.success = False # a value read by GUI
             if None not in global_args:
                 try:
-                    subresult = step.tool.run(step.meta_args, global_args, self.model, strictness)
+                    subresult = step.tool.run(step.hyper_params, global_args, self.logic, strictness)
                     step.success = True
                 except Exception as e:
                     if not isinstance(e, ToolError): e = ToolErrorException(e)
@@ -39,17 +60,18 @@ class ToolStepEnv:
                     else: raise e
             self.local_to_global.extend(subresult)
 
-class CompositeTool(CachedTool):
+class CompositeTool(MemoizedTool):
     def __init__(self, assumptions, implications, result, proof, arg_types, out_types, name,
                  basic_tools = None, var_to_name = None):
-        CachedTool.__init__(self, arg_types, out_types, name)
+        MemoizedTool.__init__(self, arg_types, out_types, name)
         self.assumptions = assumptions
         self.implications = implications
         self.result = result
         self.proof = proof
-        self.proof_tools = basic_tools
-        self.var_to_name = var_to_name
+        self.proof_tools = basic_tools # access to basic tools for running triggers in the proof check
+        self.var_to_name = var_to_name # names of variables, mainly for GUI
 
+        # estimating the total number of nested proof checks that will be required
         self.deep_len_all = sum(
             step.tool.deep_len_all
             for step in assumptions
@@ -65,12 +87,12 @@ class CompositeTool(CachedTool):
             )
             self.deep_len_all += self.deep_len_proof
 
-    def run_no_cache(self, args, model, strictness):
-        env = ToolStepEnv(model, args)
+    def run_no_mem(self, args, logic, strictness):
+        env = ToolStepEnv(logic, args)
         env.run_steps(self.assumptions, strictness)
         if strictness == 1 and self.proof is not None:
             num_args = [
-                model.num_model[gi]
+                logic.num_model[gi]
                 for gi in env.local_to_global
             ]
             proof_checker.check(self, num_args)
@@ -81,13 +103,13 @@ class CompositeTool(CachedTool):
 
     def proof_check(self, num_args):
         assert(self.proof is not None)
-        model = LogicModel(basic_tools = self.proof_tools)
-        args = model.add_objs(num_args[:len(self.arg_types)])
-        env = ToolStepEnv(model, args)
+        logic = LogicalCore(basic_tools = self.proof_tools)
+        args = logic.add_objs(num_args[:len(self.arg_types)])
+        env = ToolStepEnv(logic, args)
         try:
             env.run_steps(self.assumptions, 0)
             #for num_arg, gi in zip(num_args, env.local_to_global):
-            #    if not num_arg.identical_to(model.num_model[gi]):
+            #    if not num_arg.identical_to(logic.num_model[gi]):
             #        raise ToolError("Extracted problem leads to different numerical values")
 
             local_to_global_bak = list(env.local_to_global)
@@ -105,7 +127,7 @@ from queue import Queue, Empty
 from collections import deque
 import time
 
-class ProofChecker:
+class ProofChecker: # parallel running of proof checks
     def __init__(self):
         self.t = threading.Thread(target=self.process, daemon = True)
         self.q = Queue()

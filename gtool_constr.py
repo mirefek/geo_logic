@@ -4,13 +4,29 @@ import itertools
 from primitive_constr import circumcircle
 from primitive_pred import not_collinear
 
+"""
+Construction tools are ComboPoint, ComboLine, ComboPerpLine, ComboCircle and ComboCircumCircle
+They all support automatic addition of new points which is handled by an abstract class
+GToolConstr.
+"""
 class GToolConstr(GTool):
+    # point can be now a GUI index, or tuple (self.smart_intersection, a, b)
     def lies_on(self, p, cl):
         if isinstance(p, tuple) and p[0] == self.smart_intersection:
             return cl in p[1:]
         else: return GTool.lies_on(self, p, cl)
 
-    def intersect(self, cln1, cln2):
+    # check for applying touchpoint on line and a circle
+    def is_tangent(self, c, l):
+        c,l = map(self.vis.gi_to_li, (c,l))
+        if self.vis.li_to_type(c) == Line: c,l = l,c
+        if self.vis.li_to_type(c) != Circle or self.vis.li_to_type(l) != Line:
+            return False
+        label = self.tools.is_tangent_cl
+        return self.vis.logic.get_constr(label, (c,l)) is not None
+
+    # numerical intersection only if it is guarantied that there is one
+    def intersect(self, cl1, cln1, cl2, cln2):
         if cln1 is cln2: return None
         if isinstance(cln1, Line) and isinstance(cln2, Line):
             x = intersection_ll(cln1, cln2)
@@ -19,9 +35,11 @@ class GToolConstr(GTool):
         if isinstance(cln2, Line): cln1, cln2 = cln2, cln1
         if isinstance(cln1, Line): res = intersection_lc(cln1, cln2)
         else: res = intersection_cc(cln1, cln2)
-        if len(res) <= 1: return None
+        if len(res) == 0: return None
+        if len(res) == 1 and not self.is_tangent(cl1, cl2): return None
         return tuple(res)
 
+    # find an intersection near the mouse coordinates
     def select_intersection(self, coor, point_on = None):
         if point_on is None:
             cl1,cln1 = self.select_cl(coor, permanent = False)
@@ -36,7 +54,7 @@ class GToolConstr(GTool):
             if cl2 == cl1: continue
             dist_cl = cln2.dist_from(coor)
             if dist_cl >= self.find_radius: continue
-            intersections = self.intersect(cln1, cln2)
+            intersections = self.intersect(cl1, cln1, cl2, cln2)
             if intersections is None: continue
             for x in intersections:
                 dist_x = np.linalg.norm(x-coor)
@@ -58,6 +76,7 @@ class GToolConstr(GTool):
         self.hl_select(cl2)
         return (self.smart_intersection, x, cl1, cl2), x
 
+    # find a point, or create a new one
     def select_pi(self, coor, point_on = None):
         if point_on is None: filter_f = None
         else:
@@ -66,7 +85,13 @@ class GToolConstr(GTool):
         if p is not None: return p,pn
         return self.select_intersection(coor, point_on = point_on)
 
+    # create a new intersection in the logic system
+    # if there are two options, it attempts to smartly decide whether to guide
+    # the position of the intersection by a point or not
     def smart_intersection(self, x, cl1, cl2, update = True):
+        if self.is_tangent(cl1, cl2):
+            if self.vis.gi_to_type(cl1) == Line: cl1, cl2 = cl2, cl1
+            return self.run_tool("touchpoint", cl1, cl2, update = update)
         cln1 = self.vis.gi_to_num(cl1)
         cln2 = self.vis.gi_to_num(cl2)
         if isinstance(cln1, Line) and isinstance(cln2, Line):
@@ -75,7 +100,7 @@ class GToolConstr(GTool):
             cl1, cl2 = cl2, cl1
             cln1, cln2 = cln2, cln1
 
-        x1,x2 = self.intersect(cln1, cln2)
+        x1,x2 = self.intersect(cl1, cln1, cl2, cln2)
 
         r = np.linalg.norm(x1 - x2) / 4
         if isinstance(cln1, Line):
@@ -122,6 +147,7 @@ class ComboPoint(GToolConstr):
 
         self.confirm = self.run_m_tool, "free_point", Point(coor)
 
+    # after a click on a point
     def update_midpoint(self, coor, p, pn):
 
         p2, pn2 = self.select_point(coor)
@@ -133,6 +159,7 @@ class ComboPoint(GToolConstr):
             self.drag = self.drag_foot, p,pn, p2,pn2
             return
 
+        # foot to a line / circle
         cl, cln = self.select_cl(
             coor,
             filter_f = lambda l,ln: isinstance(ln, Circle) or not ln.contains(pn.a)
@@ -141,6 +168,7 @@ class ComboPoint(GToolConstr):
         if cl is not None:
             if isinstance(cln, Circle):
                 if eps_identical(cln.c, pn.a): return
+                # Point on a circle -> select arc direction or diameter
                 if self.lies_on(p, cl):
                     op_point = Point(2*cln.c - pn.a)
                     if np.linalg.norm(op_point.a - coor) < self.find_radius:
@@ -165,8 +193,8 @@ class ComboPoint(GToolConstr):
 
         self.hl_propose(Point((pn.a+coor)/2))
         self.hl_add_helper((pn.a, coor))
-        return
 
+    # after clicking a point and a circle containing it
     def select_arc_midpoint(self, coor, p1,pn1, circ,circn, pos_arc):
 
         p2,pn2 = self.select_point(
@@ -200,6 +228,7 @@ class ComboPoint(GToolConstr):
             if pos_arc: self.confirm = self.run_tool, "midpoint_arc", p1, p2, circ
             else: self.confirm = self.run_tool, "midpoint_arc", p2, p1, circ
 
+    # after clicking a point and draging from another point (foot to a line)
     def drag_foot(self, coor, p,pn, p1,pn1):
         p2,pn2 = self.select_point(coor)
         if p2 is not None:
@@ -213,9 +242,12 @@ class ComboPoint(GToolConstr):
         self.hl_propose(foot)
         self.hl_add_helper(l, (pn.a, foot.a))
 
+    # dragging from a line / circle -> circle center or an intersection
     def drag_intersection(self, coor, cl1,cln1):
 
-        if isinstance(cln1, Circle):
+        ## circle center
+        
+        if isinstance(cln1, Circle): # close to the circle center
             self.hl_add_helper(Point(cln1.c))
             if np.linalg.norm(coor - cln1.c) < self.find_radius:
                 self.hl_propose(Point(cln1.c))
@@ -224,6 +256,7 @@ class ComboPoint(GToolConstr):
 
         cl2,cln2 = self.select_cl(coor)
         if cl2 is None:
+             # futher from to circle center but also from other clines
             if isinstance(cln1, Circle) and \
                np.linalg.norm(coor - cln1.c) < cln1.r:
                     self.hl_propose(Point(cln1.c))
@@ -231,7 +264,9 @@ class ComboPoint(GToolConstr):
             return
         if cl2 == cl1: return
 
-        intersections = self.intersect(cln1, cln2)
+        ## intersection
+
+        intersections = self.intersect(cl1, cln1, cl2, cln2)
         if intersections is None: return
 
         x = Point(min(intersections, key = lambda x: np.linalg.norm(x-coor)))
@@ -254,7 +289,9 @@ class ComboLine(GToolConstr):
         if l is not None:
             self.confirm_next = self.select_parallel, (l,), ln.n
 
+    # after clicking on a point
     def update_point2(self, coor, p1, pn1):
+        # simple line P -> P
         p2,pn2 = self.select_pi(coor)
         if p2 is not None:
             if p2 != p1 and not pn2.identical_to(pn1):
@@ -263,6 +300,8 @@ class ComboLine(GToolConstr):
                 self.drag = self.drag_angle_bisector, p1,pn1, p2,pn2
                 self.hl_propose(l, permanent = False)
             return
+
+        # tangents
         c,cn = self.select_circle(
             coor,
             filter_f = (lambda c,cn: self.lies_on(p1,c) or
@@ -301,10 +340,13 @@ class ComboLine(GToolConstr):
                         )
                         return
 
+        # free line passing a point
+
         free_l = line_passing_np_points(pn1.a, coor)
         self.confirm = self.run_m_tool, "m_line", free_l, p1
         self.hl_propose(free_l)
 
+    # numerical helper
     def angle_bisector(self, A, B, C):
         v1 = A - B
         v2 = C - B
@@ -315,6 +357,8 @@ class ComboLine(GToolConstr):
         else:
             n = v1-v2
         return Line(n, np.dot(B, n))
+
+    # after clicking a point and dragging from another
     def drag_angle_bisector(self, coor, p,pn, p1,pn1):
 
         p2,pn2 = self.select_pi(coor)
@@ -333,6 +377,7 @@ class ComboLine(GToolConstr):
         if p2 is not None:
             self.confirm = self.run_tool, "angle_bisector_int", p1,p,p2
 
+    # after dragging from a point -> virtual line
     def drag_parallel(self, coor, p1, pn1):
         p2,pn2 = self.select_pi(coor)
         if p2 is None:
@@ -341,7 +386,8 @@ class ComboLine(GToolConstr):
             ln = line_passing_points(pn1, pn2)
             self.hl_add_helper(ln)
             self.confirm_next = self.select_parallel, (p1,p2), ln.n
-
+    
+    # after clicking a line / drawing a line by dragging -> parallel
     def select_parallel(self, coor, line_def, normal_vec):
 
         p,pn = self.select_pi(coor)
@@ -356,6 +402,7 @@ class ComboLine(GToolConstr):
             args = line_def+(p,)
             self.confirm = self.run_tool, "paraline", *args
 
+# Very similar to ComboLine
 class ComboPerpLine(GToolConstr):
 
     icon_name = "perpline"
@@ -372,10 +419,12 @@ class ComboPerpLine(GToolConstr):
         if l is not None:
             self.confirm_next = self.select_perp, (l,), ln.v
 
+    # numerical helper
     def perp_bisector(self, p1, p2):
         v = p1 - p2
         return Line(v, np.dot(v, p1+p2)/2)
 
+    # after clicking on a point
     def update_point2(self, coor, p1, pn1):
 
         p2,pn2 = self.select_pi(coor)
@@ -390,6 +439,7 @@ class ComboPerpLine(GToolConstr):
             self.hl_add_helper((pn1.a, pn2.a))
             self.hl_propose(l, permanent = False)
 
+    # numerical helper
     def angle_bisector(self, A, B, C):
         v1 = A - B
         v2 = C - B
@@ -401,6 +451,7 @@ class ComboPerpLine(GToolConstr):
             n = vector_perp_rot(v1-v2)
         return Line(n, np.dot(B, n))
 
+    # after clicking a point and dragging from another
     def drag_angle_bisector(self, coor, p,pn, p1,pn1):
         self.hl_add_helper((pn.a,pn1.a))
 
@@ -418,6 +469,7 @@ class ComboPerpLine(GToolConstr):
         if p2 is not None:
             self.confirm = self.run_tool, "angle_bisector_ext", p1,p,p2
 
+    # after dragging from a point -> virtual line
     def drag_perp(self, coor, p1, pn1):
         p2,pn2 = self.select_pi(coor)
         if p2 is None:
@@ -430,6 +482,7 @@ class ComboPerpLine(GToolConstr):
             self.hl_propose(Line(l.v, np.dot(l.v, pn2.a)), permanent = False)
             self.confirm_next = self.select_perp, (p1,p2), l.v
 
+    # after clicking a line / drawing a line by dragging -> perpendicular
     def select_perp(self, coor, line_def, normal_vec):
         p,pn = self.select_pi(coor)
 
@@ -460,6 +513,7 @@ class ComboCircle(GToolConstr):
             r = ("radius_of", c)
             self.confirm_next = self.update_center, r,cn.r, None
 
+    # after clicking on a point
     def update_p(self, coor, center, center_n):
         p, pn = self.select_pi(coor)
         if p is not None:
@@ -472,7 +526,7 @@ class ComboCircle(GToolConstr):
         l, ln = self.select_line(
             coor, filter_f = lambda l,ln: not ln.contains(center_n.a)
         )
-        if ln is not None:
+        if ln is not None: # circle touching a line
             foot = ln.closest_on(center_n.a)
             if np.linalg.norm(coor-foot) < 4*self.find_radius:
                 circle = Circle(center_n.a, np.linalg.norm(foot - center_n.a))
@@ -481,6 +535,7 @@ class ComboCircle(GToolConstr):
                 self.confirm = self.make_tangent_to_line, center, l
                 return
 
+        # copy circle radius
         new_c = Circle(center_n.a, np.linalg.norm(center_n.a-coor))
         self.hl_propose(new_c)
         self.confirm = self.run_m_tool, "m_circle_with_center", new_c, center
@@ -489,6 +544,7 @@ class ComboCircle(GToolConstr):
         foot, = self.run_tool("foot", center, l, update = False)
         return self.run_tool("circle", center, foot)
 
+    # after dragging from a point
     def drag_radius(self, coor, p1, pn1):
         p2, pn2 = self.select_pi(coor)
         if p2 is not None and not pn2.identical_to(pn1):
@@ -501,6 +557,7 @@ class ComboCircle(GToolConstr):
             c = Circle(coor, np.linalg.norm(coor-pn1.a))
             self.hl_propose(c)
 
+    # after selecting a radius
     def update_center(self, coor, r,rn, radius_helper):
         if radius_helper is not None:
             self.hl_add_helper(radius_helper)
@@ -526,6 +583,7 @@ class ComboCircumCircle(GToolConstr):
         if p1 is not None:
             self.confirm_next = self.update_p, p1, pn1
 
+    # after selecting one point
     def update_p(self, coor, p1, pn1):
         p2,pn2 = self.select_pi(coor)
         if p2 is None:
@@ -539,6 +597,7 @@ class ComboCircumCircle(GToolConstr):
             self.hl_propose(c, permanent = False)
             self.confirm_next = self.update_pp, p1,pn1,p2,pn2
 
+    # after selecting two points
     def update_pp(self, coor, p1,pn1, p2,pn2):
         p3,pn3 = self.select_pi(coor)
         c = None

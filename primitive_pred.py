@@ -1,6 +1,15 @@
 from geo_object import *
 import numpy as np
 
+"""
+This file contains annotated geometrical predicates.
+They are loaded by primitive_tools.py, and converted into
+equally named tools.
+Functions here return boolean values. The resulting tools
+then fail if the value here is False,
+and succeed if it is True.
+"""
+
 def not_eq(a, b):
     return a != b
 def intersecting(cl1 : PointSet, cl2 : PointSet):

@@ -1,12 +1,30 @@
 from collections import defaultdict
 from stop_watch import StopWatch
 
+"""
+UnionFindDict is a dictionary-like structure for the lookup table of the logical core.
+It is a dictionary of the form (label, tuple of objects) -> (tuple of objects)
+which can be set using
+  add(label, input, output)
+and retrieved using
+  get(label, input)
+The "add" function cannot overwrite, that is, it raises an exception
+if the (label, input) is already in the database. The "get" function
+returns a tuple, or None if it is not in the database.
+Moreover, the structure allows "gluing" of objects. The function
+  glue(obj1, obj2)
+makes the two objects equal from the perspective of the UnionFindDict.
+The "glue" function returns the list of all pairs (a,b) that were glued,
+they include the initial (obj1, obj2) and other pairs glued
+due to extensionality.
+"""
+
 class UnionFindDict:
     def __init__(self):
-        self.obj_to_keys = defaultdict(set)
-        self.obj_to_root_d = dict()
-        self.obj_to_children = defaultdict(set)
-        self.data = dict()
+        self.data = dict() # the main dictionary
+        self.obj_to_root_d = dict()             # obj -> (representative) obj
+        self.obj_to_children = defaultdict(set) # inverse of obj_to_root
+        self.obj_to_keys = defaultdict(set) # obj -> (label, input) such that obj in input or output
 
     def obj_to_root(self, obj):
         return self.obj_to_root_d.get(obj, obj)

@@ -23,7 +23,7 @@ from gtool_logic import GToolReason
 from gtool_constr import ComboPoint, ComboLine, ComboPerpLine, ComboCircle, ComboCircumCircle
 from toolbar import ToolBar
 from step_list import StepList
-from logic_model import LogicModel
+from logical_core import LogicalCore
 
 class GeoLogic(Gtk.Window):
 
@@ -102,6 +102,7 @@ class GeoLogic(Gtk.Window):
 
         self.update_title(None)
 
+    # changes the default filename for saving and the title of the window
     def update_title(self, fname):
         self.default_fname = fname
         title = "GeoLogic"
@@ -121,7 +122,7 @@ class GeoLogic(Gtk.Window):
         self.env.redo()
         self.reset_view()
     def restart(self):
-        print("RESTART")
+        #print("RESTART")
         self.update_title(None)
         self.viewport.reset_tool()
         self.env.set_steps((), ())
@@ -171,10 +172,10 @@ class GeoLogic(Gtk.Window):
         if view_data_tool is None:
             self.viewport.set_zoom((375, 277), 1)
         else:
-            model = LogicModel(basic_tools = self.imported_tools)
-            anchor_l, zoom_l = view_data_tool.run((), (), model, 0)
-            anchor = model.num_model[anchor_l].a
-            zoom = model.num_model[zoom_l].x
+            logic = LogicalCore(basic_tools = self.imported_tools)
+            anchor_l, zoom_l = view_data_tool.run((), (), logic, 0)
+            anchor = logic.num_model[anchor_l].a
+            zoom = logic.num_model[zoom_l].x
             self.viewport.set_zoom(anchor, zoom)
 
         self.reset_view()
@@ -197,7 +198,7 @@ class GeoLogic(Gtk.Window):
                 tokens = [self.env.gi_to_name[x] for x in step.local_outputs]
                 tokens.append('<-')
                 tokens.append(step.tool.name)
-                tokens.extend(map(str, step.meta_args))
+                tokens.extend(map(str, step.hyper_params))
                 tokens.extend(self.env.gi_to_name[x] for x in step.local_args)
                 f.write('  '+' '.join(tokens)+'\n')
 

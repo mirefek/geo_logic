@@ -4,19 +4,22 @@ from gi.repository import Gtk, Gdk
 
 from gtool_general import GToolGeneral
 
-class ListBoxRowWithData(Gtk.ListBoxRow):
-    def __init__(self, data):
-        super(Gtk.ListBoxRow, self).__init__()
-        self.data = data
-        self.add(Gtk.Label(data))
+"""
+The GUI element at the top of the window
+"""
+
+### Tool Entry with completion
 
 class SelectionEntry(Gtk.Entry):
     def __init__(self, options, *args, **kwargs):
         Gtk.Entry.__init__(self, *args, **kwargs)
-        self.on_confirm_hook = None
-        self.on_discard_hook = None
-        self.on_focus_hook = None
-        self.put_focus_away = None
+
+        # functions that can be set from outside
+        self.on_confirm_hook = None # when pressing enter
+        self.on_discard_hook = None # when loosing focus (escape)
+        self.on_focus_hook = None # when focus is received
+        # functions that must be set from outside
+        self.put_focus_away = None # when the entry wants to get rid of focus
 
         self.connect("activate", self.on_activate)
         self.connect("focus-in-event", self.on_focus_in)
@@ -60,7 +63,6 @@ class SelectionEntry(Gtk.Entry):
         return True
 
     def on_activate(self, *args):
-        #print("activate")
         text = self.get_text()
         if text not in self.options_s: return
         self.unselect(2)
@@ -68,12 +70,10 @@ class SelectionEntry(Gtk.Entry):
             self.on_confirm_hook(text)
 
     def on_focus_in(self, *args):
-        #print("focus in event")
         self._last_text = self.get_text()
         if self.on_focus_hook is not None:
             self.on_focus_hook()
     def on_focus_out(self, *args):
-        #print("focus out event", self._focus_out_mode)
         self.select_region(0,0)
         if self._focus_out_mode != 2:
             self.set_text(self._last_text)
@@ -113,6 +113,8 @@ class SelectionEntry(Gtk.Entry):
         text = self.get_text()
         if text in self.options_s: return text
         else: return None
+
+### The main class
 
 class ToolBar(Gtk.HBox):
     def __init__(self, menu_items, gtools, gtool_dict):
@@ -189,6 +191,7 @@ class ToolBar(Gtk.HBox):
         self.entry.on_focus_hook = entry_focus
         self.entry.on_discard_hook = entry_discard
 
+    # add a tool
     def add_radio_button(self, icon, label):
         if self.first_radio is None:
             self.first_radio = Gtk.RadioToolButton()
@@ -200,10 +203,12 @@ class ToolBar(Gtk.HBox):
         self.toolbox.pack_start(button, False, False, 0)
         return button
 
+    # click on a tool
     def tool_button_click(self, button, tool):
         if not button.get_active(): return
         self.change_tool(tool)
         self.entry.unselect(1)
+    # click on the three dots (entry tool)
     def other_tool_button_click(self, button):
         if not button.get_active(): return
         name = self.entry.get_current_option()

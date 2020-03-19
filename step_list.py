@@ -2,6 +2,12 @@ import gi as gtk_import
 gtk_import.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GLib
 
+"""
+StepList is an GUI element showing steps
+on the left side of the window.
+"""
+
+# Label of a variable which can be also selected or undefined (disabled)
 class VarLabel(Gtk.Label):
     def __init__(self, env, gi):
         Gtk.Label.__init__(self)
@@ -31,6 +37,7 @@ class VarLabel(Gtk.Label):
             markup = "<span fgcolor='#777777'>"+markup+"</span>"
         self.set_markup(markup)
 
+# Label of a step -- the name of the tool -- can be unsuccessful (disabled)
 class StepMainLabel(Gtk.Label):
     def __init__(self, env, step):
         Gtk.Label.__init__(self)
@@ -48,6 +55,7 @@ class StepMainLabel(Gtk.Label):
             markup = "<span fgcolor='#777777'>"+markup+"</span>"
         self.set_markup(markup)
 
+# One row in the list
 class StepListRow(Gtk.ListBoxRow):
     def __init__(self, step, env):
         Gtk.ListBoxRow.__init__(self)
@@ -59,27 +67,27 @@ class StepListRow(Gtk.ListBoxRow):
 
         self.output_widgets = self.make_var_widgets(self.step.local_outputs)
         self.label = StepMainLabel(env, step)
-        self.meta_widget = Gtk.Label(self.get_meta_str())
+        self.hyperpar_widget = Gtk.Label(self.get_hyperpar_str())
         self.arg_widgets = self.make_var_widgets(self.step.local_args)
 
         for w in self.output_widgets:
             self.hbox.pack_start(w, False, False, 3)
         self.hbox.pack_start(self.label, False, False, 0)
-        self.hbox.pack_start(self.meta_widget, False, False, 0)
+        self.hbox.pack_start(self.hyperpar_widget, False, False, 0)
         for w in self.arg_widgets:
             self.hbox.pack_start(w, False, False, 3)
 
-    def update_meta(self):
-        self.meta_widget.set_text(self.get_meta_str())
+    def update_hyperpar(self):
+        self.hyperpar_widget.set_text(self.get_hyperpar_str())
 
     def make_var_widgets(self, var_list):
         return [VarLabel(self.env, gi) for gi in var_list]
-    def get_meta_str(self):
+    def get_hyperpar_str(self):
         res = ' '
-        for meta_arg in self.step.meta_args:
-            if isinstance(meta_arg, float):
-                res += "{:.3}".format(meta_arg)
-            else: res += str(meta_arg)
+        for hyper_param in self.step.hyper_params:
+            if isinstance(hyper_param, float):
+                res += "{:.3}".format(hyper_param)
+            else: res += str(hyper_param)
             res += ' '
         return res
 
@@ -95,7 +103,7 @@ class ListRowSeparator(Gtk.ListBoxRow):
         self.set_selectable(False)
         self.add(Gtk.HSeparator())
         self.show_all()
-    def update_meta(self):
+    def update_hyperpar(self):
         pass
     def update_selected(self):
         pass
@@ -113,11 +121,9 @@ class StepList(Gtk.ScrolledWindow):
         env.add_step_hook = self.add_step
         env.remove_step_hook = self.remove_step
         env.reload_steps_hook = self.load_steps
-        env.update_meta_hook = self.update_meta
+        env.update_hyperpar_hook = self.update_hyperpar
         env.vis.update_selected_hook = self.update_selected
-        #for i in range(20):
-        #    label = Gtk.Label("An item number %d" % i, xalign=0)
-        #    self.listbox.add(label)
+
         self.env = env
         self.load_steps()
 
@@ -157,8 +163,8 @@ class StepList(Gtk.ScrolledWindow):
         self.listbox.insert(row, self.insert_position)
         self.insert_position += 1
 
-    def update_meta(self, step):
-        step.gui_row.update_meta()
+    def update_hyperpar(self, step):
+        step.gui_row.update_hyperpar()
 
     def remove_step(self, step):
         self.listbox.remove(step.gui_row)

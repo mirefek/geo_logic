@@ -6,27 +6,42 @@ from gi.repository import Gtk, Gdk, GdkPixbuf
 from label_visualiser import LabelVisualiser
 import cairo
 
+"""
+Viewport is the main part of the window, displaying the construction.
+It draws the data that a KnowledgeVisualiser has extracted (self.vis)
+and passes catched events to the corrent GTool (self.gtool)
+"""
+
 class Viewport:
     def __init__(self, env, app):
         self.app = app
         self.env = env
         self.vis = env.vis
         self.label_vis = LabelVisualiser(16, 10, 6)
-        self.color_dict = dict()
+        self.color_dict = dict() # cache of colors for distances / angles
+        # static list of colors
         self.default_colors = [
             (0,    0, 0),   # default
             (0.6,  0, 0),   # ambiguous
             (0,    0, 0.7), # movable
         ]
         self.reset_zoom()
+
+        # current GTool
         self.none_gtool = GToolNone()
         self.gtool = self.none_gtool
+
+        # ambi_select is activated on pressing shift
         self.ambi_select = AmbiSelect()
         self.shift_pressed = False
 
-        self.click_hook = None
+        # if not None, there is a label currently edited, as a tuple of arguments for self.draw_label
         self.edited_label = None
 
+        # click_hook is called on button click, used for deactivating entry in the toolbar
+        self.click_hook = None
+
+        # GTK widget for drawing
         self.darea = Gtk.DrawingArea()
         self.darea.connect("draw", self.on_draw)
         self.darea.set_events(Gdk.EventMask.BUTTON_PRESS_MASK |
@@ -39,6 +54,7 @@ class Viewport:
         self.darea.connect("motion-notify-event", self.on_motion)
         self.darea.set_property('can-focus', True)
 
+        # loading mouse cursors for tools
         self.load_cursors()
 
     def reset_zoom(self):
@@ -92,6 +108,7 @@ class Viewport:
             cursor = self.gtool.get_cursor()
         self.set_cursor(cursor)
 
+    # unselect everything, typically called on right click
     def reset_tool(self):
         self.gtool.reset()
 
@@ -104,6 +121,7 @@ class Viewport:
             self.gtool = self.none_gtool
         self.set_cursor_by_tool()
 
+    # turning self.obj_selector on / off
     def update_shift_pressed(self, shift_pressed):
         if not isinstance(shift_pressed, bool):
             shift_pressed = bool(shift_pressed.state & Gdk.ModifierType.SHIFT_MASK)
@@ -116,6 +134,8 @@ class Viewport:
             self.set_cursor(None)
         self.shift_pressed = shift_pressed
         if self.vis.view_changed: self.darea.queue_draw()
+
+    ### Events
 
     def on_button_press(self, w, e):
         hook_used = False
@@ -170,6 +190,8 @@ class Viewport:
         self.zoom(direction, e)
         self.darea.queue_draw()
         return True
+
+    ### Drawing
 
     def point_dot(self, cr, p, pix_radius, fill = True):
         cr.arc(p.a[0], p.a[1], pix_radius / self.scale, 0, 2*np.pi)
@@ -283,6 +305,7 @@ class Viewport:
         if np.dot(e2-e1, l.v) >= 0: return l.v, l.n, l.c, e1, e2
         else: return -l.v, -l.n, -l.c, e1, e2
 
+    # draws the sign of a parallelity on a line (ticks)
     def draw_parallel(self, cr, l, lev):
         endpoints = self.get_line_endpoints_ordered(l)
         if endpoints is None: return
@@ -418,12 +441,14 @@ class Viewport:
 
     def set_select_color(self, cr):
         cr.set_source_rgb(0.3, 1, 1)
+    
     def set_color(self, cr, col_index, index2 = 0):
-        if col_index < 0:
-            alpha = 1./(-col_index)
+        if col_index < 0: # default "outer" color, -1 = black, -2 = gray
+            if col_index == -1: alpha = 1.
+            else: alpha = 0.25
             r,g,b = self.default_colors[index2]
             cr.set_source_rgba(r,g,b,alpha)
-        else:
+        else: # color for distances / angles
             if col_index in self.color_dict:
                 cr.set_source_rgb(*self.color_dict[col_index])
                 return
@@ -570,4 +595,3 @@ class Viewport:
         surface = cairo.SVGSurface(fname, *size)
         cr = cairo.Context(surface)
         self.draw(cr)
-

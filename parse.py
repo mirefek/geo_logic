@@ -2,7 +2,7 @@ from primitive_tools import make_primitive_tool_dict
 from fractions import Fraction
 from geo_object import *
 from tool_step import ToolStep, CompositeTool
-from logic_model import LogicModel
+from logical_core import LogicalCore
 
 type_names = {
     'P' : Point,
@@ -48,6 +48,7 @@ class Parser:
     def var_type(self, name):
         return self.variables[name][1]
 
+    # expect a tool step line (with "<-"), returns a ToolStep
     def parse_line(self, line_info, line):
         try:
             start_var_num = self.var_num
@@ -57,13 +58,13 @@ class Parser:
             outputs = tokens[:i]
             tool_name = tokens[i+1]
             args = iter(tokens[i+2:])
-            meta_args = []
+            hyper_params = []
             obj_args = []
             for arg in args:
-                for meta_type in (int, float, Fraction):
+                for hyper_type in (int, float, Fraction):
                     try:
-                        val = meta_type(arg)
-                        meta_args.append(val)
+                        val = hyper_type(arg)
+                        hyper_params.append(val)
                         break
                     except ValueError:
                         pass
@@ -72,7 +73,7 @@ class Parser:
 
             in_types = [
                 type(x)
-                for x in meta_args
+                for x in hyper_params
             ]
             in_types.extend(
                 self.var_type(x)
@@ -95,13 +96,15 @@ class Parser:
                 self.add_var(o, t)
 
             return ToolStep(
-                tool, meta_args, self.var_indices(obj_args),
+                tool, hyper_params, self.var_indices(obj_args),
                 start_var_num, debug_msg,
             )
         except Exception:
             print(debug_msg)
             raise
 
+    # header every line is in the form (debug_info, str)
+    # header is a single line, others are lists of lines
     def parse_tool(self, header, assump, impl, proof):
         try:
             header_info, header = header
@@ -109,6 +112,8 @@ class Parser:
             if not self.allow_axioms and impl and proof is None:
                 raise Exception("Axioms are not allowed here")
 
+            ## Decode header
+            
             name, *data = header.split()
             i = data.index('->')
             i_data = data[:i]
@@ -123,10 +128,13 @@ class Parser:
                 self.add_var(v, t)
                 arg_types.append(t)
 
+            ## Process steps
+
             assump = [
                 self.parse_line(*line)
                 for line in assump
             ]
+            # save variable environment after assumptions, will be used again for proof
             var_after_assump = dict(self.variables), self.var_num
 
             impl = [
@@ -152,6 +160,7 @@ class Parser:
                 for (name, (i,t)) in self.variables.items()
             )
 
+            # save variable environment after assumptions
             self.variables, self.var_num = var_after_assump
             if proof is not None:
                 proof = [
@@ -225,11 +234,11 @@ if __name__ == "__main__":
         print("{} : {} -> {}".format(name, in_types, out_types))
 
     parser.parse_file("construction.gl")
-    model = LogicModel()
+    logic = LogicalCore()
 
     parser.tool_dict['line', (Point, Point)].add_symmetry((1,0))
     parser.tool_dict['midpoint', (Point, Point)].add_symmetry((1,0))
     parser.tool_dict['dist', (Point, Point)].add_symmetry((1,0))
     parser.tool_dict['intersection', (Line, Line)].add_symmetry((1,0))
 
-    parser.tool_dict['_', ()].run((), (), model, 1)
+    parser.tool_dict['_', ()].run((), (), logic, 1)

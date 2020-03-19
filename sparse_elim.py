@@ -10,9 +10,35 @@ def lcm(a, *args):
     return a
 
 class EquationIndex:
+    """
+    EquationIndex is a helper identifier, any new equation obtains
+    a new variable EquationIndex with coefficient 1.
+    This allows tracing the origin of a derived equation, currently used
+    for determining the common denominator
+    = how much did we have to divide to obtain a derived equation
+    """
     def __init__(self, equation):
         self.equation = equation
 
+"""
+ElimMatrix keeps a set of non-redundant linear equations (SparseRows).
+User can add a new linear equation using function
+  add(equation)
+or check whether a certain equation can be derived from the equations added so far
+using the function
+  check(equation)
+It also automatically detects if two variables are forced to be zero,
+or proportional to each other, and communicates this fact back in the form of pairs
+which are forced to be equal, returned by the "add" function.
+Besides that, ElimMatrix also offer method
+  get_inverse(x)
+which finds a variable y (if possible) such that y == -x.
+
+Variables which are non-zero, and not substituted by a proportion of other variable
+are kept in a "matrix", rows of which are equations derived from the input equations.
+Every row in the matrix must have a "pivot" variable such that there is no other
+equation in the matrix containing this variable.
+"""
 class ElimMatrix:
     def __init__(self):
         self.rows = dict() # pivot -> row
@@ -22,10 +48,6 @@ class ElimMatrix:
         self.proportional_to = dict() # varname -> (varname, equation(size=2) )
         self.root_to_proportions = dict() # varname -> size, dict(proportion -> varnames)
 
-    #def query(self, query_r):
-    #    with StopWatch("SparseElim2"):
-    #        with StopWatch("Query"):
-    #            return self._query(query_r)
     def query(self, query_r):
         query_r = SparseRow(query_r)
         self._eliminate(query_r)
@@ -33,10 +55,6 @@ class ElimMatrix:
             return 0
         return self._least_denom(query_r)
 
-    #def add(self, added):
-    #    with StopWatch("SparseElim2"):
-    #        with StopWatch("Add"):
-    #            return self._add(added)
     def add(self, added):
         #assert(self.check_consistency())
         #print("elim.add({})".format(added))

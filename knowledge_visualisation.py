@@ -3,6 +3,30 @@ from collections import defaultdict
 import itertools
 from geo_object import *
 
+"""
+KnowledgeVisualisation investigates LogicalCore in a GraphicalEnv
+and extract data which should be displayed by Viewport
+(which have access to the knowledge_visualisation).
+
+The logical objects are mostly accessed as logical indices (li),
+although we also sometimes need GUI indices (gi) used by GraphicalEnv.
+"""
+
+### segment distribution
+"""
+For distances, arcs and angles, we sometimes put them to different
+levels to avoid collisions. This segment distribution is done on every line
+(distribute_segments), and on every circle / around every point (distribute_segments_cyc)
+
+The input is a list of quadruples of the form (a,b,start,info) meaning that we want to
+draw the segment from "a" to "b".
+We want to assign the segments as low (non-negative) level as possible so that
+no intersecting segments share their level.
+"start" is 0 or 1, if 1 the segment is forbiden to be on level 0.
+Similarly, we forbid the segment level zero if its inside contains
+some of the lev_zero_points given as a potential argument.
+The output of the function is an iterator of pairs (info, level)
+"""
 def distribute_segments(segments, lev_zero_points = ()):
     segments.sort(key = lambda x: (x[0], -x[1]))
     lev_zero_points = sorted(lev_zero_points, reverse = True)
@@ -22,7 +46,7 @@ def distribute_segments(segments, lev_zero_points = ()):
             occupied.append(b)
         yield info,lev
 
-# (a,b,info), a in (0,2), b in (0,4), cyc mod 2
+# cyclic variant, (a,b,info), a in (0,2), b in (0,4), cyclic mod 2
 def distribute_segments_cyc(segments, lev_zero_points = ()):
     segments.sort(key = lambda x: (x[0], -x[1]))
     lev_zero_points = list(lev_zero_points) + [x+2 for x in lev_zero_points]
@@ -44,20 +68,32 @@ def distribute_segments_cyc(segments, lev_zero_points = ()):
             occupied.append((a,b))
         yield info,lev
 
+"""
+In KnowledgeVisualisation, we assign data to numerical objects for two reasons.
+* First, we want to detect identical objects to show only one of them and allow
+  swapping using shift key.
+* Second, we want to distribute segments even on a line / around a point
+  even when we are not logically guarrantied that the segments are on a single line
+  or the angles are around the same point.
+The abstract class for it is NumData, with functions handling the object ambiguity.
+"""
 class NumData:
     def __init__(self, vis, num_obj):
-        self.vis = vis
+        self.vis = vis # backward reference
         self.num_obj = num_obj
         self.active_candidates = []
         self.extra_candidates = []
-        self.visible = None
+        self.visible = None # li
         self.is_active = False
 
+    # non-hiden GUI element
     def add_active_candidate(self, li, priority):
         self.is_active = True
         self.active_candidates.append((priority, li))
+    # extra object, to be drawn as dashed, grey
     def add_extra_candidate(self, li, priority):
         self.extra_candidates.append((priority, li))
+    # find the object 
     def select_visible(self):
         if self.is_active:
             if self.vis.move_mode:
@@ -75,6 +111,7 @@ class NumData:
 class NumPointData(NumData):
     def __init__(self, vis, point):
         NumData.__init__(self, vis, point)
+        # data for angles
         self.angles_ppl = []
         self.angles_ll = []
         self.exact_lines = defaultdict(set)
@@ -82,8 +119,8 @@ class NumPointData(NumData):
 
     def add_angle(self, angle_data):
         if angle_data.color < 0:
-            d, = self.vis.model.get_constr(self.vis.tools.direction_of, (angle_data.l1,))
-            d,_ = self.vis.model.angles.equal_to[d]
+            d, = self.vis.logic.get_constr(self.vis.tools.direction_of, (angle_data.l1,))
+            d,_ = self.vis.logic.angles.equal_to[d]
             self.exact_lines[d].update((angle_data.l1, angle_data.l2))
             self.exact_angles[d].append(angle_data)
         elif angle_data.l1_dir_sgn is None:
@@ -277,6 +314,11 @@ class NumLineData(NumData):
 
 class NumCircleData(NumData):
 
+    """
+    This function technically don't have to be a part of NumCircleData
+    as we display only arcs that are bound to the displayed circle, but it
+    fits to the approach to points and lines.
+    """
     def distribute_arcs(self):
         if self.visible is None: return
 
@@ -354,16 +396,24 @@ class NumCircleData(NumData):
             ]
         else: add_black_arc(cur_pos, first_pos)
 
+"""
+ArcData and AngleData are not related to NumData, and are places
+that could display an angle.
+"""
 class ArcData:
-    def __init__(self, vis,p1,p2,c):
-        self.vis = vis
+    def __init__(self, vis,p1,p2,c): # arc from p1 to p2 on a circle c
+        self.vis = vis # backward reference
         self.p1 = p1
         self.p2 = p2
         self.c = c
+    # activate is called once we decide that we the angle is worth showing
+    # (at least twice in the picture)
     def activate(self, color, positive):
         if positive: p1,p2 = self.p1, self.p2
         else: p1,p2 = self.p2, self.p1
         self.vis.circle_to_arcs[self.c].append((p1, p2, color))
+    # to count how many different places of that angle are in the picture
+    # (we don't display the angle if only one)
     def get_repr(self):
         if self.p1 < self.p2: return self.p1,self.p2,self.c
         else: return self.p2,self.p1,self.c
@@ -373,9 +423,11 @@ class AngleData:
         self.l1, self.l2 = lines
         self.dr1, self.dr2 = dir_reqs
         self.positive = True
-    def require_lines(self):
+    def require_lines(self): # angle encourage display of extra helper lines
         self.vis.line_to_angle_number[self.l1] += 1
         self.vis.line_to_angle_number[self.l2] += 1
+    # activate is called once we decide that we the angle is worth showing
+    # (at least twice in the picture)
     def activate(self, color, positive):
         self.color = color
         if self.positive != positive:
@@ -384,6 +436,12 @@ class AngleData:
             self.positive = positive
         self.vis.angles.append(self)
         self.require_lines()
+    # to count how many different places of that angle are in the picture
+    # (we don't display the angle if only one)
+    def get_repr(self):
+        return tuple(sorted((self.l1, self.l2)))
+
+    # now we know that the angle will be displayed
     def add_to_point(self):
         self.p = Point(intersection_ll(
             self.vis.li_to_num(self.l1),
@@ -392,7 +450,7 @@ class AngleData:
         self.l1_num = self.vis.li_to_num_data[self.l1].num_obj
         self.l2_num = self.vis.li_to_num_data[self.l2].num_obj
 
-        # get orientation:
+        # get orientation: self.l1_dir_sgn, self.l2_dir_sgn
         self.l1_dir_sgn = None
         self.l2_dir_sgn = None
         if self.dr1 is not None or self.dr2 is not None:
@@ -420,6 +478,7 @@ class AngleData:
 
         self.vis.get_num_point(self.p).add_angle(self)
 
+    # select l1_dir if it was not forced by previous calculation
     def find_nicer_l1_dir(self):
         points = self.vis.line_to_points[self.l1]
         if not points:
@@ -434,6 +493,8 @@ class AngleData:
         pos = np.dot(self.p.a, self.l1_num.v)
         if eps_bigger(pos - min_pos, max_pos - pos): self.l1_dir_sgn = -1
         else: self.l1_dir_sgn = 1
+
+    # given the computed angle orientation, return it as an interval mod 2
     def find_arc(self):
         self.pos_a = vector_direction(self.l1_num.v * self.l1_dir_sgn)%2
         self.pos_b = vector_direction(self.l2_num.v)%2
@@ -441,31 +502,46 @@ class AngleData:
             if self.pos_b >= 1: self.pos_b -= 1
             else: self.pos_b += 1
         if self.pos_b < self.pos_a: self.pos_b += 2
-    def get_repr(self):
-        return tuple(sorted((self.l1, self.l2)))
 
+### The main class
+
+"""
+KnowledgeVisualisation investigates the logical core upon calling
+method refresh(). For some changes that do not change the showed
+objects, only visual details (selection, label), it is sufficient
+to call self.visible_export().
+"""
 class KnowledgeVisualisation:
     def __init__(self, env):
+
+        # primary data
         self.env = env
         self.tools = env.tools
-        self.model = None
+        self.logic = None
         self.gi_to_li_l = None
 
-        self.hl_proposals = ()
-        self.hl_helpers = ()
-
+        # alternative modes
         self.move_mode = False
         self.show_all_mode = False
         self.ambi_select_mode = False
 
+        # set to true upon export, or highlight change
+        self.view_changed = False
+
+        # permanent data
         self.gi_to_priority = []
         self.gi_to_hidden = []
         self.gi_label_show = []
         self.gi_label_position = []
 
+        # extra elements to the main construction
+        self.hl_proposals = ()
+        self.hl_helpers = ()
+
+        # when selection changes, StepList wants to recognize it too
         self.update_selected_hook = lambda: None
 
-        # static
+        # static dictionary
         self.angle_label_to_larg = {
             self.tools.angle_ll : (True, True),
             self.tools.angle_ppl : (False, True),
@@ -473,35 +549,65 @@ class KnowledgeVisualisation:
             self.tools.angle_pppp : (False, False),
         }
 
-        # for visualisation
-        #self.movable_objects = ()
-        #self.visible_points_numer = ()
-        #self.active_lines_numer, self.active_circles_numer = (), ()
-        #self.extra_lines_numer, self.extra_circles_numer = (), ()
-        #self.visible_arcs, self.visible_dists = (), ()
-        #self.selectable_points = []
-        #self.selectable_lines = []
-        #self.selectable_circles = []
+        ########
+        #
+        # The __init__ function could end here, all the following
+        # data are constructed from scratch by every refresh
+        #
+        ########
+
+        ## exported data for GTool (selection)
+
+        self.selectable_points = []
+        self.selectable_lines = []
+        self.selectable_circles = []
+        
+        ## exported data for Vievport (visualisation)
+
+        self.visible_points_numer = []
+        self.active_lines_numer = []
+        self.extra_lines_numer = []
+        self.active_circles_numer = []
+        self.extra_circles_numer = []
+
+        self.visible_angles = []
+        self.visible_arcs = []
+        self.visible_dists = []
+        self.visible_exact_angles = []
+        self.visible_labels = []
+        self.visible_parallels = []
+
+        ## data for internal usage
 
         # numerical representation
-        #self.num_points_d = dict()
-        #self.num_lines_d = dict()
-        #self.num_circles_d = dict()
-        #self.num_points = ()
-        #self.num_lines = ()
-        #self.num_circles = ()
+        self.num_points_d = dict()
+        self.num_lines_d = dict()
+        self.num_circles_d = dict()
+        self.num_points = ()
+        self.num_lines = ()
+        self.num_circles = ()
 
-        # other internal links
-        #self.li_to_gi_first = dict()
-        #self.li_to_gi_last = dict()
-        #self.li_to_num_data = dict()
-        #self.line_to_points = defaultdict(list)
-        #self.circle_to_points = defaultdict(list)
-        #self.circle_to_arcs = defaultdict(list)
-        #self.visible_points = set()
-        #self.visible_lines = set()
-        #self.visible_circles = set()
+        # gi <-> li <-> data
+        self.li_to_gi_first = dict()
+        self.li_to_gi_last = dict()
+        self.li_to_num_data = dict()
+        self.li_to_gi_movable = dict()
 
+        # lies_on data
+        self.line_to_points = defaultdict(list)
+        self.circle_to_points = defaultdict(list)
+
+        # angle data
+        self.angles = []
+        self.circle_to_arcs = defaultdict(list)
+        self.line_to_angle_number = defaultdict(int)
+        
+        # logical indices which were decided to be shown
+        self.visible_points = set()
+        self.visible_lines = set()
+        self.visible_circles = set()
+
+    # update number / status of GUI indices
     def add_gis(self, number):
         self.gi_to_priority += [2]*number
         self.gi_to_hidden += [False]*number
@@ -516,18 +622,20 @@ class KnowledgeVisualisation:
         for i in range(len(self.gi_to_hidden)):
             self.gi_to_hidden[i] = i not in visible
 
+    # helper functions for translating indices
+    # gi -> li -> num -> data
     def li_root(self, li):
-        return self.model.ufd.obj_to_root(li)
+        return self.logic.ufd.obj_to_root(li)
     def gi_to_li(self, gi): # graphical index to logic index
         li = self.gi_to_li_l[gi]
         if li is None: return None
         return self.li_root(li)
 
     def li_to_num(self, li): # logic index to numerical object
-        return self.model.num_model[li]
+        return self.logic.num_model[li]
 
     def li_to_type(self, li): # logic index to type
-        return self.model.obj_types[li]
+        return self.logic.obj_types[li]
 
     def gi_to_num(self, gi): # graphical index to numerical object
         li = self.gi_to_li_l[gi]
@@ -538,6 +646,8 @@ class KnowledgeVisualisation:
         li = self.gi_to_li_l[gi]
         if li is None: return None
         return self.li_to_type(self.li_root(li))
+
+    ## Assigning NumData to numerical objects
 
     def _get_num_obj(self, d, l, constructor, obj, keys):
         for key in keys:
@@ -585,6 +695,8 @@ class KnowledgeVisualisation:
         elif isinstance(obj, Circle): return self.get_num_circle(obj)
         else: raise Exception("Unexpected type {}".format(type(obj)))
 
+    ## steps of refresh
+    
     def update_rev_links(self):
         self.li_to_gi_movable = dict()
         self.li_to_gi_first = dict()
@@ -618,13 +730,13 @@ class KnowledgeVisualisation:
             priority = self.gi_to_priority[gi]
             num_data.add_active_candidate(li, (priority,gi))
 
+    # Determining which objects should be shown (especially among ambiguous ones)
     def select_visible_objs(self, objs):
         visible_objs = set()
         for num_data in objs:
             visible = num_data.select_visible()
             if visible is not None: visible_objs.add(visible)
         return visible_objs
-
     def select_visible_points(self):
         self.visible_points = self.select_visible_objs(self.num_points)
     def select_visible_lines(self):
@@ -632,6 +744,7 @@ class KnowledgeVisualisation:
     def select_visible_circles(self):
         self.visible_circles = self.select_visible_objs(self.num_circles)
 
+    # helper function for extract_knowledge
     def get_angle_lines(self, angle_label, args):
         res = []
         dir_reqs = []
@@ -647,12 +760,14 @@ class KnowledgeVisualisation:
                 p2 = next(arg_it)
                 if p1 not in self.li_to_gi_first or p2 not in self.li_to_gi_first:
                     return None
-                l, = self.model.ufd.get(self.tools.line, (p1,p2))
+                l, = self.logic.ufd.get(self.tools.line, (p1,p2))
                 dir_req = (p1,p2)
             res.append(l)
             dir_reqs.append(dir_req)
         return res, dir_reqs
 
+    # Go through the logical core database, and save the relevant data
+    # to internal attributes
     def extract_knowledge(self):
         self.line_to_points = defaultdict(list)
         self.circle_to_points = defaultdict(list)
@@ -668,7 +783,7 @@ class KnowledgeVisualisation:
         angle_to_data = defaultdict(list)
 
         # points on lines and circles
-        for (label, args), out in self.model.ufd.data.items():
+        for (label, args), out in self.logic.ufd.data.items():
             if label is self.tools.lies_on_l:
                 p,l = args
                 if p in self.li_to_gi_first: self.line_to_points[l].append(p)
@@ -677,13 +792,13 @@ class KnowledgeVisualisation:
                 if p in self.li_to_gi_first: self.circle_to_points[c].append(p)
 
         zero_angle = Angle(0)
-        for (label, args), out in self.model.ufd.data.items():
+        for (label, args), out in self.logic.ufd.data.items():
             if label is self.tools.arc_length:   #### arc length
                 p1,p2,c = args
                 if p1 not in self.li_to_gi_first or p2 not in self.li_to_gi_first:
                     continue
                 a, = out
-                if self.model.angles.has_exact_difference(a, self.model.exact_angle):
+                if self.logic.angles.has_exact_difference(a, self.logic.exact_angle):
                     continue
                 angle_to_data[a].append(ArcData(self, p1,p2,c))
             elif label is self.tools.dist:         #### distance
@@ -698,7 +813,7 @@ class KnowledgeVisualisation:
                 if l not in self.li_to_gi_first: continue
                 d, = out
                 direction_to_line[d].append(l)
-                direction_q_to_line[self.model.angles.equal_to[d][0]].append((l,d))
+                direction_q_to_line[self.logic.angles.equal_to[d][0]].append((l,d))
             elif label in self.tools.angle_tools: #### angles
                 lines_dr = self.get_angle_lines(label, args)
                 if lines_dr is None: continue
@@ -728,10 +843,10 @@ class KnowledgeVisualisation:
         used_compl = set()
         for a, l in sorted(angle_to_data.items(), key = lambda x: x[0]):
             if a in used_compl: continue
-            if self.model.angles.has_exact_difference(a, self.model.exact_angle):
+            if self.logic.angles.has_exact_difference(a, self.logic.exact_angle):
                 for data in l: data.activate(-1, True)
             else:
-                c = self.li_root(self.model.angles.get_complement(a))
+                c = self.li_root(self.logic.angles.get_complement(a))
                 if c is not None:
                     used_compl.add(c)
                     cl = angle_to_data[c]
@@ -770,6 +885,7 @@ class KnowledgeVisualisation:
             points = [p for p in points if p in self.visible_points]
             self.circle_to_points[circle] = points
 
+    # clines to be shown gray and dashed
     def find_extra_clines(self):
         lines = set(self.line_to_points.keys()) | set(self.line_to_angle_number.keys())
         for line in lines:
@@ -784,8 +900,8 @@ class KnowledgeVisualisation:
             self.li_to_num_data[line] = num_data
             num_data.add_extra_candidate(line, (angle_number, points_number))
 
-        assert(all(self.li_to_type(c) == Circle for c in self.circle_to_points.keys()))
-        assert(all(self.li_to_type(c) == Circle for c in self.circle_to_arcs.keys()))
+        #assert(all(self.li_to_type(c) == Circle for c in self.circle_to_points.keys()))
+        #assert(all(self.li_to_type(c) == Circle for c in self.circle_to_arcs.keys()))
         circles = set(self.circle_to_points.keys()) | set(self.circle_to_arcs.keys())
         for circle in circles:
             if circle in self.li_to_gi_first: continue
@@ -802,6 +918,8 @@ class KnowledgeVisualisation:
         num_data = self.li_to_num_data.get(li, None)
         if num_data is None or num_data.visible is None: return False
         return num_data.visible == li
+
+    # do not show an angle if one of its corresponding lines is not shown
     def filter_visible_angles(self):
         self.line_to_angle_number = defaultdict(int)
         used_angles = []
@@ -834,62 +952,7 @@ class KnowledgeVisualisation:
             point_data.distribute_angles()
             point_data.distribute_exact_angles()
 
-    def update_hl_selected(self, selected):
-        obj_is_selected = dict()
-        for obj in selected:
-            if isinstance(obj, tuple):
-                data = obj[1:]
-                obj = obj[0]
-            else: data = True
-            if obj >= len(self.gi_to_li_l): continue
-            li = self.gi_to_li(obj)
-            if li is None: continue
-            obj_is_selected[li] = data
-
-        # check change
-        if not self.view_changed:
-            if self.obj_is_selected == obj_is_selected: return
-        self.obj_is_selected = obj_is_selected
-        self.visible_export()
-        self.update_selected_hook()
-    def update_hl_proposals(self, proposals):
-        if not self.view_changed and len(proposals) == len(self.hl_proposals):
-            if all(
-                prev_prop.identical_to(prop)
-                for prev_prop, prop in zip(self.hl_proposals, proposals)
-            ): return
-        self.view_changed = True
-        self.hl_proposals = proposals
-    def update_hl_helpers(self, helpers):
-        # push segments away from lines
-        hl_helpers = []
-        hl_helpers_ori = iter(self.hl_helpers)
-        def next_ori():
-            try:
-                return next(hl_helpers_ori)
-            except StopIteration:
-                return None
-        for helper in helpers:
-            if isinstance(helper, GeoObject):
-                if not helper.identical_to(next_ori()): self.view_changed = True
-                hl_helpers.append(helper)
-            else:
-                a,b = helper
-                if eps_identical(a,b): continue
-                hl_helper_ori = next_ori()
-                if not isinstance(hl_helper_ori, tuple): self.view_changed = True
-                else:
-                    ori_a,ori_b,ori_lev = hl_helper_ori
-                    if not eps_identical(ori_a, a) or not eps_identical(ori_b, b):
-                        self.view_changed = True
-                line_data = self.get_num_line(line_passing_np_points(a,b))
-                v = line_data.num_obj.v
-                if np.dot(v,a) > np.dot(v,b): a,b = b,a
-                lev = line_data.find_available_level(a,b)
-                hl_helpers.append((a,b,lev))
-
-        if self.view_changed: self.hl_helpers = hl_helpers
-
+    # helper functions for visible_export
     def is_ambiguous(self, li):
         num_data = self.li_to_num_data[li]
         if len(num_data.active_candidates) > 1: return True
@@ -906,7 +969,6 @@ class KnowledgeVisualisation:
         if self.ambi_select_mode: return self.is_ambiguous(li)
         elif self.is_move_mode(): return self.is_movable(li)
         else: return True
-
     def get_label_position(self, gi):
         position = self.gi_label_position[gi]
 
@@ -918,7 +980,8 @@ class KnowledgeVisualisation:
             else: raise Exception("Unexpected type {}".format(type(num_obj)))
             self.gi_label_position[gi] = position
         return position
-        
+
+    # create data for Viewport and GTool
     def visible_export(self):
         self.view_changed = True
         self.visible_points_numer = [
@@ -1013,6 +1076,66 @@ class KnowledgeVisualisation:
 
         self.visible_export()
 
+    ## Highlights / selection / noticing change in the view
+
+    def update_hl_selected(self, selected):
+        obj_is_selected = dict()
+        for obj in selected:
+            if isinstance(obj, tuple):
+                data = obj[1:]
+                obj = obj[0]
+            else: data = True
+            if obj >= len(self.gi_to_li_l): continue
+            li = self.gi_to_li(obj)
+            if li is None: continue
+            obj_is_selected[li] = data
+
+        # check change
+        if not self.view_changed:
+            if self.obj_is_selected == obj_is_selected: return
+        self.obj_is_selected = obj_is_selected
+        self.visible_export()
+        self.update_selected_hook()
+    def update_hl_proposals(self, proposals):
+        if not self.view_changed and len(proposals) == len(self.hl_proposals):
+            if all(
+                prev_prop.identical_to(prop)
+                for prev_prop, prop in zip(self.hl_proposals, proposals)
+            ): return
+        self.view_changed = True
+        self.hl_proposals = proposals
+    def update_hl_helpers(self, helpers):
+        # push segments away from lines
+        hl_helpers = []
+        hl_helpers_ori = iter(self.hl_helpers)
+        def next_ori():
+            try:
+                return next(hl_helpers_ori)
+            except StopIteration:
+                return None
+        for helper in helpers:
+            if isinstance(helper, GeoObject):
+                if not helper.identical_to(next_ori()): self.view_changed = True
+                hl_helpers.append(helper)
+            else:
+                a,b = helper
+                if eps_identical(a,b): continue
+                hl_helper_ori = next_ori()
+                if not isinstance(hl_helper_ori, tuple): self.view_changed = True
+                else:
+                    ori_a,ori_b,ori_lev = hl_helper_ori
+                    if not eps_identical(ori_a, a) or not eps_identical(ori_b, b):
+                        self.view_changed = True
+                line_data = self.get_num_line(line_passing_np_points(a,b))
+                v = line_data.num_obj.v
+                if np.dot(v,a) > np.dot(v,b): a,b = b,a
+                lev = line_data.find_available_level(a,b)
+                hl_helpers.append((a,b,lev))
+
+        if self.view_changed: self.hl_helpers = hl_helpers
+
+    ## functions for external manipulation
+    
     def swap_priorities(self, gi, direction):
         li = self.gi_to_li(gi)
         candidates = self.li_to_num_data[li].active_candidates
@@ -1046,6 +1169,6 @@ class KnowledgeVisualisation:
                 self.gi_to_hidden[gi] = True
         self.refresh()
 
-    def set_model(self, model, gi_to_li):
-        self.model = model
+    def set_logic(self, logic, gi_to_li):
+        self.logic = logic
         self.gi_to_li_l = gi_to_li

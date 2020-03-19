@@ -1,10 +1,26 @@
 from tool_step import ToolStepEnv, CompositeTool, proof_checker
-from logic_model import LogicModel
+from logical_core import LogicalCore
 from geo_object import *
 import itertools
 from tools import ToolError, ToolErrorException
 from knowledge_visualisation import KnowledgeVisualisation
 
+"""
+GraphicalEnv contains primarily the list of the main steps
+in the construction constructed in GUI, and the state of logic
+after the constructions steps.
+As additional data, it contains names of the objects and redo stack.
+The state of the logical core is processed using
+KnowledgeVisualisation contained in the GraphicalEnv to extract
+the data to be drawn.
+
+The logical core self.logic is contained in a StepEnv: self.step_env.
+
+The objects here are primarily viewed as "GUI indices" (gi)
+which correspond to local indices in a StepEnv. There are also
+"logical indices" (li) that correcpond to the global indices in
+StepEnv and represent the object in the logical core.
+"""
 class GraphicalEnv:
 
     def __init__(self, tools):
@@ -20,18 +36,21 @@ class GraphicalEnv:
         self.gi_to_step_i = []
         self.gi_to_name = []
 
+        # build logic and step_env
         self.refresh_steps()
 
         # hooks
         self.add_step_hook = lambda step: None
         self.remove_step_hook = lambda step: None
         self.reload_steps_hook = lambda steps: None
-        self.update_meta_hook = lambda step: None
+        self.update_hyperpar_hook = lambda step: None
 
+    # given gi, return index of a step which created it
     def gi_to_step(self, gi):
         i = self.gi_to_step_i[gi]
         return self.steps[i]
 
+    # change name of a gi, and check name collisions
     def change_name(self, gi, name):
         if name == self.gi_to_name[gi]: return
         problems = []
@@ -52,6 +71,7 @@ class GraphicalEnv:
         self.gi_to_name[gi] = name
         self.vis.update_selected_hook()
     
+    # on loading a file / reseting
     def set_steps(self, steps, names, visible = None, goals = None, proof = None):
         self.vis.truncate_gis(0)
         if goals is None: self.min_steps = 0
@@ -72,6 +92,7 @@ class GraphicalEnv:
         self.reload_steps_hook()
         self.redo_stack = []
 
+    # "smart" assignment of a name of a new object
     def make_name(self, step, out_i, t):
         tool = step.tool
         used_names = set(self.gi_to_name)
@@ -110,6 +131,7 @@ class GraphicalEnv:
                 i += 1
 
     def add_step(self, step, update = True):
+        # update = False if we will immediatelly add another steps
         try:
             ori_len = len(self.step_env.local_to_global)
             self.step_env.run_steps((step,), 1)
@@ -132,7 +154,7 @@ class GraphicalEnv:
             self.refresh_steps()
             return None
 
-    def pop_step(self):
+    def pop_step(self): # undo
         if len(self.steps) == self.min_steps:
             print("No more steps to undo")
             return
@@ -165,11 +187,12 @@ class GraphicalEnv:
         self.vis.refresh()
         self.add_step_hook(step)
 
+    # reset the logical core and run all steps (with all proof checks)
     def refresh_steps(self, catch_errors = True):
         proof_checker.reset()
-        self.model = LogicModel(basic_tools = self.tools)
-        self.step_env = ToolStepEnv(self.model)
-        self.vis.set_model(self.model, self.step_env.local_to_global)
+        self.logic = LogicalCore(basic_tools = self.tools)
+        self.step_env = ToolStepEnv(self.logic)
+        self.vis.set_logic(self.logic, self.step_env.local_to_global)
         self.step_env.run_steps(self.steps, 1, catch_errors = catch_errors)
         self.check_goals()
         self.vis.refresh()

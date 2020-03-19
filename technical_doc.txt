@@ -1,0 +1,79 @@
+Here are basic descriptions and categorization
+of the individual files of the source code,
+
+Main application
+* geo_logic.py
+
+Numerical basics
+* geo_object.py
+  = Five numerical geometrical objects (Point, Line, Circle, Angle, Ratio)
+    and basic numerical operations with them
+* primitive_constr.py
+  = file investigated by primitive_tools.py
+    for making primitive construction tools (such as line, circumcenter)
+* primitive_pred.py
+  = file investigated by primitive_tools.py
+    for making primitive predicate tools (such as lies_on, oriented_as)
+
+Logic
+* logical_core.py
+* uf_dict.py = structure for lookup table
+* Gaussian elimination (angles, ratios)
+  * sparse_row.py
+    = dictionary : object -> Fraction
+      capable of addition and constant (Fraction) multiplication
+  * sparse_elim.py
+    ElimMatrix = structure representing the linear span
+      of SparseRow, capable of dynamic addition,
+      used for automatic ratio calculations
+  * angle_chasing.py
+    = extension of ElimMatrix of numerical detection modulo 1
+      used for automatic angle calculations
+* tools.py
+  = tools which can interract with the logical core
+  * primitive_tools.py
+    = loading tools available at the beginning of basic.gl
+  * tool_step.py
+    = composite tools and (parallel) proof checking
+  * parse.py
+    = loading gl files
+    * basic_tools.py
+      = python access to tools loaded from gl files
+        + additional tweaks
+  * movable_tools.py
+    = loaded after parsing basic.gl, including (movable) intersection
+* triggers.py
+  = automatic deduction of facts such as
+    a <- line A B
+    <- lies_on C l
+    b <- line B C
+    THEN
+    <- == a b
+  * relstr.py
+
+GUI
+* viewport.py
+  = main drawable area, it takes data of what
+    to draw from knowledge_visualisation.py
+  * label_visualiser.py
+    = drawing object labels
+* toolbar.py
+* gtool.py = GUI Tool, also with simple tools GToolMove and GToolHide
+  * gtool_constr.py
+    = The five construction tools:
+      Point, Parallel, Perpendicular, Circle, Circumcircle
+  * gtool_general.py = tool activated by the input bar
+  * gtool_label.py
+  * gtool_logic.py = reasoning tool
+* step_list.py
+  = sidebar with steps
+* file_chooser.py
+
+Between logic and GUI
+* graphical_env.py
+  = dynamic structure storing the current construction
+    and running it using a logical core
+* knowledge_visualisation.py
+  = investigating the inner state of a logical core
+    and deciding what to draw,
+    also contains some additional data such as label positions

@@ -890,7 +890,7 @@ incircle A:P B:P C:P -> i:C
   THEN
   <- is_tangent a i
   <- is_tangent b i
-  <- is_tangent b i
+  <- is_tangent c i
   PROOF
   Fb <- foot I b
   Fc <- foot I c

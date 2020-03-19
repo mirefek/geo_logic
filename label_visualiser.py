@@ -1,5 +1,8 @@
 import numpy as np
 
+"""
+Drawing labels of geometrical objects (with indices)
+"""
 class LabelVisualiser:
     def __init__(self, std_size = 48, sub_size = 30, sub_lower = 10):
         self.lookup_table = dict()
@@ -7,6 +10,26 @@ class LabelVisualiser:
         self.sub_size = sub_size
         self.sub_lower = sub_lower
 
+    """
+    parse(cr, s) converts the string into instructions for drawing
+    the parsing rules are approximatelly:
+     * if there is an underscore in the string,
+       it swaps the index mode and normal mode
+     * otherwise, there are three basic character types:
+       uppercase letters, lowercase letters, numbers
+       * change between these types causes mode swap
+       * other characters, such as comma, does not cause mode swap
+       * prime is never put into index
+    The output is of the form
+    (texts, subscripts, extents).
+    extents are analogous of the standard cairo.text_extents
+    texts and subscripts are lists of instructions of the form
+    (x, y, text) for
+      cr.move_to(x,y)
+      cr.show_text(text)
+    Note that the parsing results are cached, so the parse function should
+    be always called with the same font set in the cairo context.
+    """
     def parse(self, cr, s):
         if s in self.lookup_table:
             return self.lookup_table[s]
@@ -21,21 +44,18 @@ class LabelVisualiser:
         self.std_chars = []
         self.sub_chars = []
 
+        has_underscore = '_' in s
+
         last_sub = None
         last_ctype = None
-        forced_sub = False
         for c in s:
             if c == '_':
-                if forced_sub or last_sub:
-                    forced_sub = False
-                    last_sub = False
-                    last_ctype = None
-                else: forced_sub = True
+                last_sub = not last_sub
                 continue
 
             cur_ctype = self._char_type(c)
-            if forced_sub:
-                cur_sub = True
+            if has_underscore:
+                cur_sub = last_sub
             else:
                 if cur_ctype is None or last_ctype is None:
                     cur_sub = last_sub
@@ -64,6 +84,7 @@ class LabelVisualiser:
         self.lookup_table[s] = result
         return result
 
+    # draw the text in the format given by self.parse
     def show(self, cr, texts, subscripts):
         cr.set_font_size(self.std_size)
         for x,y,text in texts:
@@ -75,12 +96,37 @@ class LabelVisualiser:
             cr.show_text(text)
         cr.new_path()
 
+    # draw so that the center of the text is at (0,0)
     def show_center(self, cr, texts, subscripts, extents):
         x, y, width, height, dx, dy = extents
         cr.save()
-        cr.translate(-(x+width/2), -(y+height/2))
+        cr.translate(*self.get_center_start(extents))
         self.show(cr, texts, subscripts)
         cr.restore()
+    def get_center_start(self, extents):
+        x, y, width, height, dx, dy = extents
+        return np.array([-(x+width/2), -(y+height/2)])
+
+    # draw text in "edit mode", as is, without smart parsing, with a cursor
+    def show_edit(self, cr, text, curs_index, position = (0,0),
+                  curs_color = (0,0,1), curs_by = 'I', curs_w = 2):
+
+        cr.save()
+        cr.translate(*position)
+        cr.set_font_size(self.std_size)
+        _, curs_y, _, curs_h, _, _ = cr.text_extents(curs_by)
+        curs_pos = cr.text_extents(text[:curs_index])[4]
+
+        cr.move_to(0, 0)
+        cr.show_text(text)
+
+        cr.rectangle(curs_pos, curs_y, curs_w, curs_h)
+        cr.set_source_rgb(*curs_color)
+        cr.fill()
+
+        cr.restore()
+
+    ### Helper functions for parsing
 
     def _char_type(self, c):
         if c.islower(): return 0
@@ -122,25 +168,3 @@ class LabelVisualiser:
         self.std_chars.append(c)
     def _add_sub_char(self, c):
         self.sub_chars.append(c)
-
-    def get_center_start(self, extents):
-        x, y, width, height, dx, dy = extents
-        return np.array([-(x+width/2), -(y+height/2)])
-
-    def show_edit(self, cr, text, curs_index, position = (0,0),
-                  curs_color = (0,0,1), curs_by = 'I', curs_w = 2):
-
-        cr.save()
-        cr.translate(*position)
-        cr.set_font_size(self.std_size)
-        _, curs_y, _, curs_h, _, _ = cr.text_extents(curs_by)
-        curs_pos = cr.text_extents(text[:curs_index])[4]
-
-        cr.move_to(0, 0)
-        cr.show_text(text)
-
-        cr.rectangle(curs_pos, curs_y, curs_w, curs_h)
-        cr.set_source_rgb(*curs_color)
-        cr.fill()
-
-        cr.restore()

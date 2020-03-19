@@ -4,6 +4,26 @@ from math import floor
 from fractions import Fraction
 from geo_object import eps_identical
 
+"""
+AngleChasing is a superstructure of ElimMatrix in sparse_elim specifically
+targeted to handling equations about angles.
+Angles use the straight-angle units here, that is
+  1/2 = 90 degrees, 1 = 180 degrees, 2 = 360 degrees, ...
+Equations about angles are considered modulo 1 (modulo 180 degrees)
+since the basic usage of an angle is a direction of a line, and a direction
+of a line is unambiguous modulo 180 degrees only.
+
+Since AngleChasing is using gaussian elimination (over a field)
+taking equations modulo 1 is equivalent to taking equations modulo rationals.
+Therefore, the logic checks only whether a certain equation is satisfied modulo
+rational numbers, and the rest is checked numerically.
+
+An equation is of the form
+  x_1*c_1 + x_2*c_2 + ... + x_n*c_n + C = 0.
+C is an extra constant called "frac_offset", and
+the rest is encoded using a SparseRow.
+"""
+
 class AngleChasing:
     def __init__(self):
         self.elim = ElimMatrix()
@@ -11,6 +31,8 @@ class AngleChasing:
         self.root_to_vars = dict() # root -> size, dict( frac_diff -> var_list )
         self.value = dict() # var -> value
 
+    # var is the variable (geometrical reference)
+    # value is a numerical value (object of type Angle)
     def add_var(self, var, value):
         #print("    angles.add_var({}, {})".format(var, value))
         self.value[var] = value
@@ -40,7 +62,8 @@ class AngleChasing:
     def has_exact_difference(self, a, b):
         return self.equal_to[a][0] == self.equal_to[b][0]
 
-    def get_frac_dist(self, f1, f2, denom):
+    def _get_frac_dist(self, f1, f2, denom):
+        # find a fraction with denominator denom approximatelly equal to f2-f1
         numer_f = (f2 - f1) * denom + 0.5
         numer = int(floor(numer_f)) % denom
         numer_f = numer_f % denom - 0.5
@@ -72,7 +95,7 @@ class AngleChasing:
 
             # find fractional difference between x,y
 
-            frac_dist = self.get_frac_dist(self.value[y], self.value[x], denom)
+            frac_dist = self._get_frac_dist(self.value[y], self.value[x], denom)
 
             # add y_dict to x_dict, calculate to_glue_out
 
@@ -89,11 +112,12 @@ class AngleChasing:
 
         return to_glue_out
 
+    # find angle y such that it is proven that y == -x
     def get_complement(self, x):
         r, d_xr = self.equal_to[x]
         inv, denom = self.elim.get_inverse(r)
         if inv is None: return None
-        d_ri = self.get_frac_dist(-self.value[r],self.value[inv], denom)
+        d_ri = self._get_frac_dist(-self.value[r],self.value[inv], denom)
         y, d_iy = self.equal_to[inv]
         d_nxy = (-d_xr + d_ri + d_iy)%1
         #print("{} +{} -> {} inv[{}] -> {} +{} -> {}".format(x, d_xr, r, denom, inv, d_iy, y))

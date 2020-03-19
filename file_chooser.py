@@ -3,6 +3,11 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 import os
 
+"""
+Dialog window for opening / saving
+"""
+
+# show svg files, for image export
 def add_svg_filters(dialog):
     filter_gl = Gtk.FileFilter()
     filter_gl.set_name("SVG Images")
@@ -15,6 +20,7 @@ def add_svg_filters(dialog):
     filter_any.add_pattern("*")
     dialog.add_filter(filter_any)
 
+# show GeoLogic files
 def add_gl_filters(dialog):
     filter_gl = Gtk.FileFilter()
     filter_gl.set_name("GeoLogic Files")
@@ -72,6 +78,8 @@ def select_file_save(win, win_title = "Save file", folder = "saved", add_filters
         else:
             res = None
             break
+
+        # check overwrite
 
         cansave = True
         if os.path.exists(dialog.get_filename()):

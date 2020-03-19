@@ -11,12 +11,18 @@ def run_tuple(f, *args):
         f = f[0]
     f(*args)
 
+"""
+ObjSelector is a class for finding an object in the picture by coordinates
+the result is a pair (graphical_index, numerical_representation).
+The graphical_index determines e.g. the name of the object, see graphical_env.py.
+"""
 class ObjSelector:
     def __init__(self):
-        self.find_radius_pix = 20
+        self.find_radius_pix = 20 # radius for selection in pixels
     def _update_find_radius(self):
         self.find_radius = self.find_radius_pix / self.viewport.scale
 
+    # find object from a given list
     def coor_to_obj(self, coor, l, filter_f = None):
         self._update_find_radius()
         if filter_f is not None:
@@ -41,6 +47,7 @@ class ObjSelector:
             itertools.chain(self.vis.selectable_lines,self.vis.selectable_circles),
             **kwargs
         )
+    # sequential attempts of coor_to_*
     def coor_to_attempts(self, coor, *selectors, **kwargs):
         for selector in selectors:
             obj,objn = selector(coor, **kwargs)
@@ -53,13 +60,28 @@ class ObjSelector:
     def coor_to_pc(self, coor, **kwargs):
         return self.coor_to_attempts(coor, self.coor_to_point, self.coor_to_circle, **kwargs)
 
+    # when activated
     def enter(self, viewport):
         self.viewport = viewport
         self.env = viewport.env
         self.vis = viewport.vis
+    # when deactivated
     def leave(self):
         pass
 
+"""
+HighlightList is a general class for extra gui elements
+(selections, helpers, proposals) drawn by the gtool.
+These elements are often build incrementaly,
+but some are permanent (already selected items), others are
+temporary (the current object under mouse).
+
+Therefore, there is the saved list of the permanent object
+(the initial setting before investigating mouse cursor), and
+the current list l. When confirmed (click), the current list
+becomes the initial list depending on whether the new objects
+were added with the "permanent" attribute.
+"""
 class HighlightList:
     def __init__(self):
         self.l = []
@@ -80,20 +102,23 @@ class HighlightList:
             (x,perm) for (x,perm) in self.l if not cond(x)
         ]
 
+"""
+The main class for a GUI Tool is GTool, its descendants are used for all the GUI tools
+such as point, parallel, move, hide, ...
 
-class GToolNone:
-    def get_icon_name(self): return None
-    def get_cursor(self): return None
-    def get_key_shortcut(self): return None
-    def get_label(self): return None
-    def reset(self): pass
-    def cursor_away(self): pass
-    def button_press(self, coor): pass
-    def button_release(self, coor): pass
-    def motion(self, coor, button_pressed): pass
-    def enter(self, viewport): pass
-    def leave(self): pass
+At every point, there is an update function which is called primarily on mouse movement.
+The update function takes the current mouse coordinates (in geometrical coordinates), and
+potentionally further extra parameters. It searches for interesting
+objects under the mouse cursor and determines what should be done with them.
 
+At the beginning (or after tool restart), the update function is set to be "self.update_basic".
+The update function can update the hl_* lists (typically by calling hl_propose, hl_select, hl_add_helper),
+and set the following attributes
+  * self.confirm = function (possibly with arguments) that should be called after click
+  * self.confirm_next = the next update function after a click (if not set, the tool is reseted after click)
+  * self.drag_start = function called on clicking followed by a drag
+  * self.drag = update function during dragging (if not set, dragging is disabled)
+"""
 class GTool(ObjSelector):
     icon_name = None
     key_shortcut = None
@@ -112,7 +137,7 @@ class GTool(ObjSelector):
         self.hl_helpers = HighlightList()
         self.hl_lists = [self.hl_proposals, self.hl_selected, self.hl_helpers]
 
-    def reset(self):
+    def reset(self): # called for example on right click
         self.dragged = False
         self.click_coor = None
 
@@ -122,6 +147,7 @@ class GTool(ObjSelector):
         self.update = self.update_basic
         run_tuple(self.on_reset)
 
+    ### basic manipulation with additional GUI elements
     def _hl_reset(self):
         for hl_list in self.hl_lists: hl_list.reset_save()
     def _hl_load(self):
@@ -137,6 +163,8 @@ class GTool(ObjSelector):
         self._hl_load()
         self._hl_update()
 
+    # object selection -- combining ObjSelector and HighlightList hl_selected
+    # the selected object is returned and also added to self.hl_selected
     def select_by_coor(self, coor, coor_to_x, permanent = True, **kwargs):
         obj,nobj = coor_to_x(coor, **kwargs)
         if obj is not None: self.hl_select(obj, permanent = permanent)
@@ -171,11 +199,13 @@ class GTool(ObjSelector):
     def hl_add_helper(self, *args, **kwargs):
         self.hl_helpers.add(*args, **kwargs)
 
+    # function executed primarily on mouse movement
     def _run_update(self, coor):
         self._pre_update()
         run_tuple(self.update, coor)
         self._hl_update()
 
+    # function executted primarily on click (or drag release)
     def _run_confirm(self):
         if self.confirm is not None:
             run_tuple(self.confirm)
@@ -186,6 +216,8 @@ class GTool(ObjSelector):
             self._hl_reset()
             self.update = self.update_basic
             run_tuple(self.on_reset)
+
+    ### externally called functions
 
     def button_press(self, coor):
         if self.click_coor is not None: self.reset()
@@ -220,12 +252,14 @@ class GTool(ObjSelector):
         if self.click_coor is None or self.dragged:
             self._run_update(coor)
 
+    ### helpers for further descendants for interacting with the logic
+
     def lies_on(self, p, cl):
         p_li = self.vis.gi_to_li(p)
         cl_li = self.vis.gi_to_li(cl)
         if self.vis.li_to_type(cl_li) == Line: label = self.tools.lies_on_l
         else: label = self.tools.lies_on_c
-        return self.vis.model.get_constr(label, (p_li, cl_li)) is not None
+        return self.vis.logic.get_constr(label, (p_li, cl_li)) is not None
 
     def instantiate_obj(self, obj):
         if isinstance(obj, tuple):
@@ -248,11 +282,13 @@ class GTool(ObjSelector):
         arg_types = tuple(type(x) for x in num_args)
         out_type = type(res_obj)
         tool = self.tools.m[name, arg_types, out_type]
-        meta_args = tool.get_meta(res_obj, *num_args)
-        step = ToolStep(tool, meta_args, args, len(self.env.gi_to_step_i))
+        hyper_params = tool.get_hyperpar(res_obj, *num_args)
+        step = ToolStep(tool, hyper_params, args, len(self.env.gi_to_step_i))
         #if name == "intersection":
-        #    print(arg_types, meta_args)
+        #    print(arg_types, hyper_params)
         return self.env.add_step(step, update = update)
+
+    ### extended methods of ObjSelector
 
     def enter(self, viewport):
         ObjSelector.enter(self, viewport)
@@ -264,10 +300,29 @@ class GTool(ObjSelector):
 
     # to be implemented
     def on_reset(self):
-        pass
+        pass # on right click, unexpected click, or other case of reseting to the default state
     def update_basic(self, coor):
-        pass
+        pass # investigating  in the default (starting) phase
 
+
+### Simple GTools
+
+
+# dummy GTool, when no tool is selected
+class GToolNone:
+    def get_icon_name(self): return None
+    def get_cursor(self): return None
+    def get_key_shortcut(self): return None
+    def get_label(self): return None
+    def reset(self): pass
+    def cursor_away(self): pass
+    def button_press(self, coor): pass
+    def button_release(self, coor): pass
+    def motion(self, coor, button_pressed): pass
+    def enter(self, viewport): pass
+    def leave(self): pass
+
+# applied during holding shift
 class AmbiSelect(ObjSelector):
 
     def click(self, coor, rev):
@@ -314,13 +369,13 @@ class GToolMove(GTool):
 
     def move_obj(self, coor, step, grasp, num_args):
         tool = step.tool
-        step.meta_args = tool.new_meta(grasp, coor, *num_args)
+        step.hyper_params = tool.new_hyperpar(grasp, coor, *num_args)
         if isinstance(tool, Intersection):
             intersections = tool.ordered_candidates(num_args)
-            i, = step.meta_args
+            i, = step.hyper_params
             self.hl_propose(Point(intersections[1-i]))
         self.env.refresh_steps(catch_errors = True)
-        self.env.update_meta_hook(step)
+        self.env.update_hyperpar_hook(step)
 
     def enter(self, viewport):
         ObjSelector.enter(self, viewport)

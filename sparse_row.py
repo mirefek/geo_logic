@@ -1,5 +1,17 @@
 from fractions import Fraction
 
+"""
+SparseRow is a dictionary of the form obj -> Fraction
+such that the default value is Fraction(0)
+(and also any zero value is automatically removed from the keys)
+It supports addition and scalar multiplication as vectors in a vector space.
+
+SparseRow is used as the type of linear equations in GeoLogic of the form
+  x_1*c_1 + x_2*c_2 + ... + x_n*c_n = 0,
+where x_1, ..., x_n are variables (object references), and c_1, ..., c_n
+fractional coefficients.
+"""
+
 class SparseRow(dict):
     def __init__(self, data):
         if isinstance(data, SparseRow):
@@ -24,7 +36,7 @@ class SparseRow(dict):
                 self[k] = x*n
         return self
 
-    def iadd_coef(self, coef, other):
+    def iadd_coef(self, coef, other): # self += coef*other
         if coef == 0: return
         other = other.items()
         for k,x in other:

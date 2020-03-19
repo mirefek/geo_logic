@@ -1,6 +1,13 @@
 from collections import defaultdict
 from stop_watch import StopWatch
 
+"""
+Alternative view to the lookup table, used by triggers.
+It sees every value: (label, input) -> output
+as a relation (label, data = input+output), and it allows to access
+all such relations given label and a single element of data.
+"""
+
 class RelStr:
     def __init__(self):
         self.t_to_data = defaultdict(set)  # t -> set of tuples(x1,x2,...,xn)
@@ -15,6 +22,23 @@ class RelStr:
             self.obj_to_ti[x].add((t,i))
         return True
 
+    # removing a node (called upon gluing)
+    def discard_node(self, obj, store_disc_edges = None):
+        for t,i in self.obj_to_ti[obj]:
+            edges = self.tobj_to_nb.pop((t,obj,i))
+            self.t_to_data[t].difference_update(edges)
+            for edge in edges:
+                for i2,obj2 in enumerate(edge):
+                    if obj2 != obj:
+                        self.tobj_to_nb[t,obj2,i2].discard(edge)
+            if store_disc_edges is not None:
+                store_disc_edges.extend(
+                    (t, data)
+                    for data in edges
+                )
+        del self.obj_to_ti[obj]
+
+    # debug function
     def check_consistency(self):
         test_tobj_to_nb = defaultdict(set)
         test_obj_to_ti = defaultdict(set)
@@ -41,21 +65,7 @@ class RelStr:
             s2 = test_obj_to_ti2.get(obj, set())
             assert(s <= s2)
 
-    def discard_node(self, obj, store_disc_edges = None):
-        for t,i in self.obj_to_ti[obj]:
-            edges = self.tobj_to_nb.pop((t,obj,i))
-            self.t_to_data[t].difference_update(edges)
-            for edge in edges:
-                for i2,obj2 in enumerate(edge):
-                    if obj2 != obj:
-                        self.tobj_to_nb[t,obj2,i2].discard(edge)
-            if store_disc_edges is not None:
-                store_disc_edges.extend(
-                    (t, data)
-                    for data in edges
-                )
-        del self.obj_to_ti[obj]
-
+    # currently not used
     def copy(self):
         res = Relstr()
         res.t_to_data = self.t_to_data.copy()

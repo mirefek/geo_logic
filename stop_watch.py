@@ -1,6 +1,18 @@
 from time import time, gmtime, strftime
 import sys
 
+"""
+This is a debugging tool for measuring time taken by certain operations
+For usage, wrap any piece of code into:
+    with StopWatch("Any label"):
+        do
+        some
+        code
+It summarizes the parts of the code which were under a given label.
+In the end, call print_times() for printing how much time
+the operations have taken.
+"""
+
 _d = dict()
 _l = list()
 _stack = ()
