@@ -155,18 +155,52 @@ class GeoLogic(Gtk.Window):
         parser = Parser(self.imported_tools.tool_dict)
         parser.parse_file(fname, axioms = True)
         loaded_tool = parser.tool_dict['_', ()]
-        visible = set(loaded_tool.result)
-        if not visible: visible = None
-        names = []
         steps = loaded_tool.assumptions
-        for step in steps:
-            names.extend(loaded_tool.var_to_name[x] for x in step.local_outputs)
+        names = [
+            loaded_tool.var_to_name_proof[x]
+            for x in range(len(loaded_tool.var_to_name_proof))
+        ]
         if loaded_tool.implications:
             goals, proof = loaded_tool.implications, loaded_tool.proof
         else: goals, proof = None, None
-        self.env.set_steps(steps, names = names, visible = visible,
+        self.env.set_steps(steps, names = names,
                            goals = goals, proof = proof)
 
+        # hide objects
+        visible = set(loaded_tool.result) # old format
+        if visible:
+            for gi in range(len(self.gi_to_hidden)):
+                self.vis.gi_to_hidden[gi] = gi not in visible
+        for gi,name in enumerate(names): # new format
+            if ("hide__{}".format(name), ()) in parser.tool_dict:
+                self.vis.gi_to_hidden[gi] = True
+
+        # set labels
+        for gi,name in enumerate(names): # new format
+            label_pos_tool = parser.tool_dict.get(("label__{}".format(name), ()), None)
+            if label_pos_tool is not None:
+                self.vis.gi_label_show[gi] = True
+                logic = LogicalCore(basic_tools = self.imported_tools)
+                pos_l = label_pos_tool.run((), (), logic, 0)
+                pos_n = [logic.num_model[x] for x in pos_l]
+                t = self.vis.gi_to_type(gi)
+                if t == Point:
+                    point, = pos_n
+                    position = point.a
+                    print(position)
+                elif t == Line:
+                    position = tuple(d.x for d in pos_n)
+                elif t == Circle:
+                    ang, offset = pos_n
+                    position = ang.data*2, offset.x
+                else:
+                    print("Warning: save label: unexpected type {} of {}".format(t, name))
+                    continue
+                self.vis.gi_label_position[gi] = position
+
+        self.vis.refresh()
+
+        # viewport zoom and position
         view_data_tool = parser.tool_dict.get(('view__data', ()), None)
 
         if view_data_tool is None:
@@ -184,15 +218,16 @@ class GeoLogic(Gtk.Window):
         print("saving to '{}'".format(fname))
         self.update_title(fname)
         with open(fname, 'w') as f:
-            visible = [
-                "{}:{}".format(
-                    self.env.gi_to_name[gi],
-                    type_to_c[self.vis.gi_to_type(gi)]
-                )
-                for gi,hidden in enumerate(self.vis.gi_to_hidden)
-                if not hidden
-            ]
-            f.write('_ -> {}\n'.format(' '.join(sorted(visible))))
+            #visible = [
+            #    "{}:{}".format(
+            #        self.env.gi_to_name[gi],
+            #        type_to_c[self.vis.gi_to_type(gi)]
+            #    )
+            #    for gi,hidden in enumerate(self.vis.gi_to_hidden)
+            #    if not hidden
+            #]
+            #f.write('_ -> {}\n'.format(' '.join(sorted(visible))))
+            f.write('_ ->\n')
 
             def write_step(step):
                 tokens = [self.env.gi_to_name[x] for x in step.local_outputs]
@@ -211,6 +246,39 @@ class GeoLogic(Gtk.Window):
                 f.write('  PROOF\n')
                 for step in self.env.steps[self.env.min_steps:]: write_step(step)
 
+            # hidden objects and labels
+            f.write("\n")
+            for gi, (name, hidden, label_show, label_pos) in enumerate(zip(
+                    self.env.gi_to_name, self.vis.gi_to_hidden, self.vis.gi_label_show, self.vis.gi_label_position)):
+                if hidden: f.write("hide__{} ->\n".format(name))
+                if label_show:
+                    t = self.vis.gi_to_type(gi)
+                    if t == Point:
+                        label_attrs = [('pos', 'P', 'free_point', label_pos)]
+                    elif t == Line:
+                        pos, offset = label_pos
+                        label_attrs = [
+                            ('pos', 'D', 'custom_ratio', (pos, 0.)),
+                            ('offset', 'D', 'custom_ratio', (offset, 0.)),
+                        ]
+                    elif t == Circle:
+                        direction, offset = label_pos
+                        label_attrs = [
+                            ('direction', 'A', 'custom_angle', (direction/2,)),
+                            ('offset', 'D', 'custom_ratio', (offset, 0.)),
+                        ]
+                    else:
+                        print("Warning: save label: unexpected type {} of {}".format(t, name))
+                        continue
+                    label_attr_names = [
+                        "{}:{}".format(attr_name, t) for attr_name, t, _, _ in label_attrs
+                    ]
+                    f.write("label__{} -> {}\n".format(name, ' '.join(label_attr_names)))
+                    for attr_name, _, attr_constructor, attr_values in label_attrs:
+                        f.write("  {} <- {} {}\n".format(attr_name, attr_constructor,
+                                                         ' '.join(map(str, attr_values))))
+
+            # writing current zoom and position
             f.write("\n")
             f.write("view__data -> anchor:P zoom:D\n")
             f.write("  anchor <- free_point {} {}\n".format(*self.viewport.view_center))

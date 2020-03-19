@@ -160,19 +160,27 @@ class Parser:
                 for (name, (i,t)) in self.variables.items()
             )
 
-            # save variable environment after assumptions
+            # restore variable environment after assumptions
             self.variables, self.var_num = var_after_assump
             if proof is not None:
                 proof = [
                     self.parse_line(*line)
                     for line in proof
                 ]
+            var_to_name_proof = dict(
+                (i, name)
+                for (name, (i,t)) in self.variables.items()
+            )
+
             arg_types = tuple(arg_types)
             out_types = tuple(out_types)
-            self.add_tool(name, CompositeTool(
+            tool = CompositeTool(
                 assump, impl, result, proof, arg_types, out_types, name,
-                basic_tools = self.basic_tools, var_to_name = var_to_name,
-            ))
+                basic_tools = self.basic_tools,
+            )
+            tool.var_to_name = var_to_name
+            tool.var_to_name_proof = var_to_name_proof
+            self.add_tool(name, tool)
 
         except Exception:
             print("l{}: Tool: {}".format(*header_info))

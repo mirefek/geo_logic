@@ -533,6 +533,10 @@ class KnowledgeVisualisation:
         self.gi_to_hidden = []
         self.gi_label_show = []
         self.gi_label_position = []
+        # label position =
+        #    Point: np.array([x,y])
+        #    Line: position (float 0 to 1), offset (pixels)
+        #    Circle: direction (float mod 2), offset (pixels)
 
         # extra elements to the main construction
         self.hl_proposals = ()
@@ -618,9 +622,6 @@ class KnowledgeVisualisation:
         del self.gi_to_hidden[number:]
         del self.gi_label_show[number:]
         del self.gi_label_position[number:]
-    def set_visible_set(self, visible):
-        for i in range(len(self.gi_to_hidden)):
-            self.gi_to_hidden[i] = i not in visible
 
     # helper functions for translating indices
     # gi -> li -> num -> data

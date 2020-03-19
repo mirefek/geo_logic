@@ -62,14 +62,13 @@ class ToolStepEnv:
 
 class CompositeTool(MemoizedTool):
     def __init__(self, assumptions, implications, result, proof, arg_types, out_types, name,
-                 basic_tools = None, var_to_name = None):
+                 basic_tools = None):
         MemoizedTool.__init__(self, arg_types, out_types, name)
         self.assumptions = assumptions
         self.implications = implications
         self.result = result
         self.proof = proof
         self.proof_tools = basic_tools # access to basic tools for running triggers in the proof check
-        self.var_to_name = var_to_name # names of variables, mainly for GUI
 
         # estimating the total number of nested proof checks that will be required
         self.deep_len_all = sum(

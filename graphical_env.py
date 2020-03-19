@@ -72,7 +72,7 @@ class GraphicalEnv:
         self.vis.update_selected_hook()
     
     # on loading a file / reseting
-    def set_steps(self, steps, names, visible = None, goals = None, proof = None):
+    def set_steps(self, steps, names, goals = None, proof = None):
         self.vis.truncate_gis(0)
         if goals is None: self.min_steps = 0
         else:
@@ -85,8 +85,6 @@ class GraphicalEnv:
         for i,step in enumerate(steps):
             self.gi_to_step_i += [i]*len(step.tool.out_types)
         self.vis.add_gis(len(self.gi_to_step_i))
-        if visible is not None:
-            self.vis.set_visible_set(visible)
         assert(len(self.gi_to_name) == len(self.gi_to_step_i))
         self.refresh_steps(False)
         self.reload_steps_hook()
