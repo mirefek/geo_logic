@@ -1,4 +1,4 @@
-_ -> A:P B':P B:P C':P C:P D:P E:P F:P G:P H:P I:P J:P K:P L:P M:P O:P a:L b:L c:L d:L e:L f:L g:L p:L
+_ ->
   A <- free_point 272.67291259765625 117.24664306640625
   B <- free_point 206.54791259765625 388.65655517578125
   C <- free_point 548.4716796875 382.93927001953125
@@ -23,3 +23,8 @@ _ -> A:P B':P B:P C':P C:P D:P E:P F:P G:P H:P I:P J:P K:P L:P M:P O:P a:L b:L c
   <- sim_aa G C A G M D
   <- sim_sas H A G O D G
   g <- line H G
+
+
+view__data -> anchor:P zoom:D
+  anchor <- free_point 355.59381103515625 285.03375244140625
+  zoom <- custom_ratio 1.0 0.

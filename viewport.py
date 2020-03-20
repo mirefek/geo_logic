@@ -438,10 +438,9 @@ class Viewport:
         self.shift_to_mouse(coor, e)
         print("zoom {}".format(self.scale))
 
-
     def set_select_color(self, cr):
         cr.set_source_rgb(0.3, 1, 1)
-    
+
     def set_color(self, cr, col_index, index2 = 0):
         if col_index < 0: # default "outer" color, -1 = black, -2 = gray
             if col_index == -1: alpha = 1.

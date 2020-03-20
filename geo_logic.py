@@ -169,7 +169,7 @@ class GeoLogic(Gtk.Window):
         # hide objects
         visible = set(loaded_tool.result) # old format
         if visible:
-            for gi in range(len(self.gi_to_hidden)):
+            for gi in range(len(self.vis.gi_to_hidden)):
                 self.vis.gi_to_hidden[gi] = gi not in visible
         for gi,name in enumerate(names): # new format
             if ("hide__{}".format(name), ()) in parser.tool_dict:
