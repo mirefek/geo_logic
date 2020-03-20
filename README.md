@@ -4,8 +4,8 @@ Tool for euclidean geometry aware of logic
 ![GeoLogic Screenshot](images/screenshot.png)
 
 ## Dependencies
-+ Python3
-+ pyGtk3
++ [pyGtk3](https://pygobject.readthedocs.io/en/latest/getting_started.html)
++ numpy (on Windows: "pacman -S mingw-w64-x86_64-python3-numpy")
 
 For studying the source code, start [here](technical_doc.txt).
 
