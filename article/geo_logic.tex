@@ -20,7 +20,7 @@
 % If there are more than two authors, 'et al.' is used.
 %
 \institute{%
-University of Innsbruck, Austria,
+University of Innsbruck, Austria,\\
 \email{mirek@olsak.net}}
 %
 \maketitle              % typeset the header of the contribution
@@ -28,7 +28,7 @@ University of Innsbruck, Austria,
 \begin{abstract}
 Domain of mathematical logic in computers is dominated by
 automated theorem provers (ATP) and interactive theorem provers (ITP).
-Both of these are hard to  access by AI from the human-immitation
+Both of these are hard to  access by AI from the human-imitation
 approach: ATPs often use human-unfriendly logical foundations while ITPs
 are meant for formalizing existing proofs rather than problem solving.
 We aim to create a simple human-friendly logical system for mathematical
@@ -39,8 +39,7 @@ environment user friendly, we abandoned strict logic required by ITPs,
 allowing to infer topological facts from pictures. We present our system
 for Euclidean geometry, together with a graphical application GeoLogic,
 similar to GeoGebra, which allows users to interactively study and prove
-properties about the geometrical setup. In the future, we would like to
-perform experiments with machine learning agents.
+properties about the geometrical setup.
 \keywords{Euclidean geometry  \and Logical system.}
 \end{abstract}
 
@@ -55,11 +54,11 @@ perform experiments with machine learning agents.
 The article discusses GeoLogic 0.2 which can be downloaded from
 \url{https://github.com/mirefek/geo_logic}. It is a logic system for
 Euclidean geometry together with a graphical application capable of
-automatic vizualisation of basic facts (equal angles, equal distances,
+automatic visualisation of basic facts (equal angles, equal distances,
 point being on a line, ...) and allowing user interaction with the
 logic system. GeoLogic can be used for proving many classical high
 school geometry problems such as Simson's line, Pascal's theorem, or
-some problems from International mathematical Olympiad. Examples of
+some problems from International Mathematical Olympiad. Examples of
 such proofs are available in the package. In this paper, we first
 explain our motivation, then we give a description of the underlying
 logical system, and finally we present and example of proving the
@@ -73,7 +72,7 @@ solving capabilities of human beings, presumably most famous of which
 is the International Mathematical Olympiad (IMO). Writing an automated
 theorem prover (ATP) that could solve a large portion of IMO problems is a
 challenge recognized in the field of artificial
-intelligence~\cite{IMO-Challenge}, and could potentionally lead to
+intelligence~\cite{IMO-Challenge}, and could potentially lead to
 strong ATPs in general.
 
 IMO, as well as many regional mathematical olympiads divide problems
@@ -279,29 +278,6 @@ Adding a macro or a lemma to the tool set creates a conservative
 extension of the logic -- anything that is provable with the usage of
 lemmata and macros can be proven without them.
 
-\section{Related work}
-
-Jeremy Avigad et al.~\cite{Coexact} developed a logical system for
-formalizing elementary geometrical proofs from Euclid's elements, also
-distinguishing exact and coexact predicates. Their approach is more
-formal than ours allowing also proving the coexact statements in the
-end but it is less extensible by further tools.
-Michael Beeson et al.~\cite{GeoCoQ} connected the interactive theorem
-prover CoQ with GeoGebra for visualisation of the theorem (but not for
-the proving procedure). Also note that using a rigid logic system such
-as in CoQ does not allow numerical checks to be trusted in coexact
-statements.
-
-The logical core of GeoLogic is partially inspired by General
-Deduction Database~\cite{GDD} and Full Angle~\cite{FullAngle} methods for authomated syntetic proofs in
-Euclidean Geometry.
-These methods are supported by a graphical application
-Geometry Expert~\cite{GEX} which allows user to state a
-geometrical problem, run an authomated geometrical theorem prover on
-it, and visualise the proof.
-Julien Narboux presented a similar graphical interface for
-construction of geometrical statement traslated to CoQ~\cite{GeoProof}.
-
 \section{Example -- Simson's line}
 
 We provide an example GeoLogic usage on the example of proving Simson's line.
@@ -392,6 +368,32 @@ and since $BF_aC$ are collinear, $F_cF_aF_b$ are collinear as well.
 \centerline{%
   \includegraphics[width = \imgwidth]{simson5.pdf}%
 }
+
+\section{Related work}
+
+Jeremy Avigad et al.~\cite{Coexact} developed a logical system for
+formalizing elementary geometrical proofs from Euclid's elements, also
+distinguishing exact and coexact predicates. Their approach is more
+formal than ours allowing also proving the coexact statements in the
+end but it is less extensible by further tools.
+Michael Beeson et al.~\cite{GeoCoQ} connected the interactive theorem
+prover CoQ with GeoGebra for visualisation of the theorem (but not for
+the proving procedure). Also note that using a rigid logic system such
+as in CoQ does not allow numerical checks to be trusted in coexact
+statements.
+
+The logical core of GeoLogic is partially inspired by General
+Deduction Database~\cite{GDD} and Full Angle~\cite{FullAngle} methods for authomated synthetic proofs in
+Euclidean Geometry.
+These methods are supported by a graphical application
+Geometry Expert~\cite{GEX} which allows user to state a
+geometrical problem, run an automated geometrical theorem prover on
+it, and visualise the proof.
+Julien Narboux presented a similar graphical interface for
+construction of geometrical statement traslated to
+CoQ~\cite{GeoProof}.
+None of these tools, however, supports constructing proofs in the
+graphical interface.
 
 \begin{thebibliography}
 \expandafter\ifx\csname urlstyle\endcsname\relax
