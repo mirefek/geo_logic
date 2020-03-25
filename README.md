@@ -36,7 +36,7 @@ It is not possible to create lemmata in the user interface yet
 ## Automation
 
 As an interactive theorem prover, GeoLogic intentionally does not possess
-much automation, especially if it can me circumvented with visual steps.
+much automation, especially if it can be circumvented with visual steps.
 There are basically four ways in which GeoLogic makes automatic decisions:
 
 + Gaussian elimination for angles: GeoLogic uses "oriented angle chasing"
