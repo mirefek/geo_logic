@@ -393,6 +393,9 @@ class GToolHide(GTool):
     key_shortcut = 'h'
     label = "Hide Tool"
 
+    def get_cursor(self):
+        if self.vis.show_all_mode: return "unhide"
+        else: return "hide"
     def update_basic(self, coor):
         obj,_ = self.select_pcl(coor)
         if obj is None:
@@ -423,4 +426,5 @@ class GToolHide(GTool):
     def set_show_all(self, value):
         if self.vis.show_all_mode != value:
             self.vis.show_all_mode = value
+            self.viewport.set_cursor_by_tool()
             self.vis.refresh()

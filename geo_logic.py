@@ -116,8 +116,10 @@ class GeoLogic(Gtk.Window):
             self.viewport.darea.queue_draw()
 
     def undo(self):
+        proof_checker.disable()
         self.env.pop_step()
         self.reset_view()
+        proof_checker.enable()
     def redo(self):
         self.env.redo()
         self.reset_view()

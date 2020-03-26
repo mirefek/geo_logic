@@ -35,6 +35,9 @@ Logic
     = loading tools available at the beginning of basic.gl
   * tool_step.py
     = composite tools and (parallel) proof checking
+  * externally loaded tools:
+    * basic.gl = axioms and elementary tools
+    * macros.gl = majority of tools
   * parse.py
     = loading gl files
     * basic_tools.py

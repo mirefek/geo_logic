@@ -71,7 +71,7 @@ class Viewport:
             "basic", "point",
             "line", "perpline",
             "circle", "circumcircle",
-            "reason", "hide",
+            "reason", "hide", "unhide",
             "label",
         ]
         names_gtk = [

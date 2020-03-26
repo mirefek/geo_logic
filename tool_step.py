@@ -134,6 +134,10 @@ class ProofChecker: # parallel running of proof checks
         self.checked_num = 0
         self.task_index = 0
         self.tasks = []
+        self.disabled = False
+
+    def disable(self): self.disabled = True
+    def enable(self): self.disabled = False
 
     def paralelize(self, progress_hook = None):
         self.progress_hook = progress_hook
@@ -145,6 +149,7 @@ class ProofChecker: # parallel running of proof checks
     #    self.t.join()
 
     def check(self, tool, num_args):
+        if self.disabled: return
         if not self.t.is_alive():
             tool.proof_check(num_args)
             return
