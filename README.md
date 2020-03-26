@@ -1,13 +1,14 @@
 # GeoLogic
 Tool for euclidean geometry aware of logic
 
+For studying the source code, start [here](technical_doc.txt).
+
 ![GeoLogic Screenshot](images/screenshot.png)
 
 ## Dependencies
++ Python3
 + [pyGtk3](https://pygobject.readthedocs.io/en/latest/getting_started.html)
-+ numpy (on Windows: "pacman -S mingw-w64-x86_64-python3-numpy")
-
-For studying the source code, start [here](technical_doc.txt).
++ [numpy](https://pypi.org/project/numpy/) (on Windows: "pacman -S mingw-w64-x86_64-python3-numpy")
 
 ## Data types
 
