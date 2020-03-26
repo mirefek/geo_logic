@@ -1,0 +1,76 @@
+_ ->
+  A <- free_point 284.7607727050781 329.27679443359375
+  C <- free_point 716.6341552734375 321.5935974121094
+  ac <- line A C
+  X <- m_point_on 432.7585144042969 249.86715698242188 ac
+  bd <- perpline ac X
+  B <- m_point_on 436.5653076171875 482.10125732421875 bd
+  w <- circumcircle A C B
+  D <- intersection_remoter bd w B
+  O <- center_of w
+  w1 <- diacircle A O
+  w3 <- diacircle C O
+  w2 <- diacircle B O
+  w4 <- diacircle D O
+  S <- intersection_remoter w4 w1 O
+  R <- intersection_remoter w3 w4 O
+  Q <- intersection_remoter w2 w3 O
+  P <- intersection_remoter w1 w2 O
+  THEN
+  <- perpendicular P Q Q R
+  <- perpendicular Q R R S
+  <- perpendicular R S S P
+  <- perpendicular S P P Q
+  PROOF
+  d <- line A D
+  c <- line D C
+  S0 <- midpoint A D
+  R0 <- midpoint D C
+  <- point_on_circle A w
+  <- point_on_circle A w
+  <- point_on_circle D w
+  <- point_on_circle C w
+  <- point_on_circle B w
+  <- point_to_perp_bisector O A D
+  <- point_to_perp_bisector O C D
+  <- point_to_perp_bisector O B C
+  <- point_to_perp_bisector O A B
+  <- point_to_diacircle R0 O C
+  <- point_to_diacircle R0 O D
+  <- point_to_diacircle S0 O A
+  <- point_to_diacircle S0 O D
+  P0 <- midpoint A B
+  Q0 <- midpoint B C
+  <- point_to_diacircle P0 A O
+  <- point_to_diacircle P0 O B
+  <- point_to_diacircle Q0 B O
+  <- point_to_diacircle Q0 C O
+  S1 R1 <- midsegment D A C
+  P1 Q1 <- midsegment B A C
+  Q2 R2 <- midsegment C B D
+  P2 S2 <- midsegment A B D
+
+label__A -> pos:P
+  pos <- free_point -25.630150341778783 15.591516714477043
+label__C -> pos:P
+  pos <- free_point 18.714111328125 14.970672607421875
+label__X -> pos:P
+  pos <- free_point 16.507744001225944 19.298526301470986
+label__B -> pos:P
+  pos <- free_point -7.986505089539264 22.641944904064815
+label__D -> pos:P
+  pos <- free_point -13.01832190487903 -16.428699438451474
+label__O -> pos:P
+  pos <- free_point 17.46628074012631 24.391167194439316
+label__S -> pos:P
+  pos <- free_point 18.957468075880797 11.038274792493013
+label__R -> pos:P
+  pos <- free_point 19.10268597138861 -20.39716527098355
+label__Q -> pos:P
+  pos <- free_point 10.423190326324175 19.64844132410269
+label__P -> pos:P
+  pos <- free_point 15.679522723785055 -18.021648397576996
+
+view__data -> anchor:P zoom:D
+  anchor <- free_point 507.794189453125 267.37762451171875
+  zoom <- custom_ratio 1.0 0.

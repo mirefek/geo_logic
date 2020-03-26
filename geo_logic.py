@@ -256,18 +256,18 @@ class GeoLogic(Gtk.Window):
                 if label_show:
                     t = self.vis.gi_to_type(gi)
                     if t == Point:
-                        label_attrs = [('pos', 'P', 'free_point', label_pos)]
+                        label_attrs = [('pos', 'P', 'free_point', tuple(map(float, label_pos)))]
                     elif t == Line:
                         pos, offset = label_pos
                         label_attrs = [
-                            ('pos', 'D', 'custom_ratio', (pos, 0.)),
-                            ('offset', 'D', 'custom_ratio', (offset, 0.)),
+                            ('pos', 'D', 'custom_ratio', (float(pos), 0.)),
+                            ('offset', 'D', 'custom_ratio', (float(offset), 0.)),
                         ]
                     elif t == Circle:
                         direction, offset = label_pos
                         label_attrs = [
-                            ('direction', 'A', 'custom_angle', (direction/2,)),
-                            ('offset', 'D', 'custom_ratio', (offset, 0.)),
+                            ('direction', 'A', 'custom_angle', (float(direction/2),)),
+                            ('offset', 'D', 'custom_ratio', (float(offset), 0.)),
                         ]
                     else:
                         print("Warning: save label: unexpected type {} of {}".format(t, name))

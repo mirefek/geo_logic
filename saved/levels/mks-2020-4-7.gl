@@ -1,0 +1,40 @@
+_ ->
+  A <- free_point 308.853271484375 285.0768737792969
+  D <- free_point 223.93048095703125 385.48931884765625
+  B <- free_point 652.8225708007812 282.7047424316406
+  a <- line B A
+  c <- paraline a D
+  d <- line A D
+  b <- paraline d B
+  C <- intersection c b
+  <- parallelogram_aa A B C D
+  M <- midpoint A B
+  m <- line D M
+  w1 <- circumcircle D A B
+  F <- intersection_remoter m w1 D
+  H <- foot B d
+  E <- foot A b
+  THEN
+  <- concyclic C D H E
+  PROOF
+
+label__A -> pos:P
+  pos <- free_point -9.2183837890625 -14.857879638671875
+label__D -> pos:P
+  pos <- free_point -1.66949462890625 25.47900390625
+label__B -> pos:P
+  pos <- free_point -0.08953857421875 19.412872314453125
+label__C -> pos:P
+  pos <- free_point 8.12274169921875 20.96527099609392
+label__M -> pos:P
+  pos <- free_point -12.696319580078125 23.56011962890625
+label__F -> pos:P
+  pos <- free_point 7.730074213103535 -20.34331944877104
+label__H -> pos:P
+  pos <- free_point -15.630303489263156 -19.22039744108548
+label__E -> pos:P
+  pos <- free_point -10.292070732543184 28.1793058827986
+
+view__data -> anchor:P zoom:D
+  anchor <- free_point 375.0 277.0
+  zoom <- custom_ratio 1.0 0.

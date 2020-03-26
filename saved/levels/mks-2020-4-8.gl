@@ -1,0 +1,48 @@
+_ ->
+  A <- free_point 414.24658203125 57.627410888671875
+  B <- free_point 327.0667724609375 436.85919189453125
+  C <- free_point 741.4964599609375 451.76678466796875
+  a <- line B C
+  b <- line C A
+  c <- line A B
+  G <- centroid A B C
+  M_C <- midpoint A B
+  M_A <- midpoint B C
+  M_B <- midpoint C A
+  N_A <- midpoint A G
+  N_B <- midpoint G B
+  N_C <- midpoint G C
+  wA <- circumcircle M_C N_A M_B
+  wC <- circumcircle M_B N_C M_A
+  wB <- circumcircle M_A N_B M_C
+  X <- intersection_remoter wB wA M_C
+  THEN
+  <- lies_on X wC
+  PROOF
+
+label__A -> pos:P
+  pos <- free_point 27.275831434461807 -4.993693033854167
+label__B -> pos:P
+  pos <- free_point -15.171678331163195 -17.803439670138914
+label__C -> pos:P
+  pos <- free_point 5.786926269531199 -22.17724609375005
+label__G -> pos:P
+  pos <- free_point 7.908964934172471 -26.655481409143565
+label__M_C -> pos:P
+  pos <- free_point -23.268296983506946 7.257286919487835
+label__M_A -> pos:P
+  pos <- free_point -14.826409233941023 19.765882703993043
+label__M_B -> pos:P
+  pos <- free_point 7.040228949652803 -21.97380574544272
+label__N_A -> pos:P
+  pos <- free_point 8.309805410879676 -22.443666811342606
+label__N_B -> pos:P
+  pos <- free_point 1.4893098054108755 -18.414671721281923
+label__N_C -> pos:P
+  pos <- free_point 2.7482751916957366 22.492846453631298
+label__X -> pos:P
+  pos <- free_point -9.312409163186178 13.040066985769966
+
+view__data -> anchor:P zoom:D
+  anchor <- free_point 545.2809143066406 261.18898315429686
+  zoom <- custom_ratio 1.1111111111111112 0.

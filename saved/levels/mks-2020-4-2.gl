@@ -1,0 +1,36 @@
+_ ->
+  O1 <- free_point 322.4656066894531 353.3541259765625
+  X <- free_point 431.5154724121094 233.50808715820312
+  a <- line O1 X
+  b <- perpline a X
+  O2 <- m_point_on 546.1598510742188 372.623779296875 b
+  w2 <- circle O2 X
+  w1 <- circle O1 X
+  Y <- intersection_remoter w2 w1 X
+  c <- line O1 O2
+  D <- intersection_remoter w1 c X
+  d <- line D X
+  P <- intersection_remoter d w2 X
+  THEN
+  <- perpendicular P O2 c
+  PROOF
+
+label__O1 -> pos:P
+  pos <- free_point 4.542144775390625 24.79559326171875
+label__X -> pos:P
+  pos <- free_point 0.523773193359375 -20.004974365234375
+label__O2 -> pos:P
+  pos <- free_point -11.432224655624251 27.73633428236934
+label__Y -> pos:P
+  pos <- free_point -0.8865153060221038 29.9868986494467
+label__c -> pos:D offset:D
+  pos <- custom_ratio 0.7991312886287827 0.0
+  offset <- custom_ratio 13.432303559657782 0.0
+label__D -> pos:P
+  pos <- free_point -12.573319393047257 -13.824641998048776
+label__P -> pos:P
+  pos <- free_point 15.94664811603991 14.769906116264082
+
+view__data -> anchor:P zoom:D
+  anchor <- free_point 435.20751953125 327.7374267578125
+  zoom <- custom_ratio 1.0 0.

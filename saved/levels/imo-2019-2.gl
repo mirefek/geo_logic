@@ -1,0 +1,40 @@
+_ ->
+  A <- free_point -139.2213134765625 -282.2152404785156
+  B <- free_point -477.198974609375 210.1524658203125
+  C <- free_point 233.489990234375 217.9029541015625
+  a <- line A B
+  b <- line B C
+  c <- line C A
+  D <- m_point_on -349.1357421875 24.8143310546875 a
+  E <- m_point_on -22.7784423828125 -108.86618041992188 c
+  d <- line D C
+  e <- line E B
+  F <- m_point_on -330.8531494140625 97.859130859375 e
+  pa <- paraline b F
+  X <- intersection pa a
+  G <- intersection pa d
+  H <- intersection c pa
+  f <- line F D
+  g <- line G E
+  h <- circumcircle A G H
+  i <- circumcircle A F X
+  I <- intersection 1 f i F
+  J <- intersection 1 g h G
+  THEN
+  <- concyclic I J F G
+  PROOF
+
+label__F -> pos:P
+  pos <- free_point -5.566352335886441 22.959953895900902
+label__G -> pos:P
+  pos <- free_point 10.119419022938633 17.742230934136785
+hide__h ->
+hide__i ->
+label__I -> pos:P
+  pos <- free_point -7.416630728129303 23.256965818540525
+label__J -> pos:P
+  pos <- free_point 8.320856089171821 18.643222978309137
+
+view__data -> anchor:P zoom:D
+  anchor <- free_point -100.68421934775733 -94.343650628829
+  zoom <- custom_ratio 0.7290000000000004 0.

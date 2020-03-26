@@ -1,0 +1,58 @@
+_ ->
+  A <- free_point 639.4428421478269 108.40435175781242
+  B <- free_point 514.2480378265379 220.20705143432605
+  C <- free_point 694.2080105133055 213.9911206298827
+  a <- line B C
+  b <- line C A
+  c <- line A B
+  gamma <- circumcircle A C B
+  t <- tangent_at C gamma
+  S <- intersection c t
+  s <- circle S C
+  P <- m_point_on 0.7040100545568524 s
+  <- point_on_circle P s
+  k <- line A P
+  m <- line C P
+  l <- line B P
+  M <- intersection 1 m gamma C
+  K <- intersection 1 k gamma A
+  L <- intersection 1 l gamma B
+  <- isosceles_ss S P C
+  x <- line S P
+  THEN
+  <- eq_dist M K M L
+  PROOF
+  ang0 <- secant_direction C M gamma
+  ang1 <- secant_direction C A gamma
+  ang2 <- inscribed_angle A B C
+  <- sim_aa_r C S A B S C
+  <- sim_sas_r P S A B S P
+  ang3 <- secant_direction A B gamma
+  ang4 <- secant_direction B C gamma
+  ang5 <- secant_direction C A gamma
+  ang6 <- secant_direction M C gamma
+  ang7 <- secant_direction L B gamma
+  ang8 <- secant_direction K A gamma
+  <- eq_arcs_to_eq_dist M L K M gamma
+
+label__A -> pos:P
+  pos <- free_point -1.3451251329541607 -29.432560957199257
+label__B -> pos:P
+  pos <- free_point -25.90365029010884 15.132775741672255
+label__C -> pos:P
+  pos <- free_point 20.6756553582585 21.737462490054273
+label__S -> pos:P
+  pos <- free_point 14.018015696205737 11.019951306485774
+hide__s ->
+label__P -> pos:P
+  pos <- free_point 10.062652026035579 27.25514008625237
+label__M -> pos:P
+  pos <- free_point -5.953582393348517 -18.890970638526895
+label__K -> pos:P
+  pos <- free_point 12.28293325080379 26.242861223596055
+label__L -> pos:P
+  pos <- free_point 11.710976646621793 -22.429578210640056
+
+view__data -> anchor:P zoom:D
+  anchor <- free_point 610.8011566467285 152.97315673217776
+  zoom <- custom_ratio 1.5241579027587262 0.

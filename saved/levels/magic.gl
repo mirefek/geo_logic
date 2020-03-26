@@ -1,0 +1,28 @@
+_ ->
+  A <- free_point -67.4366455078125 -186.94235229492188
+  B <- free_point -150.71661376953125 -50.786865234375
+  C <- free_point -77.69537353515625 -4.03399658203125
+  c <- circumcircle A B C
+  D <- m_point_on 0.149322913515504 c
+  a <- line A B
+  b <- line B C
+  d <- line C D
+  e <- line D A
+  X <- intersection d a
+  E <- intersection b e
+  l <- angle_bisector_int D E C
+  f <- angle_bisector_int C X B
+  THEN
+  <- perpendicular f l
+  PROOF
+
+label__l -> pos:D offset:D
+  pos <- custom_ratio 0.14302512205559112 0.0
+  offset <- custom_ratio -14.420757653691282 0.0
+label__f -> pos:D offset:D
+  pos <- custom_ratio 0.8667681679394779 0.0
+  offset <- custom_ratio 13.980884447649814 0.0
+
+view__data -> anchor:P zoom:D
+  anchor <- free_point 0.0 0.0
+  zoom <- custom_ratio 1.0 0.

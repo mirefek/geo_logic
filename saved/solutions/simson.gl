@@ -14,6 +14,11 @@ _ ->
   THEN
   <- lies_on Fb d
   PROOF
+  <- angles_to_concyclic B D Fc Fa
+  <- angles_to_concyclic C D Fa Fb
+  <- concyclic_to_angles Fc B Fa D
+  <- concyclic_to_angles Fb C Fa D
+  <- concyclic_to_angles A D B C
 
 label__A -> pos:P
   pos <- free_point -5.7205810546875 -26.283782958984375
@@ -21,6 +26,8 @@ label__B -> pos:P
   pos <- free_point -26.927883214476115 -13.224564476289405
 label__C -> pos:P
   pos <- free_point 22.2576904296875 -12.772674560546875
+label__D -> pos:P
+  pos <- free_point -1.8651018910266055 29.94196711867958
 label__Fa -> pos:P
   pos <- free_point -6.652826288817323 -25.45527359747649
 label__Fc -> pos:P

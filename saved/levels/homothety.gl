@@ -1,0 +1,27 @@
+_ ->
+  A <- free_point -351.3194319615701 -369.73587975173626
+  B <- free_point -433.34515380859375 130.55828857421875
+  C <- free_point 242.4351806640625 123.14581298828125
+  i <- incircle A B C
+  e <- excircle A B C
+  a <- line A B
+  b <- line A C
+  c <- line C B
+  X <- touchpoint c i
+  D <- touchpoint c e
+  p <- perpline c X
+  E <- intersection 1 p i X
+  THEN
+  <- collinear A E D
+  PROOF
+
+label__A -> pos:P
+  pos <- free_point -8.489120700841683 -23.82159262024068
+label__D -> pos:P
+  pos <- free_point -10.171332647514804 17.96063958636752
+label__E -> pos:P
+  pos <- free_point -11.813436554601044 16.656724047526808
+
+view__data -> anchor:P zoom:D
+  anchor <- free_point 306.06683350419166 367.2012576005472
+  zoom <- custom_ratio 0.28242953648100017 0.

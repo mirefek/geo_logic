@@ -1,0 +1,41 @@
+_ ->
+  O1 <- free_point 264.5248718261719 317.69940185546875
+  O2 <- free_point 611.6620483398438 301.9326171875
+  a <- line O2 O1
+  T <- m_point_on 406.91748046875 343.75726318359375 a
+  w1 <- circle O1 T
+  w2 <- circle O2 T
+  C <- m_point_on -0.6151829349630342 w2
+  t <- tangent_at C w2
+  Y X <- intersections t w1
+  b <- line C T
+  P <- intersection_remoter w1 b T
+  THEN
+  <- eq_dist P X P Y
+  PROOF
+  c <- line O2 C
+  d <- paraline c O1
+  P' <- intersection_closer d w1 P
+  <- point_on_circle P' w1
+  <- point_on_circle C w2
+  <- sim_sas C O2 T P' O1 T
+  d' <- perp_bisector X Y
+  <- point_on_circle X w1
+  <- point_on_circle Y w1
+  <- point_to_perp_bisector O1 X Y
+  <- point_on_perp_bisector P' X Y
+
+label__T -> pos:P
+  pos <- free_point 16.510127196684323 20.804733785048086
+label__C -> pos:P
+  pos <- free_point 3.241689630873225 -29.587546840780277
+label__Y -> pos:P
+  pos <- free_point -9.996488110171128 -19.137488998473174
+label__X -> pos:P
+  pos <- free_point -3.1813872354765067 -25.2467726444267
+label__P -> pos:P
+  pos <- free_point -15.39698893418273 18.271482302967115
+
+view__data -> anchor:P zoom:D
+  anchor <- free_point 398.71282958984375 280.089599609375
+  zoom <- custom_ratio 1.0 0.

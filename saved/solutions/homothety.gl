@@ -1,0 +1,28 @@
+_ ->
+  A <- free_point -351.3194319615701 -369.73587975173626
+  B <- free_point -433.34515380859375 130.55828857421875
+  C <- free_point 242.4351806640625 123.14581298828125
+  i <- incircle A B C
+  e <- excircle A B C
+  a <- line A B
+  b <- line A C
+  c <- line C B
+  X <- touchpoint c i
+  D <- touchpoint c e
+  p <- perpline c X
+  E <- intersection 1 p i X
+  THEN
+  <- collinear A E D
+  PROOF
+  F <- center_of i
+  G <- center_of e
+  H <- touchpoint i b
+  I <- touchpoint e b
+  <- point_on_circle E i
+  <- sim_aa A H F A I G
+  <- sim_sas E F A D G A
+
+
+view__data -> anchor:P zoom:D
+  anchor <- free_point 124.28984225698503 113.21873711674856
+  zoom <- custom_ratio 0.3874204890000002 0.

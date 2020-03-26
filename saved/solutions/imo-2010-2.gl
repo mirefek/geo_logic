@@ -1,0 +1,69 @@
+_ ->
+  A <- free_point 518.7274780273438 82.03643798828125
+  B <- free_point 435.75054931640625 254.43853759765625
+  C <- free_point 677.7418823242188 258.01605224609375
+  g <- circumcircle A C B
+  D <- midpoint_arc C B g
+  I <- incenter A C B
+  E <- m_point_on 0.3028842512456856 g
+  b <- line A C
+  a <- line C B
+  c <- line B A
+  e <- line E I
+  f <- line E A
+  h <- isogonal_by_refl E A B C
+  F <- intersection h a
+  i <- line F I
+  G <- midpoint F I
+  gd <- line G D
+  ie <- line I E
+  X <- intersection gd ie
+  THEN
+  <- lies_on X g
+  PROOF
+  Ea <- excenter A B C
+  X' <- intersection 1 e g E
+  j <- line X' D
+  G' <- intersection j i
+  ang0 <- inscribed_angle C B D
+  ang1 <- inscribed_angle D A B
+  ang2 <- inscribed_angle C A D
+  <- isosceles_aa D I B
+  <- isosceles_aa D B Ea
+  <- midpoint_uq D I Ea
+  G'' D' <- midsegment I F Ea
+  k <- line F Ea
+  d <- line A D
+  <- concyclic_to_angles A C B E
+  <- sim_aa A B F A E C
+  <- sim_aa A B I A Ea C
+  <- sim_sas Ea A F E A I
+  <- concyclic_to_angles X' A E D
+
+label__A -> pos:P
+  pos <- free_point -23.810606403115205 -6.567385449821404
+label__B -> pos:P
+  pos <- free_point -22.639210265359644 11.778779206452649
+label__C -> pos:P
+  pos <- free_point 15.18732593677672 17.230319552951446
+label__g -> direction:A offset:D
+  direction <- custom_angle -0.08223706989931281
+  offset <- custom_ratio 16.292540611177255 0.0
+label__D -> pos:P
+  pos <- free_point 22.89674515964432 19.38398981361434
+label__I -> pos:P
+  pos <- free_point 18.599814713736077 -6.423202045432413
+label__E -> pos:P
+  pos <- free_point 11.867802448617194 21.76723774238913
+label__F -> pos:P
+  pos <- free_point -16.264397515281978 -16.971329114568654
+label__G -> pos:P
+  pos <- free_point 18.740065776961437 10.459533736405724
+label__X -> pos:P
+  pos <- free_point 4.285859573170151 -26.698972784217176
+label__Ea -> pos:P
+  pos <- free_point 16.26669013706735 -5.651937659193837
+
+view__data -> anchor:P zoom:D
+  anchor <- free_point 640.3702575683594 270.6289721679688
+  zoom <- custom_ratio 1.2345679012345683 0.

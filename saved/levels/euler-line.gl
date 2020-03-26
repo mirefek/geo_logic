@@ -1,0 +1,24 @@
+_ ->
+  A <- free_point 272.67291259765625 117.24664306640625
+  B <- free_point 206.54791259765625 388.65655517578125
+  C <- free_point 548.4716796875 382.93927001953125
+  H <- orthocenter A B C
+  O <- circumcenter A B C
+  G <- centroid A B C
+  p <- line A B
+  a <- line B C
+  b <- line C A
+  THEN
+  <- collinear H O G
+  PROOF
+
+label__H -> pos:P
+  pos <- free_point -9.288343079419121 -16.881466387056378
+label__O -> pos:P
+  pos <- free_point 10.145911041662657 -16.01098799787809
+label__G -> pos:P
+  pos <- free_point -8.179219563802064 -14.2666015625
+
+view__data -> anchor:P zoom:D
+  anchor <- free_point 355.59381103515625 285.03375244140625
+  zoom <- custom_ratio 1.0 0.

@@ -1,0 +1,93 @@
+_ ->
+  A <- free_point -139.2213134765625 -282.2152404785156
+  B <- free_point -477.198974609375 210.1524658203125
+  C <- free_point 233.489990234375 217.9029541015625
+  a <- line A B
+  b <- line B C
+  c <- line C A
+  D <- m_point_on -349.1357421875 24.8143310546875 a
+  E <- m_point_on -22.7784423828125 -108.86618041992188 c
+  d <- line D C
+  e <- line E B
+  F <- m_point_on -330.8531494140625 97.859130859375 e
+  pa <- paraline b F
+  X <- intersection pa a
+  G <- intersection pa d
+  H <- intersection c pa
+  f <- line F D
+  g <- line G E
+  h <- circumcircle A G H
+  i <- circumcircle A F X
+  I <- intersection 1 f i F
+  J <- intersection 1 g h G
+  THEN
+  <- concyclic I J F G
+  PROOF
+  j <- circumcircle A C B
+  K <- intersection 1 d j C
+  L <- intersection 1 e j B
+  M <- intersection f b
+  N <- intersection g b
+  k <- circumcircle A M B
+  <- concyclic_to_angles X I A F
+  <- angles_to_concyclic B I M A
+  l <- circumcircle A N C
+  <- concyclic_to_angles J H A G
+  <- angles_to_concyclic J C A N
+  <- concyclic_to_angles B K L C
+  <- angles_to_concyclic F K L G
+  <- angles_to_concyclic L G K F
+  <- concyclic_to_angles B A L C
+  <- concyclic_to_angles G A J H
+  <- angles_to_concyclic E A J L
+  <- angles_to_concyclic J L A E
+  <- concyclic_to_angles L E A J
+  <- angles_to_concyclic F J L G
+  <- concyclic_to_angles L C K B
+  <- concyclic_to_angles A M I B
+  <- concyclic_to_angles A C K B
+  <- angles_to_concyclic K I A D
+  <- concyclic_to_angles D K I A
+  m <- circumcircle L G F
+  <- angles_to_concyclic I G K F
+
+label__A -> pos:P
+  pos <- free_point -4.372583868382273 -24.148514075750228
+label__B -> pos:P
+  pos <- free_point -9.033194586155552 -16.32288373517428
+label__C -> pos:P
+  pos <- free_point 6.136512933375392 -17.829373969549287
+label__D -> pos:P
+  pos <- free_point 21.300249298701036 -10.746178651410457
+label__E -> pos:P
+  pos <- free_point -24.56636579569613 -4.666047132312733
+label__F -> pos:P
+  pos <- free_point -6.402900187448927 20.11785184511968
+label__X -> pos:P
+  pos <- free_point -16.194741899321436 -14.275939277591947
+label__G -> pos:P
+  pos <- free_point 8.146701737782388 19.853009742730546
+label__H -> pos:P
+  pos <- free_point 9.367471470861895 -15.22327675946273
+hide__h ->
+hide__i ->
+label__I -> pos:P
+  pos <- free_point -19.006382925394913 10.528648557798311
+label__J -> pos:P
+  pos <- free_point 15.163507456359335 -7.193431684776774
+hide__j ->
+label__K -> pos:P
+  pos <- free_point -14.316304688833997 -16.90177471151407
+label__L -> pos:P
+  pos <- free_point 20.140589971236814 11.598626640289503
+label__M -> pos:P
+  pos <- free_point -3.5600681886512073 17.677700588709737
+label__N -> pos:P
+  pos <- free_point 3.879097598319495 19.81413569263927
+hide__k ->
+hide__l ->
+hide__m ->
+
+view__data -> anchor:P zoom:D
+  anchor <- free_point -100.68421934775733 -94.343650628829
+  zoom <- custom_ratio 0.7290000000000004 0.

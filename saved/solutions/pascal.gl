@@ -1,0 +1,60 @@
+_ ->
+  x0 <- free_point 354.0157775878906 297.92889404296875
+  w <- m_circle_passing1 202.33023071289062 -0.556182861328125 x0
+  E <- m_point_on -0.7256600662575139 w
+  A <- m_point_on -0.5134149201543298 w
+  C <- m_point_on -0.22296239697679646 w
+  F <- m_point_on 0.22749244642384586 w
+  D <- m_point_on 0.41537356812163095 w
+  B <- m_point_on 0.7561594972416088 w
+  d <- line E D
+  c <- line D C
+  a <- line B A
+  f <- line A F
+  e <- line E F
+  b <- line B C
+  X <- intersection a d
+  Y <- intersection e b
+  Z <- intersection f c
+  THEN
+  <- collinear X Y Z
+  PROOF
+  Z' <- copy_triangle_r F C Z B E
+  Z'' <- conjugate Z' B Y E
+  <- concyclic_to_angles F D C E
+  <- concyclic_to_angles A C B F
+  <- sim_aa_r E B Z' C F Z
+  <- concyclic_to_angles F B E C
+  <- concyclic_to_angles E C B F
+  <- sim_aa_r E B Y C F Y
+  <- sim_sas_r Z' B Y Z F Y
+
+label__E -> pos:P
+  pos <- free_point -0.43747116962811106 -26.530845736242696
+label__A -> pos:P
+  pos <- free_point 0. -20.
+label__C -> pos:P
+  pos <- free_point 20.694872890205943 0.5610289482471842
+label__F -> pos:P
+  pos <- free_point 25.926239898512904 7.27607612416125
+label__D -> pos:P
+  pos <- free_point 21.074517254240163 14.594050735469352
+label__B -> pos:P
+  pos <- free_point 1.928000037423999 24.082506251115092
+label__d -> pos:D offset:D
+  pos <- custom_ratio 0.1 0.0
+  offset <- custom_ratio 20. 0.0
+label__X -> pos:P
+  pos <- free_point -23.727930920508584 7.476729546086517
+label__Y -> pos:P
+  pos <- free_point -0.21720308090220897 22.12996661498579
+label__Z -> pos:P
+  pos <- free_point 24.022725675218226 -12.024389497831805
+label__Z' -> pos:P
+  pos <- free_point 16.780331887130444 -22.535850725117598
+label__Z'' -> pos:P
+  pos <- free_point -24.896418469336766 -0.6184242625072898
+
+view__data -> anchor:P zoom:D
+  anchor <- free_point 582.75390625 298.6510009765625
+  zoom <- custom_ratio 1.0 0.

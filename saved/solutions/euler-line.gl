@@ -8,6 +8,9 @@ _ ->
   p <- line A B
   a <- line B C
   b <- line C A
+  THEN
+  <- collinear H O G
+  PROOF
   M <- midpoint A B
   D <- midpoint B C
   E <- midpoint C A
