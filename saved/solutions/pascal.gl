@@ -41,9 +41,6 @@ label__D -> pos:P
   pos <- free_point 21.074517254240163 14.594050735469352
 label__B -> pos:P
   pos <- free_point 1.928000037423999 24.082506251115092
-label__d -> pos:D offset:D
-  pos <- custom_ratio 0.1 0.0
-  offset <- custom_ratio 20. 0.0
 label__X -> pos:P
   pos <- free_point -23.727930920508584 7.476729546086517
 label__Y -> pos:P

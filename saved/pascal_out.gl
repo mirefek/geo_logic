@@ -1,32 +1,54 @@
 _ ->
   x0 <- free_point 384.32025146484375 379.5526123046875
-  x1 <- m_circle_passing1 101.1852347046879 18.99698632697175 x0
-  x2 <- m_point_on -0.38245902789261094 x1
-  x3 <- m_point_on 0.16914795542754923 x1
-  x4 <- m_point_on -0.8000463704711748 x1
-  x5 <- m_point_on -0.16191959274799797 x1
-  x6 <- m_point_on -0.6310946146785608 x1
-  x7 <- m_point_on 0.45065363935562824 x1
-  x8 <- line x7 x4
-  x9 <- line x2 x5
-  x10 <- line x7 x3
-  x11 <- line x5 x3
-  x12 <- line x2 x6
-  x13 <- line x6 x4
-  x14 <- intersection x11 x13
-  x15 <- intersection x8 x9
-  x16 <- intersection x10 x12
-  <- concyclic_to_angles x5 x7 x2 x4
-  <- concyclic_to_angles x2 x4 x7 x5
-  x17 <- copy_triangle_r x5 x4 x14 x7 x2
-  x18 <- conjugate x17 x7 x15 x2
-  <- sim_aa_r x2 x7 x15 x4 x5 x15
-  <- sim_sas_r x17 x7 x15 x14 x5 x15
-  <- concyclic_to_angles x5 x6 x2 x4
-  <- concyclic_to_angles x3 x4 x5 x7
-  x19 <- line x16 x15
+  w <- m_circle_passing1 101.1852347046879 18.99698632697175 x0
+  E <- m_point_on -0.38245902789261094 w
+  A <- m_point_on 0.16914795542754923 w
+  C <- m_point_on -0.8000463704711748 w
+  F <- m_point_on -0.16191959274799797 w
+  D <- m_point_on -0.6310946146785608 w
+  B <- m_point_on 0.45065363935562824 w
+  d <- line E D
+  c <- line D C
+  a <- line B A
+  f <- line A F
+  e <- line E F
+  b <- line B C
+  X <- intersection a d
+  Y <- intersection e b
+  Z <- intersection f c
+  Z' <- copy_triangle_r F C Z B E
+  Z'' <- conjugate Z' B Y E
+  <- concyclic_to_angles F D C E
+  <- concyclic_to_angles A C B F
+  <- sim_aa_r E B Z' C F Z
+  <- concyclic_to_angles F B E C
+  <- concyclic_to_angles E C B F
+  <- sim_aa_r E B Y C F Y
+  <- sim_sas_r Z' B Y Z F Y
 
+label__E -> pos:P
+  pos <- free_point 8.896101415011685 -18.81042737338339
+label__A -> pos:P
+  pos <- free_point 12.722254698095185 13.972733093632826
+label__C -> pos:P
+  pos <- free_point -23.112019569560175 -6.09698976868566
+label__F -> pos:P
+  pos <- free_point 12.548693599381068 -10.21047142438698
+label__D -> pos:P
+  pos <- free_point -4.401498447614927 -17.3781295781846
+label__B -> pos:P
+  pos <- free_point -6.053069194175691 19.144704266087274
+label__X -> pos:P
+  pos <- free_point 2.0389873648790626 22.537508587632146
+label__Y -> pos:P
+  pos <- free_point -15.021437942082429 18.239605764308692
+label__Z -> pos:P
+  pos <- free_point 12.73298535527024 -27.16378257795614
+label__Z' -> pos:P
+  pos <- free_point 10.061549222549388 -19.77606182641057
+label__Z'' -> pos:P
+  pos <- free_point -24.896418469336766 -0.6184242625072898
 
 view__data -> anchor:P zoom:D
-  anchor <- free_point 512.00341796875 283.47894287109375
+  anchor <- free_point 535.1531846788193 276.036376953125
   zoom <- custom_ratio 1.0 0.
