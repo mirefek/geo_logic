@@ -1,0 +1,35 @@
+_ ->
+  A <- free_point -130.474609375 26.52557373046875
+  B <- free_point -18.56854248046875 20.20416259765625
+  w <- circle B A
+  a <- circle A B
+  C <- intersection 0 a w
+  b <- circle C B
+  D <- intersection 1 w b A
+  c <- circle D B
+  E <- intersection 1 c w C
+  THEN
+  <- collinear A B E
+  PROOF
+  <- point_on_circle C a
+  <- point_on_circle C w
+  <- point_on_circle D b
+  <- point_on_circle D w
+  <- point_on_circle E c
+  <- point_on_circle E w
+  <- point_to_circle A b
+  <- point_to_circle C c
+  <- equilateral_s C A B
+  <- equilateral_s B C D
+  <- equilateral_s D B E
+
+label__A -> pos:P
+  pos <- free_point -20.1424560546875 16.9609375
+label__B -> pos:P
+  pos <- free_point 10.5494384765625 17.07342529296875
+label__E -> pos:P
+  pos <- free_point 13.619934082031278 13.876403808593764
+
+view__data -> anchor:P zoom:D
+  anchor <- free_point 0.0 0.0
+  zoom <- custom_ratio 1.0 0.
