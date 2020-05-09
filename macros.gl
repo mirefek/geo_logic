@@ -62,6 +62,10 @@ tri_sides A:P B:P C:P -> a:L b:L c:L
   a <- line B C
   b <- line C A
   c <- line A B
+tri_lens A:P B:P C:P -> la:D lb:D lc:D
+  la <- dist B C
+  lb <- dist C A
+  lc <- dist A B
 tri_angles A:P B:P C:P -> alpha:A beta:A gamma:A
   alpha <- angle C A B
   beta <- angle A B C
@@ -1145,3 +1149,55 @@ point_to_perp_bisector X:P p:L A:P B:P ->
   p' <- perp_bisector A B
   <- == p p'
   <- point_to_perp_bisector X A B
+
+area A:P B:P C:P -> S:D
+  a b c <- tri_sides A B C
+  la lb lc <- tri_lens A B C
+  da <- dist A a
+  db <- dist B b
+  dc <- dist C c
+  S <- ratio_compute 1/2 da 1 la 1
+  THEN
+  <- ratio_pred 1/2 da 1 la 1 S -1
+  <- ratio_pred 1/2 db 1 lb 1 S -1
+  <- ratio_pred 1/2 dc 1 lc 1 S -1
+  PROOF
+  Fa <- foot A a
+  Fb <- foot B b
+  Fc <- foot C c
+  <- sim_aa_r A B Fb A C Fc
+  <- sim_aa_r B A Fa B C Fc
+
+ceva_theorem A:P B:P C:P X:P ->
+  a b c <- tri_sides A B C
+  xa <- line X A
+  xb <- line X B
+  xc <- line X C
+  Xa <- intersection xa a
+  Xb <- intersection xb b
+  Xc <- intersection xc c
+  aB <- dist Xa B
+  aC <- dist Xa C
+  bC <- dist Xb C
+  bA <- dist Xb A
+  cA <- dist Xc A
+  cB <- dist Xc B
+  THEN
+  <- ratio_pred 1 aB 1 aC -1 bC 1 bA -1 cA 1 cB -1
+  PROOF
+  Sc <- area A X B
+  Sa <- area B X C
+  Sb <- area C X A
+  Sab <- area A Xa B
+  Sac <- area A Xa C
+  Sbc <- area B Xb C
+  Sba <- area B Xb A
+  Sca <- area C Xc A
+  Scb <- area C Xc B
+  da <- dist A a
+  <- ratio_pred 1 aB 1 aC -1 Sab -1 Sac 1
+  <- ratio_pred 1 bC 1 bA -1 Sbc -1 Sba 1
+  <- ratio_pred 1 cA 1 cB -1 Sca -1 Scb 1
+  <- ratio_pred 1 aB 1 aC -1 Sc -1 Sb 1
+  <- ratio_pred 1 bC 1 bA -1 Sa -1 Sc 1
+  <- ratio_pred 1 cA 1 cB -1 Sb -1 Sa 1
