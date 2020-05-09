@@ -152,7 +152,8 @@ class GToolLabel(GTool):
             self.no_cancel = False
             return
         if self.obj_edit is None: return
-        self.vis.gi_label_show[self.obj_edit] = True
+        if self.obj_edit < len(self.vis.gi_label_show):
+            self.vis.gi_label_show[self.obj_edit] = True
         self.obj_edit = None
         self.viewport.edited_label = None
         self.viewport.app.keyboard_capture = None

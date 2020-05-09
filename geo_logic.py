@@ -109,7 +109,7 @@ class GeoLogic(Gtk.Window):
         if fname is not None:
             title = "{} -- {}".format(title, fname.split('/')[-1])
         self.set_title(title)
-        
+
     def reset_view(self):
         if self.vis.view_changed:
             self.viewport.gtool.reset()
