@@ -52,3 +52,7 @@ def circumcircle(A : Point, B : Point, C : Point) -> Circle:
     ax_B = Line(ca, np.dot((C+A)/2, ca))
     center = intersection_ll(ax_A, ax_B)
     return Circle(center, np.linalg.norm(center-C))
+
+def angle_2_to_3(ang2 : Angle) -> Angle:
+    x = (ang2.data + 0.5) % 1 - 0.5
+    return Angle(x*2 / 3)

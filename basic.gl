@@ -141,7 +141,9 @@ eq_angle A0:P B0:P C0:P A1:P B1:P C1:P ->
   alpha0 <- angle A0 B0 C0
   alpha1 <- angle A1 B1 C1
   <- == alpha0 alpha1
-
+eq_angle A0:P B0:P C0:P alpha1:A ->
+  alpha0 <- angle A0 B0 C0
+  <- == alpha0 alpha1
 
 sim_aa A0:P B0:P C0:P A1:P B1:P C1:P -> 
   <- not_collinear A0 B0 C0
@@ -217,3 +219,10 @@ double_direction A:P dir:A d:D -> B:P
   <- angle_pred 0 dir 2 dir2 -1
   d2 <- dist A B
   <- == d d2
+
+angle_2_to_3 ang2:A -> ang3:A
+  a90 <- angle_compute 1/2
+  <- not_eq ang2 a90
+  THEN
+  ang3 <- prim__angle_2_to_3 ang2
+  <- angle_pred 0 ang3 3 ang2 -2

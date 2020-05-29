@@ -1201,3 +1201,161 @@ ceva_theorem A:P B:P C:P X:P ->
   <- ratio_pred 1 aB 1 aC -1 Sc -1 Sb 1
   <- ratio_pred 1 bC 1 bA -1 Sa -1 Sc 1
   <- ratio_pred 1 cA 1 cB -1 Sb -1 Sa 1
+
+morley_side_lemma B:P C:P X:P Y:P Z:P ->
+  <- eq_dist X Y X Z
+  <- eq_angle B Z X X Y C
+  beta <- angle X B Z
+  gamma <- angle Y C X
+  xi <- angle B X C
+  <- angle_pred 0 beta 1 gamma 1 xi 1
+  THEN
+  beta' <- angle C B X
+  gamma' <- angle X C B
+  <- == beta beta'
+  <- == gamma gamma'
+  PROOF
+  xc <- line X C
+  xb <- line X B
+  Y' <- reflect Y xc
+  Z' <- reflect Z xb
+  <- point_on_perp_bisector X Y Y'
+  <- point_on_perp_bisector C Y Y'
+  <- point_on_perp_bisector X Z Z'
+  <- point_on_perp_bisector B Z Z'
+  <- isosceles_ss X Y' Z'
+
+equilateral_remoter A:P B:P X:P -> C:P
+  a <- circle A B
+  b <- circle B A
+  C <- intersection_remoter a b X
+  THEN
+  <- eq_dist A B A C
+  <- eq_dist A B B C
+  <- eq_angle C A B A B C
+  <- eq_angle C A B B C A
+  PROOF
+  <- point_on_circle C a
+  <- point_on_circle C b
+  <- equilateral_s A B C
+
+morley_reformulated_ori A:P Y:P Z:P -> B:P C:P X:P
+  X <- equilateral_remoter Y Z A
+  alpha <- angle Z A Y
+  beta_60 <- angle Y Z A
+  gamma_60 <- angle A Y Z
+  a60 <- angle Y X Z
+  ay_dir <- direction_of A Y
+  bz_dir <- angle_compute 0 ay_dir 1 alpha -1 gamma_60 1 a60 1
+  bx_dir <- angle_compute 0 bz_dir 1 beta_60 -1 a60 1
+  cy_dir <- angle_compute 0 ay_dir 1 beta_60 -1 a60 -1
+  cx_dir <- angle_compute 0 cy_dir 1 gamma_60 1 a60 -1
+  bz <- line_with_direction Z bz_dir
+  bx <- line_with_direction X bx_dir
+  cy <- line_with_direction Y cy_dir
+  cx <- line_with_direction X cx_dir
+  B <- intersection bz bx
+  C <- intersection cy cx
+  THEN
+  <- eq_angle B A Z Z A Y
+  <- eq_angle Z A Y Y A C
+  <- eq_angle A C Y Y C X
+  <- eq_angle Y C X X C B
+  <- eq_angle C B X X B Z
+  <- eq_angle X B Z Z B A
+  PROOF
+  <- morley_side_lemma B C X Y Z
+  <- morley_side_lemma C A Y Z X
+  <- morley_side_lemma A B Z X Y
+
+morley_reformulated Y:P Z:P alpha:A beta:A gamma:A -> A:P B:P C:P X:P
+  a60 <- angle_compute 0 alpha 1 beta 1 gamma 1
+  <- angle_pred 0 a60 3
+  a0 <- angle_compute 0
+  <- not_eq a0 a60
+  yz_dir <- direction_of Y Z
+  xy_dir <- angle_compute 0 yz_dir 1 a60 1
+  xz_dir <- angle_compute 0 yz_dir 1 a60 -1
+  xy <- line_with_direction Y xy_dir
+  xz <- line_with_direction Z xz_dir
+  X <- intersection xy xz
+  ay_dir <- angle_compute 0 yz_dir 1 a60 -1 gamma -1
+  az_dir <- angle_compute 0 yz_dir 1 a60 1 beta 1
+  ay <- line_with_direction Y ay_dir
+  az <- line_with_direction Z az_dir
+  A <- intersection ay az
+  bz_dir <- angle_compute 0 xz_dir 1 a60 -1 alpha -1
+  bx_dir <- angle_compute 0 xz_dir 1 a60 1 gamma 1
+  bz <- line_with_direction Z bz_dir
+  bx <- line_with_direction X bx_dir
+  B <- intersection bz bx
+  cx_dir <- angle_compute 0 xy_dir 1 a60 -1 beta -1
+  cy_dir <- angle_compute 0 xy_dir 1 a60 1 alpha 1
+  cx <- line_with_direction X cx_dir
+  cy <- line_with_direction Y cy_dir
+  C <- intersection cx cy
+  THEN
+  <- eq_angle Z X Y X Y Z
+  <- eq_angle Z X Y Y Z X
+  <- eq_dist X Y Y Z
+  <- eq_dist X Y Z X
+  <- eq_angle B A Z alpha
+  <- eq_angle Z A Y alpha
+  <- eq_angle Y A C alpha
+  <- eq_angle C B X beta
+  <- eq_angle X B Z beta
+  <- eq_angle Z B A beta
+  <- eq_angle A C Y gamma
+  <- eq_angle Y C X gamma
+  <- eq_angle X C B gamma
+  PROOF
+  <- equilateral_a X Y Z
+  <- morley_side_lemma B C X Y Z
+  <- morley_side_lemma C A Y Z X
+  <- morley_side_lemma A B Z X Y
+
+angle_trisection A:P B:P C:P -> ta:L tc:L
+  la <- line B A
+  lc <- line B C
+  da <- direction_of B A
+  da2 <- half_direction B A
+  dc2 <- half_direction B C
+  half_ang <- angle_compute 0 da2 -1 dc2 1
+  tri_ang <- angle_2_to_3 half_ang
+  dta <- angle_compute 0 da 1 tri_ang 1
+  dtc <- angle_compute 0 da 1 tri_ang 2
+  ta <- line_with_direction B dta
+  tc <- line_with_direction B dtc
+
+morley A:P B:P C:P -> X:P Y:P Z:P x:L y:L z:L
+  ay az <- angle_trisection C A B
+  bz bx <- angle_trisection A B C
+  cx cy <- angle_trisection B C A
+  X <- intersection bx cx
+  Y <- intersection cy ay
+  Z <- intersection az bz
+  x y z <- tri_sides X Y Z
+  THEN
+  <- eq_dist X Y Y Z
+  <- eq_dist Y Z Z X
+  <- eq_angle Z X Y X Y Z
+  <- eq_angle Z X Y Y Z X
+  <- eq_angle B A Z Z A Y
+  <- eq_angle Z A Y Y A C
+  <- eq_angle C B X X B Z
+  <- eq_angle X B Z Z B A
+  <- eq_angle A C Y Y C X
+  <- eq_angle Y C X X C B
+  PROOF
+  alpha <- angle Z A Y
+  beta <- angle X B Z
+  gamma <- angle Y C X
+  A' B' C' X' <- morley_reformulated Y Z alpha beta gamma
+  <- sim_aa A B C A' B' C'
+  <- sim_aa A B Z A' B' Z
+  <- sim_aa A C Y A' C' Y
+  <- sim_sas Z A' Y Z A Y
+  <- == X X'
+  <- == A A'
+  <- == B B'
+  <- == C C'
