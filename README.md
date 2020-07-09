@@ -46,7 +46,7 @@ There are basically four ways in which GeoLogic makes automatic decisions:
   Whenever an equality (modulo rational multiple of pi) can be infered,
   GeoLogic recognizes it.
 + Gaussian elimination for log-distances: Whenever an equality of the form of a ratio
-  of products of certain lengths can be infered, GeoLogic recognizes it. Not that
+  of products of certain lengths can be infered, GeoLogic recognizes it. Note that
   GeoLogic cannot "add" distances, only multiply, as it is the more common operation
   with them.
 + Extensionality: Whenever x0=y0, x1=y1, ..., xn=yn, then f(x0,...,xn) = f(y0,...,yn)
