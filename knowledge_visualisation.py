@@ -339,9 +339,9 @@ class NumCircleData(NumData):
         segments = []
         for a,b,col in arcs:
             pos_a = point_to_pos.get(a, None)
-            if a is None: continue
+            if pos_a is None: continue
             pos_b = point_to_pos.get(b, None)
-            if b is None: continue
+            if pos_b is None: continue
             if pos_b < pos_a: pos_b += 2
             start = 0
             segments.append((pos_a, pos_b, start, (pos_a,pos_b,col)))

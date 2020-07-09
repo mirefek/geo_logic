@@ -1225,49 +1225,6 @@ morley_side_lemma B:P C:P X:P Y:P Z:P ->
   <- point_on_perp_bisector B Z Z'
   <- isosceles_ss X Y' Z'
 
-equilateral_remoter A:P B:P X:P -> C:P
-  a <- circle A B
-  b <- circle B A
-  C <- intersection_remoter a b X
-  THEN
-  <- eq_dist A B A C
-  <- eq_dist A B B C
-  <- eq_angle C A B A B C
-  <- eq_angle C A B B C A
-  PROOF
-  <- point_on_circle C a
-  <- point_on_circle C b
-  <- equilateral_s A B C
-
-morley_reformulated_ori A:P Y:P Z:P -> B:P C:P X:P
-  X <- equilateral_remoter Y Z A
-  alpha <- angle Z A Y
-  beta_60 <- angle Y Z A
-  gamma_60 <- angle A Y Z
-  a60 <- angle Y X Z
-  ay_dir <- direction_of A Y
-  bz_dir <- angle_compute 0 ay_dir 1 alpha -1 gamma_60 1 a60 1
-  bx_dir <- angle_compute 0 bz_dir 1 beta_60 -1 a60 1
-  cy_dir <- angle_compute 0 ay_dir 1 beta_60 -1 a60 -1
-  cx_dir <- angle_compute 0 cy_dir 1 gamma_60 1 a60 -1
-  bz <- line_with_direction Z bz_dir
-  bx <- line_with_direction X bx_dir
-  cy <- line_with_direction Y cy_dir
-  cx <- line_with_direction X cx_dir
-  B <- intersection bz bx
-  C <- intersection cy cx
-  THEN
-  <- eq_angle B A Z Z A Y
-  <- eq_angle Z A Y Y A C
-  <- eq_angle A C Y Y C X
-  <- eq_angle Y C X X C B
-  <- eq_angle C B X X B Z
-  <- eq_angle X B Z Z B A
-  PROOF
-  <- morley_side_lemma B C X Y Z
-  <- morley_side_lemma C A Y Z X
-  <- morley_side_lemma A B Z X Y
-
 morley_reformulated Y:P Z:P alpha:A beta:A gamma:A -> A:P B:P C:P X:P
   a60 <- angle_compute 0 alpha 1 beta 1 gamma 1
   <- angle_pred 0 a60 3
