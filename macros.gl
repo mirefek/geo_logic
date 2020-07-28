@@ -851,7 +851,7 @@ midpoint_arc A:P B:P C:P -> M:P
   _ <- secant_direction B A w
   _ <- secant_direction B M w
   _ <- secant_direction B C w
-  <- eq_arcs_to_eq_dist B M M C w
+  <- eq_arcs_to_eq_dist A M M C w
 midpoint_arc A:P B:P w:C -> M:P
   <- lies_on A w
   <- lies_on B w

@@ -252,8 +252,8 @@ class NumLineData(NumData):
         point_pos = [np.dot(self.num_obj.v, self.vis.li_to_num(p).a) for p in points]
         dists_lev = tuple(distribute_segments(segments, point_pos))
         if len(points) <= 1:
-            if self.is_active: self.colorization = (None, None, -1),
-            else: self.colorization = (None, None, -2),
+            if self.is_active: self.colorization = (-np.inf, np.inf, -1),
+            else: self.colorization = (-np.inf, np.inf, -2),
             self.extra_segments = [
                 (a,b,col,lev)
                 for (a,b,_,_,col),lev in dists_lev
@@ -273,9 +273,9 @@ class NumLineData(NumData):
                 if lev == 0:
                     if cur_pos is None:
                         if self.is_active:
-                            self.colorization.append((None, start_pos, -2))
+                            self.colorization.append((-np.inf, start_pos, -2))
                             if start_pos < pos_a: self.colorization.append((start_pos, pos_a, -1))
-                        else: self.colorization.append((None, pos_a, -2))
+                        else: self.colorization.append((-np.inf, pos_a, -2))
                     elif cur_pos < pos_a:
                         self.colorization.append((cur_pos, pos_a, -2))
                     self.colorization.append((pos_a,pos_b, col))
@@ -284,17 +284,17 @@ class NumLineData(NumData):
             if cur_pos is None:
                 if self.is_active:
                     self.colorization = [
-                        (None, start_pos, -2),
+                        (-np.inf, start_pos, -2),
                         (start_pos, end_pos, -1),
-                        (end_pos, None, -2),
+                        (end_pos, np.inf, -2),
                     ]
-                else: self.colorization = (None, None, -2),
+                else: self.colorization = (-np.inf, np.inf, -2),
             else:
                 if self.is_active:
                     if cur_pos < end_pos:
                         self.colorization.append((cur_pos,end_pos, -1))
-                    self.colorization.append((end_pos,None, -2))
-                else: self.colorization.append((cur_pos,None, -2))
+                    self.colorization.append((end_pos, np.inf, -2))
+                else: self.colorization.append((cur_pos, np.inf, -2))
 
         self.vis.visible_dists.extend(self.extra_segments)
 
@@ -985,14 +985,7 @@ class KnowledgeVisualisation:
     # create data for Viewport and GTool
     def visible_export(self):
         self.view_changed = True
-        self.visible_points_numer = [
-            (
-                self.li_to_num(point),
-                self.obj_color(point),
-                self.obj_is_selected.get(point, None),
-            )
-            for point in self.visible_points
-        ]
+
         self.visible_labels = []
         def add_label(obj):
             gi = self.li_to_gi_first[obj]
@@ -1002,7 +995,17 @@ class KnowledgeVisualisation:
             self.visible_labels.append((
                 self.env.gi_to_name[gi], num_obj, self.get_label_position(gi),
             ))
-        for point in self.visible_points: add_label(point)
+
+        point_li_to_vi = dict()
+        self.visible_points_numer = []
+        for point in self.visible_points:
+            point_li_to_vi[point] = len(self.visible_points_numer)
+            self.visible_points_numer.append((
+                self.li_to_num(point),
+                self.obj_color(point),
+                self.obj_is_selected.get(point, None),
+            ))
+            add_label(point)
 
         self.active_lines_numer = []
         self.extra_lines_numer = []
@@ -1028,16 +1031,17 @@ class KnowledgeVisualisation:
             for num_data in data_list:
                 obj = num_data.visible
                 if obj is None: continue
-                colorization = (
+                points = [
+                    point_li_to_vi[point]
+                    for point in to_points[obj]
+                ]
+                extras = (
                     num_data.colorization,
                     self.obj_is_selected.get(obj, None),
                     self.obj_color(obj),
+                    points,
                 )
-                points = [
-                    self.li_to_num(point)
-                    for point in to_points[obj]
-                ]
-                exported = (num_data.num_obj, colorization), points
+                exported = num_data.num_obj, extras
                 if num_data.is_active:
                     add_label(obj)
                     active.append(exported)

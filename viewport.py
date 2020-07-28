@@ -1,15 +1,17 @@
 import numpy as np
 from itertools import islice
-from geo_object import Point, Line, Circle, vector_perp_rot, vector_of_direction
+from geo_object import Point, Line, Circle, vector_perp_rot,\
+    vector_direction, vector_of_direction, intersection_lc, intersection_cc
 from gtool import AmbiSelect, GToolNone
 from gi.repository import Gtk, Gdk, GdkPixbuf
 from label_visualiser import LabelVisualiser
+from segment_union_diff import *
 import cairo
 
 """
 Viewport is the main part of the window, displaying the construction.
 It draws the data that a KnowledgeVisualiser has extracted (self.vis)
-and passes catched events to the corrent GTool (self.gtool)
+and passes catched events to the current GTool (self.gtool)
 """
 
 class Viewport:
@@ -251,34 +253,30 @@ class Viewport:
 
         cr.restore()
 
+    def shadow_on_line(self, line, point, shadow_size = 10):
+        shadow_size /= self.scale
+        if line.dist_from(point.a) > shadow_size: return None
+        intersections = intersection_lc(line, Circle(point.a, shadow_size))
+        if len(intersections) < 2: return None
+        a,b = (np.dot(x, line.v) for x in intersections)
+        if a < b: return a,b
+        else: return b,a
+    def shadow_on_circle(self, circle, point, shadow_size = 10):
+        shadow_size /= self.scale
+        if circle.dist_from(point.a) > shadow_size: return None
+        intersections = intersection_cc(circle, Circle(point.a, shadow_size))
+        if len(intersections) < 2:
+            if shadow_size > circle.a and point.dist_from(circle.c) < shadow_size:
+                return 0, 2
+            else: return None
+        a,b = (vector_direction(x-circle.c)%2 for x in intersections)
+        if b < a: a -= 2
+        return a,b
+
     def set_stroke(self, cr, pix_width, dashes = None):
         cr.set_line_width(pix_width / self.scale)
         if dashes is not None:
             cr.set_dash([d / self.scale for d in dashes])
-
-    def draw_circle(self, cr, c, colorization = None):
-        if colorization is None:
-            cr.arc(c.c[0], c.c[1], c.r, 0, 2*np.pi)
-            cr.stroke()
-            return
-
-        segments, selected, default_color = colorization
-        if selected:
-            cr.save()
-            self.set_select_color(cr)
-            self.set_stroke(cr, 3)
-            if isinstance(selected, tuple): a, b = selected
-            else: a, b = 0, 2
-            self.raw_arc(cr, c.c, c.r, a, b)
-            cr.stroke()
-            cr.restore()
-
-        for a,b, color in segments:
-            #print("{} -> {} COLOR {}".format(a,b,color))
-            self.raw_arc(cr, c.c, c.r, a, b)
-            self.set_color(cr, color, default_color)
-            cr.stroke()
-
 
     def get_line_endpoints(self, l):
         endpoints = [None, None]
@@ -321,51 +319,115 @@ class Viewport:
             cr.stroke()
             center += shift
 
-    def draw_line(self, cr, l, colorization = None):
-
+    def draw_line_raw(self, cr, l):
         endpoints = self.get_line_endpoints(l)
         if endpoints is None: return
+        cr.move_to(*endpoints[0])
+        cr.line_to(*endpoints[1])
+        cr.stroke()
 
-        if colorization is None:
-            cr.move_to(*endpoints[0])
-            cr.line_to(*endpoints[1])
-            cr.stroke()
-            return
+    def draw_line(self, cr, line, extras, all_points, dashes = None):
 
-        segments, selected, default_color = colorization
+        endpoints = self.get_line_endpoints(line)
+        if endpoints is None: return
 
-        if selected:
-            #print("selected")
-            cr.save()
-            self.set_select_color(cr)
-            self.set_stroke(cr, 3)
-            cr.move_to(*endpoints[0])
-            cr.line_to(*endpoints[1])
-            cr.stroke()
-            cr.restore()
+        segments, selected, default_color, points_on = extras
 
-        #print("line colorized")
         e1, e2 = endpoints
-        e1c = np.dot(e1, l.v)
-        e2c = np.dot(e2, l.v)
+        e1c = np.dot(e1, line.v)
+        e2c = np.dot(e2, line.v)
         if e1c > e2c:
             e1,e2 = e2,e1
             e1c,e2c = e2c,e1c
 
+        # calculate shadows
+        shadows, non_shadows = [], []
+        points_on = set(points_on)
+        for i,point in enumerate(all_points):
+            shadow = self.shadow_on_line(line, point)
+            if shadow is None: continue
+            if i in points_on: non_shadows.append(shadow)
+            else: shadows.append(shadow)
+
+        shadows = segment_union_diff(shadows, non_shadows)
+        segments = labeled_segment_diff(segments, shadows)
+
+        if selected:
+            #print("selected")
+            sel_segments = segment_union_diff([(e1c, e2c)], shadows)
+            cr.save()
+            self.set_select_color(cr)
+            self.set_stroke(cr, 3)
+            for a,b in sel_segments:
+                cr.move_to(*line.point_by_c(a))
+                cr.line_to(*line.point_by_c(b))
+            cr.stroke()
+            cr.restore()
+
+        # draw colored segments
         for a,b, color in segments:
             if a is None or a <= e1c: a = e1c
             elif a >= e2c: continue
             if b is None or b >= e2c: b = e2c
             elif b <= e1c: continue
-            cr.move_to(*l.point_by_c(a))
-            cr.line_to(*l.point_by_c(b))
+            if dashes: cr.set_dash([dashes / self.scale], a)
+            cr.move_to(*line.point_by_c(a))
+            cr.line_to(*line.point_by_c(b))
+            self.set_color(cr, color, default_color)
+            cr.stroke()
+
+    def draw_circle_raw(self, cr, c):
+        cr.arc(c.c[0], c.c[1], c.r, 0, 2*np.pi)
+        cr.stroke()
+
+    def draw_circle(self, cr, circle, extras, all_points, dashes = None):
+
+        segments, selected, default_color, points_on = extras
+
+        # calculate shadows
+        shadows, non_shadows = [], []
+        points_on = set(points_on)
+        for i,point in enumerate(all_points):
+            shadow = self.shadow_on_circle(circle, point)
+            if shadow is None: continue
+            if i in points_on: l = non_shadows
+            else: l = shadows
+            a,b = shadow
+            l.append((a,b))
+            l.append((a+2,b+2))
+
+        shadows = segment_union_diff(shadows, non_shadows)
+        segments_lin = []
+        for a,b,color in sorted(segments):
+            if a < b: segments_lin.append((a,b,color))
+            else: segments_lin.append((a,b+2,color))
+        segments = labeled_segment_diff(segments_lin, shadows)
+
+        if selected:
+            if isinstance(selected, tuple):
+                a, b = selected
+                if b < a: b += 2
+            else: a, b = 0, 2
+            sel_segments = segment_union_diff([(a, b)], shadows)
+            cr.save()
+            self.set_select_color(cr)
+            self.set_stroke(cr, 3)
+            for a,b in sel_segments:
+                self.raw_arc(cr, circle.c, circle.r, a, b)
+                cr.stroke()
+            cr.restore()
+
+        for a,b, color in segments:
+            #print("{} -> {} COLOR {}".format(a,b,color))
+            if dashes: cr.set_dash([dashes / self.scale], a*circle.r*np.pi)
+            self.raw_arc(cr, circle.c, circle.r, a, b)
             self.set_color(cr, color, default_color)
             cr.stroke()
 
     def draw_obj(self, cr, obj):
         if isinstance(obj, Point): self.draw_point(cr, obj)
-        elif isinstance(obj, Line): self.draw_line(cr, obj)
-        elif isinstance(obj, Circle): self.draw_circle(cr, obj)
+        elif isinstance(obj, Line): self.draw_line_raw(cr, obj)
+        elif isinstance(obj, Circle): self.draw_circle_raw(cr, obj)
         else: raise Exception("Unexpected type {}".format(type(obj)))
 
     def draw_helper(self, cr, obj):
@@ -470,19 +532,6 @@ class Viewport:
             self.color_dict[col_index] = color
             cr.set_source_rgb(*color)
 
-    def draw_lies_on_l(self, cr, point, line):
-        cr.save()
-        self.point_shadow(cr, point, fill = False)
-        cr.clip()
-        self.draw_line(cr, *line)
-        cr.restore()
-    def draw_lies_on_c(self, cr, point, circle):
-        cr.save()
-        self.point_shadow(cr, point, fill = False)
-        cr.clip()
-        self.draw_circle(cr, *circle)
-        cr.restore()
-            
     def on_draw(self, wid, cr):
         self.vis.view_changed = False
         self.update_corners()
@@ -501,41 +550,25 @@ class Viewport:
         cr.set_source_rgb(1,1,1)
         cr.fill()
 
-        # draw extra lines and circles
-        self.set_stroke(cr, 1, [3])
-        for line, points in vis.extra_lines_numer:
-            self.draw_line(cr, *line)
-        for circle, points in vis.extra_circles_numer:
-            self.draw_circle(cr, *circle)
+        all_points = [x[0] for x in vis.visible_points_numer]
 
-        # draw active lines and circles
-        self.set_stroke(cr, 1, [])
-        for line, points in vis.active_lines_numer:
-            self.draw_line(cr, *line)
-        for circle, points in vis.active_circles_numer:
-            self.draw_circle(cr, *circle)
-
-        # draw points shadows
-        cr.set_source_rgb(1,1,1)
         for p,color,selected in vis.visible_points_numer:
-            self.point_shadow(cr, p)
             if selected: self.draw_point_selection(cr, p)
 
-        # draw lies_on
-        self.set_stroke(cr, 1, [3])
-        for line, points in vis.extra_lines_numer:
-            for point in points:
-                self.draw_lies_on_l(cr, point, line)
-        for circle, points in vis.extra_circles_numer:
-            for point in points:
-                self.draw_lies_on_c(cr, point, circle)
-        self.set_stroke(cr, 1, [])
-        for line, points in vis.active_lines_numer:
-            for point in points:
-                self.draw_lies_on_l(cr, point, line)
-        for circle, points in vis.active_circles_numer:
-            for point in points:
-                self.draw_lies_on_c(cr, point, circle)
+        # draw extra lines and circles
+        self.set_stroke(cr, 1)
+        cr.save()
+        for line, extras in vis.extra_lines_numer:
+            self.draw_line(cr, line, extras, all_points, dashes = 4)
+        for circle, extras in vis.extra_circles_numer:
+            self.draw_circle(cr, circle, extras, all_points, dashes = 4)
+        cr.restore()
+
+        # draw active lines and circles
+        for line, extras in vis.active_lines_numer:
+            self.draw_line(cr, line, extras, all_points)
+        for circle, extras in vis.active_circles_numer:
+            self.draw_circle(cr, circle, extras, all_points)
 
         # draw parallels
         self.set_color(cr, -1)
@@ -543,7 +576,7 @@ class Viewport:
             self.draw_parallel(cr, line, lev)
 
         # draw distances
-        self.set_stroke(cr, 1, [3])
+        self.set_stroke(cr, 1, [4])
         for a,b,col,lev in vis.visible_dists:
             self.set_color(cr, col)
             self.draw_dist(cr, a,b,lev)
@@ -551,8 +584,8 @@ class Viewport:
         for a,b,circ,col,lev in vis.visible_arcs:
             self.set_color(cr, col)
             self.draw_arc(cr, a,b,circ,lev)
-        self.set_stroke(cr, 1, [])
         # draw angles
+        self.set_stroke(cr, 1, [])
         for coor, pos_a, pos_b, col, lev in vis.visible_angles:
             self.set_color(cr, col)
             self.draw_angle(cr, coor, pos_a, pos_b, lev)
@@ -573,16 +606,16 @@ class Viewport:
             self.set_color(cr, -1, color)
             self.draw_point(cr, p)
 
-        # draw labels
-        for data in vis.visible_labels:
-            self.draw_label(cr, *data)
-
         # draw proposals
         cr.set_source_rgb(0.5, 0.65, 0.17)
         for proposal in vis.hl_proposals:
             if not isinstance(proposal, Point): self.draw_obj(cr, proposal)
         for proposal in vis.hl_proposals:
             if isinstance(proposal, Point): self.draw_point_proposal(cr, proposal)
+
+        # draw labels
+        for data in vis.visible_labels:
+            self.draw_label(cr, *data)
 
         if self.edited_label is not None:
             self.draw_label(cr, *self.edited_label)

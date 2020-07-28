@@ -135,7 +135,7 @@ class GToolReason(GTool):
             if cl is not None:
                 if isinstance(cln, Line):
                     self.confirm = self.run_tool, "point_to_perp_bisector", p3,cl,*seg
-                else: self.confirm = self.run_tool, "on_circle_by_angle", p3,cl,*seg
+                else: self.confirm = self.run_tool, "on_circle_by_angle", *seg,p3,cl
                 return
 
         helpers = ((x.a,pn4.a) for x in segn)
