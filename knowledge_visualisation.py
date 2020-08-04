@@ -406,7 +406,7 @@ class ArcData:
         self.p1 = p1
         self.p2 = p2
         self.c = c
-    # activate is called once we decide that we the angle is worth showing
+    # activate is called once we decide that the angle is worth showing
     # (at least twice in the picture)
     def activate(self, color, positive):
         if positive: p1,p2 = self.p1, self.p2
@@ -852,7 +852,10 @@ class KnowledgeVisualisation:
                     used_compl.add(c)
                     cl = angle_to_data[c]
                 else: cl = []
-                if len(set(x.get_repr() for x in l+cl)) <= 1: continue
+
+                l_reprs = set(x.get_repr() for x in l)
+                cl = [x for x in cl if x.get_repr() not in l_reprs]
+                if len(l) + len(cl) <= 1: continue
                 positive = self.li_to_num(a).data % 1 <= 0.5
                 for data in l: data.activate(angle_num, positive)
                 for data in cl: data.activate(angle_num, not positive)

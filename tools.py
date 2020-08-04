@@ -68,7 +68,7 @@ class EqualObjects(Tool):
         else: # check
             if logic.check_equal(a,b): return ()
             else:
-                print('not provably equal', a, b)
+                #print('not provably equal', a, b)
                 raise ToolErrorLog()
 
 class MemoizedTool(Tool):
