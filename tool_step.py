@@ -1,9 +1,15 @@
 from fractions import Fraction
 from tools import MemoizedTool, ToolError, DimCompute, DimPred, ToolErrorException
 from logical_core import LogicalCore
-from geo_object import Point
+
+import threading
+from queue import Queue, Empty
+from collections import deque
+import time
 
 
+##########################################################
+####################  Composite Tool  ####################
 """
 A CompositeTool is a sequence of ToolStep's -- previously defined tools
 applied to a given input.
@@ -31,9 +37,8 @@ class ToolStep:
             self.hyper_params = tuple(Fraction(x) for x in hyper_params)
         else: self.hyper_params = tuple(hyper_params)
         self.local_args = tuple(local_args)
-        if start_out is not None:
-            self.local_outputs = tuple(range(start_out, start_out+len(tool.out_types)))
-        else: self.local_outputs = None
+        self.start_out = start_out
+        self.local_outputs = tuple(range(start_out, start_out+len(tool.out_types)))
         self.debug_msg = debug_msg
 
 class ToolStepEnv:
@@ -121,10 +126,9 @@ class CompositeTool(MemoizedTool):
             )
             raise
 
-import threading
-from queue import Queue, Empty
-from collections import deque
-import time
+####################  Composite Tool  ####################
+##########################################################
+####################   Proof Checker  ####################
 
 class ProofChecker: # parallel running of proof checks
     def __init__(self):
@@ -217,3 +221,6 @@ class ProofChecker: # parallel running of proof checks
                 ))
 
 proof_checker = ProofChecker()
+
+####################   Proof Checker  ####################
+##########################################################
