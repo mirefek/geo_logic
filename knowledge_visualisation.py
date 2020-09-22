@@ -774,7 +774,7 @@ class KnowledgeVisualisation:
         self.circle_to_points = defaultdict(list)
         self.circle_to_arcs = defaultdict(list)
         self.angles = []
-        direction_to_line = defaultdict(list)
+        self.direction_to_line = defaultdict(list)
         direction_q_to_line = defaultdict(list)
         self.line_to_angle_number = defaultdict(int)
         self.visible_parallels = []
@@ -813,7 +813,7 @@ class KnowledgeVisualisation:
                 l, = args
                 if l not in self.li_to_gi_first: continue
                 d, = out
-                direction_to_line[d].append(l)
+                self.direction_to_line[d].append(l)
                 direction_q_to_line[self.logic.angles.equal_to[d][0]].append((l,d))
             elif label in self.tools.angle_tools: #### angles
                 lines_dr = self.get_angle_lines(label, args)
@@ -873,14 +873,6 @@ class KnowledgeVisualisation:
                 point_data.add_exact(l1,d)
                 point_data.add_exact(l2,d)
 
-        #### store parallels
-        parallel_num = 0
-        for d,lines in sorted(direction_to_line.items(), key = lambda x: x[0]):
-            if len(lines) < 2: continue
-            for l in lines:
-                self.visible_parallels.append((self.li_to_num(l), parallel_num))
-            parallel_num += 1
-
         #### Filter out hidden points
         for line, points in self.line_to_points.items():
             points = [p for p in points if p in self.visible_points]
@@ -917,6 +909,16 @@ class KnowledgeVisualisation:
             num_data = self.get_num_circle(num_circle)
             self.li_to_num_data[circle] = num_data
             num_data.add_extra_candidate(circle, (arcs_number, points_number))
+
+    def find_parallels(self):
+        parallel_num = 0
+        for d,lines in sorted(self.direction_to_line.items(), key = lambda x: x[0]):
+            if len(lines) < 2: continue
+            lines = [l for l in lines if l in self.visible_lines]
+            if len(lines) < 2: continue
+            for l in lines:
+                self.visible_parallels.append((self.li_to_num(l), parallel_num))
+            parallel_num += 1
 
     def li_is_visible(self, li):
         num_data = self.li_to_num_data.get(li, None)
@@ -1076,6 +1078,7 @@ class KnowledgeVisualisation:
         self.find_extra_clines()
         self.select_visible_lines()
         self.select_visible_circles()
+        self.find_parallels()
         self.filter_visible_angles()
 
         self.distribute_dists()
