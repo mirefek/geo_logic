@@ -47,7 +47,7 @@ class LogicalCore():
         self.angles = AngleChasing() # known equation about angles
         self.ufd = UnionFindDict() # lookup table for memoized tools
 
-        # for usign triggers, we need to have access to the basic tools
+        # for using triggers, we need to have access to the basic tools
         # if we don't have it, triggers are not applied (RelStrEnv is a dummy structure)
         if basic_tools is None: self.triggers = RelStrEnv(self)
         self.triggers = TriggerEnv(basic_tools, self)
