@@ -39,7 +39,7 @@ class MovableTool(Tool):
     # the user moved mouse after catching, what should be the hyperparameters now?
     def new_hyperpar(self, grasp, coor, *num_args):
         raise Exception("Not implemented")
-    # given hyperparameters and input objects (as numerical objects), what is the 
+    # given hyperparameters and input objects (as numerical objects), what is the output object
     def num_eval(self, *args):
         raise Exception("Not implemented")
     # given input objects (as geometrical references) and the output object, postulate appropriate facts
