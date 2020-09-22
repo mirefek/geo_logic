@@ -302,6 +302,11 @@ class GeoLogic(Gtk.Window):
         if keyval_name == "Return":
             self.toolbar.entry.select()
             return True
+        elif keyval_name == "Escape":
+            self.viewport.gtool.reset()
+            if self.viewport.vis.view_changed:
+                self.viewport.darea.queue_draw()
+            return True
         elif keyval_name in self.key_to_gtool:
             gtool = self.key_to_gtool[keyval_name]
             self.toolbar.select_tool_button(gtool)
