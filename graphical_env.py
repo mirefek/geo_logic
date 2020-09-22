@@ -21,6 +21,44 @@ which correspond to local indices in a StepEnv. There are also
 "logical indices" (li) that correcpond to the global indices in
 StepEnv and represent the object in the logical core.
 """
+
+# "smart" assignment of a name of a new object
+def make_name(step, out_i, t, used_names):
+    tool = step.tool
+    if isinstance(tool, CompositeTool) and tool.var_to_name is not None:
+        candidate = tool.var_to_name.get(tool.result[out_i], None)
+        #print("Candidate:", candidate)
+        if candidate is not None and candidate not in used_names:
+            return candidate
+    if t == Point:
+        i = -1
+        while True:
+            for c in range(ord('A'), ord('Z')+1):
+                if i < 0: candidate = chr(c)
+                else: candidate = chr(c)+str(i)
+                if candidate not in used_names: return candidate
+            i += 1
+    elif t == Angle:
+        i = 0
+        while True:
+            candidate = "ang"+str(i)
+            if candidate not in used_names: return candidate
+            i += 1
+    elif t == Ratio:
+        i = 0
+        while True:
+            candidate = "d"+str(i)
+            if candidate not in used_names: return candidate
+            i += 1
+    else:
+        i = -1
+        while True:
+            for c in range(ord('a'), ord('z')+1):
+                if i < 0: candidate = chr(c)
+                else: candidate = chr(c)+str(i)
+                if candidate not in used_names: return candidate
+            i += 1
+
 class GraphicalEnv:
 
     def __init__(self, tools):
@@ -90,44 +128,6 @@ class GraphicalEnv:
         self.reload_steps_hook()
         self.redo_stack = []
 
-    # "smart" assignment of a name of a new object
-    def make_name(self, step, out_i, t):
-        tool = step.tool
-        used_names = set(self.gi_to_name)
-        if isinstance(tool, CompositeTool) and tool.var_to_name is not None:
-            candidate = tool.var_to_name.get(tool.result[out_i], None)
-            #print("Candidate:", candidate)
-            if candidate is not None and candidate not in used_names:
-                return candidate
-        if t == Point:
-            i = -1
-            while True:
-                for c in range(ord('A'), ord('Z')+1):
-                    if i < 0: candidate = chr(c)
-                    else: candidate = chr(c)+str(i)
-                    if candidate not in used_names: return candidate
-                i += 1
-        elif t == Angle:
-            i = 0
-            while True:
-                candidate = "ang"+str(i)
-                if candidate not in used_names: return candidate
-                i += 1
-        elif t == Ratio:
-            i = 0
-            while True:
-                candidate = "d"+str(i)
-                if candidate not in used_names: return candidate
-                i += 1
-        else:
-            i = -1
-            while True:
-                for c in range(ord('a'), ord('z')+1):
-                    if i < 0: candidate = chr(c)
-                    else: candidate = chr(c)+str(i)
-                    if candidate not in used_names: return candidate
-                i += 1
-
     def add_step(self, step, update = True):
         # update = False if we will immediatelly add another steps
         try:
@@ -137,7 +137,10 @@ class GraphicalEnv:
             self.gi_to_step_i += [len(self.steps)]*len(step.tool.out_types)
             self.vis.add_gis(len(step.tool.out_types))
             for i,t in enumerate(step.tool.out_types):
-                self.gi_to_name.append(self.make_name(step, i, t))
+                used_names = set(self.gi_to_name)
+                name = make_name(step, i, t, used_names)
+                self.gi_to_name.append(name)
+                used_names.add(name)
             self.steps.append(step)
             self.add_step_hook(step)
             self.redo_stack = []
