@@ -83,6 +83,7 @@ class ElimMatrix:
             return True, to_glue_out
 
         self._elim_by_matrix(new_r)
+
         pivot_candidates = list(filter(
             lambda x: not isinstance(x, EquationIndex), new_r.keys(),
         ))
@@ -108,6 +109,8 @@ class ElimMatrix:
             for x in pivot_candidates
             if x != pivot
         ]
+        #_, cols_to_update_proj2 = zip(*cols_to_update)
+        #print("C", cols_to_update_proj2)
 
         # update matrix, compute glued
         main_col = set(self.cols[pivot])
@@ -134,8 +137,6 @@ class ElimMatrix:
             # add new row to columns
             self.cols[pivot] = { pivot }
             for col, ci in cols_to_update: col.add(pivot)
-        else:
-            if pivot in self.cols: del self.cols[pivot]
 
         return True, to_glue_out
 
@@ -243,11 +244,24 @@ class ElimMatrix:
         return res
 
     def _add_zero(self, x, eq, to_glue_out):
+        if x in self.cols: del self.cols[x]
         if self.zeroes:
             y,eq2 = next(iter(self.zeroes.items()))
             denom = lcm(self._least_denom(eq),self._least_denom(eq2))
             to_glue_out.append((x,y, denom))
         self.zeroes[x] = eq
+        if x in self.root_to_proportions:
+            _, d = self.root_to_proportions[x]
+            for q,l in d.items():
+                for y in l:
+                    if y != x:
+                        eq2 = self.proportional_to[y][1] + q*eq
+                        self.zeroes[y] = eq2
+                        del self.proportional_to[y]
+                        if q != 1:
+                            denom = lcm(self._least_denom(eq),self._least_denom(eq2))
+                            to_glue_out.append((x,y, denom))
+            del self.root_to_proportions[x]
 
     def _get_root_to_prop(self, x):
         res = self.root_to_proportions.get(x, None)
@@ -257,6 +271,7 @@ class ElimMatrix:
         return res
 
     def _add_proportion(self, x, y, eq_yx, to_glue_out):
+        if x in self.cols: del self.cols[x]
         if 22 in eq_yx and 13 in eq_yx and 26 in eq_yx:
             raise Exception()
         # get data
@@ -316,10 +331,10 @@ class ElimMatrix:
     def _remove_row(self, pivot, row):
         del self.rows[pivot]
         for x,coef in row.items():
-            if not isinstance(x, EquationIndex):
+            if not isinstance(x, EquationIndex) and x in self.cols:
                 self.cols[x].discard(pivot)
 
-    # updates only self.value_to_var, not self.rows nor solf.cols
+    # updates only self.value_to_var, not self.rows nor self.cols
     def _deactivate_row(self, pivot, row):
         valkey = self._row_valkey(pivot, row)
         del self.value_to_var[valkey]

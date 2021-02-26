@@ -124,7 +124,8 @@ class GraphicalEnv:
             self.gi_to_step_i += [i]*len(step.tool.out_types)
         self.vis.add_gis(len(self.gi_to_step_i))
         assert(len(self.gi_to_name) == len(self.gi_to_step_i))
-        self.refresh_steps(False)
+        #self.refresh_steps(False)
+        self.refresh_steps()
         self.reload_steps_hook()
         self.redo_stack = []
 
