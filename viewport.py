@@ -266,7 +266,7 @@ class Viewport:
         if circle.dist_from(point.a) > shadow_size: return None
         intersections = intersection_cc(circle, Circle(point.a, shadow_size))
         if len(intersections) < 2:
-            if shadow_size > circle.a and point.dist_from(circle.c) < shadow_size:
+            if shadow_size > circle.r and point.dist_from(circle.c) < shadow_size:
                 return 0, 2
             else: return None
         a,b = (vector_direction(x-circle.c)%2 for x in intersections)
