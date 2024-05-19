@@ -44,6 +44,7 @@ class GeoLogic(Gtk.Window):
             ("Save", self.save,     "<Control>s"),
             ("Save as...", self.save_as, "<Control><Shift>s"),
             ("Export SVG...", self.export_svg, "<Control><Shift>e"),
+            ("Print numerical values...", self.print_num_values, "<Control>p"),
             ("Quit", self.on_exit,  "<Control>q"),
         )
         gtools = (
@@ -325,6 +326,12 @@ class GeoLogic(Gtk.Window):
         if keyval_name.startswith("Shift"):
             self.viewport.update_shift_pressed(False)
             self.viewport.darea.queue_draw()
+
+    def print_num_values(self):
+        for gi,li in enumerate(self.env.step_env.local_to_global):
+            name = self.env.gi_to_name[gi]
+            num_obj = self.env.logic.num_model[li]
+            print(name, num_obj)
 
 if __name__ == "__main__":
     win = GeoLogic()
