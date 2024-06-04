@@ -25,6 +25,7 @@ def prime_decomposition(n):
                 p += 1
                 n //= d
             result.append((d, p))
+        d += 2
     if n > 1: result.append((n, 1))
     return result
 
